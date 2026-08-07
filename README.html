@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueen RXY — Bluetooth remote for DFRobot Maqueen Lite</title>
+<style>
+  :root{
+    --bg:#0d1520; --panel:#152232; --ink:#e8f0fa; --muted:#93a8c4;
+    --accent:#00d4ff; --line:rgba(255,255,255,.12); --code:#0a1119;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f9fc; --panel:#fff; --ink:#12202f; --muted:#5b6f88;
+           --accent:#0077dd; --line:rgba(0,0,0,.12); --code:#eef3f8; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 20px 64px;background:var(--bg);color:var(--ink);
+       font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:820px;margin:0 auto}
+  h1{font-size:2rem;margin:0 0 4px}
+  h2{font-size:1.25rem;margin:38px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .tag{color:var(--muted);margin:0 0 20px}
+  .tag a{color:var(--accent)}
+  a{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;display:block;overflow-x:auto}
+  th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;white-space:nowrap}
+  code{background:var(--code);padding:2px 6px;border-radius:5px;font-size:.9em}
+  pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow-x:auto;
+      border:1px solid var(--line)}
+  pre code{background:none;padding:0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:3px solid var(--accent);
+             background:var(--panel);color:var(--muted);border-radius:0 8px 8px 0}
+  .glyph{font-size:1.1em}
+  ul{padding-left:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Maqueen RXY</h1>
+<p class="tag">A drag-and-drop Bluetooth remote for the <strong>DFRobot Maqueen Lite</strong>,
+driven from a micro:bit. Powered by <a href="https://workshop-diy.org">Workshop-DIY.org</a></p>
+
+<p>The web app builds its interface from a layout the <strong>robot itself sends</strong> on
+connect — so the firmware owns the layout, and the app is a generic renderer. Nothing to
+configure on the browser side.</p>
+
+<h2>What you need</h2>
+<ul>
+  <li>BBC micro:bit (V1 or V2)</li>
+  <li>DFRobot <strong>Maqueen Lite</strong> chassis</li>
+  <li>A browser with Web Bluetooth: Chrome, Edge or Opera on desktop/Android
+      (Safari and iOS are not supported — Apple does not implement Web Bluetooth)</li>
+</ul>
+
+<h2>Flashing the firmware</h2>
+<ol>
+  <li>Open <a href="https://makecode.microbit.org">makecode.microbit.org</a> → <strong>New Project</strong></li>
+  <li>Switch to <strong>JavaScript</strong></li>
+  <li><strong>Extensions</strong> → search <code>maqueen</code> → add <strong>pxt-maqueen</strong></li>
+  <li>Paste the contents of <a href="firmware/maqueen-remote.ts"><code>firmware/maqueen-remote.ts</code></a></li>
+  <li><strong>Download</strong> to the micro:bit</li>
+</ol>
+<p>The version number scrolls across the LED matrix at boot — check it after every flash.</p>
+
+<h2>Running the app</h2>
+<p>Serve the folder over <code>http://</code> or <code>https://</code> and open <code>index.html</code>:</p>
+<pre><code>python -m http.server 8952</code></pre>
+<p>Then browse to <a href="http://localhost:8952">http://localhost:8952</a> and press <strong>Connect</strong>.</p>
+<blockquote>Opening the file directly via <code>file://</code> mostly works but is unreliable —
+<code>file://</code> is treated as a unique security origin, which breaks parts of Web Bluetooth.</blockquote>
+
+<h2>Controls</h2>
+<table>
+  <tr><th>Control</th><th>Does</th></tr>
+  <tr><td>D-pad</td><td>Drive (differential mix, diagonals supported)</td></tr>
+  <tr><td>Speed</td><td>Top speed for manual <em>and</em> autonomous driving</td></tr>
+  <tr><td>Mode</td><td><code>Manual</code> / <code>Line</code> (line-following) / <code>Avoid</code> (obstacle avoidance)</td></tr>
+  <tr><td>STOP</td><td>Cut both motors immediately</td></tr>
+  <tr><td>Buzz</td><td>Short tone</td></tr>
+  <tr><td>LED L / LED R</td><td>Headlights</td></tr>
+  <tr><td>Servo 1 / 2</td><td>Servo angle, 0–180°</td></tr>
+  <tr><td>Line L / R</td><td>Line sensors — <strong>lit = that side is on the line</strong></td></tr>
+  <tr><td>Distance</td><td>Ultrasonic reading, as a gauge and a rolling graph</td></tr>
+  <tr><td>Uptime</td><td>Session timer — proves the link is alive</td></tr>
+</table>
+
+<h2>Reading the robot without a screen</h2>
+<p>Every command leaves a mark on the micro:bit's LED matrix, so you can tell what reached the
+robot with no cable and no console attached:</p>
+<table>
+  <tr><th>Glyph</th><th>Meaning</th></tr>
+  <tr><td><code>vNN</code> scrolling</td><td>Firmware version at boot</td></tr>
+  <tr><td class="glyph">♥</td><td>Powered up, waiting for Bluetooth</td></tr>
+  <tr><td>grid filling pixel by pixel</td><td>Sending the layout</td></tr>
+  <tr><td class="glyph">✓</td><td>Connected, layout delivered</td></tr>
+  <tr><td class="glyph">✗</td><td>Bluetooth lost (motors auto-stopped)</td></tr>
+  <tr><td class="glyph">■</td><td>STOP pressed</td></tr>
+  <tr><td class="glyph">↑ ↓ ← →</td><td>Driving that way</td></tr>
+  <tr><td>centre dot</td><td>Motors idle</td></tr>
+  <tr><td>left / right band</td><td>Headlight toggled</td></tr>
+  <tr><td class="glyph">♪</td><td>Buzz</td></tr>
+  <tr><td>bar graph</td><td>Servo angle</td></tr>
+</table>
+
+<h2>Protocol</h2>
+<p>Plain text lines over the Nordic UART service.</p>
+<pre><code>App → robot    SET &lt;widgetId&gt; &lt;value...&gt;
+App → robot    GETCFG                      request the layout (sent once, on connect)
+robot → App    CFGBEGIN / CFG &lt;b64&gt; / CFGEND
+robot → App    UPD &lt;widgetId&gt; &lt;value&gt;      sensor and status updates</code></pre>
+<p><strong>Keep messages at or under 20 bytes.</strong> The micro:bit negotiates the default
+23-byte ATT MTU, leaving exactly 20 bytes of payload. A longer write is <em>silently
+truncated</em> rather than rejected — the trailing newline never arrives and the command
+vanishes with no error on either side. The app splits outgoing writes into 20-byte packets;
+the UART service reassembles them.</p>
+
+<h2>Licence</h2>
+<p>MIT</p>
+
+</div>
+</body>
+</html>
