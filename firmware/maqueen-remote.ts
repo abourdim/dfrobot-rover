@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v34"        scrolling at boot   — firmware version (check after every flash)
+ *    "v35"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v34"
+const FIRMWARE_VERSION = "v35"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -404,9 +404,6 @@ const AVOID_STOP_CM = 20        // back away closer than this
 const ALERT_CM = 25             // notify the app below this
 const ALERT_CLEAR_CM = 40       // ...and only re-arm once well clear again
 let alertActive = false
-// Last distance actually transmitted, so an unchanged reading is not
-// re-sent. -1 = nothing sent yet this session.
-let lastDistSent = -1
 // Avoid runs as a timed reverse-then-turn so nothing blocks the loop.
 let avoidUntil = 0
 let avoidPhase = 0              // 0 = cruising, 1 = reversing, 2 = turning
@@ -661,10 +658,10 @@ bluetooth.onBluetoothDisconnected(function () {
     // Heartbeat restarts per session, so the clock reads session uptime
     // rather than time since power-on.
     heartbeat = 0
-    // Force the next distance/line readings to be transmitted even if
-    // they match the last ones from the previous session — otherwise the
-    // graph and line LEDs sit blank until something happens to change.
-    lastDistSent = -1
+    // Force the next line readings to be transmitted even if they match
+    // the last ones from the previous session — otherwise the line LEDs
+    // sit blank until something happens to change. (The graph is not
+    // deduped at all, so it needs no reset.)
     lastLineL = -1
     lastLineR = -1
     alertActive = false
@@ -966,15 +963,21 @@ basic.forever(function () {
                 dbg("dist: bad read (" + cm + ")")
             }
 
-            // Only transmit on CHANGE. Comparing the REPORTED value, not
-            // the raw one, so clamped and sentinel readings dedupe too.
-            if (reported >= 0 && reported != lastDistSent) {
-                lastDistSent = reported
-                // The graph widget takes comma-separated numbers, one per
-                // series; a single series means a bare number is the whole
-                // payload. It gains a point when the reading CHANGES
-                // rather than on a fixed cadence, so a stationary robot
-                // draws a flat line instead of a dense one.
+            // Sent on EVERY poll, deliberately not deduped. A change-only
+            // rule is right for a gauge — a repeated identical number
+            // tells the viewer nothing — but wrong for a graph, which is
+            // a time series: with no new samples a steady reading draws
+            // no points at all and looks like a dead feed. That is
+            // exactly how it appeared when parked facing open space,
+            // where every reading is the same 200 "no echo" sentinel.
+            //
+            // The cost is one short message per poll, and polls are
+            // already rate-limited by distInterval and skipped entirely
+            // while driving, so this adds very little traffic.
+            //
+            // The graph widget takes comma-separated numbers, one per
+            // series; a single series means a bare number is the payload.
+            if (reported >= 0) {
                 sendValue("graph_dist", "" + reported)
             }
 
