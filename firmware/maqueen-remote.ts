@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v33"        scrolling at boot   — firmware version (check after every flash)
+ *    "v34"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v33"
+const FIRMWARE_VERSION = "v34"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -172,7 +172,7 @@ let btConnected = false
 //     { "id": "lbl_heartbeat", "t": "label",    "x": 190, "y": 250, "w": 260, "h": 90,  "label": "Heartbeat" }
 //   ]
 // }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9XX0="
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9XX0="
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
@@ -399,8 +399,14 @@ let lastLineL = -1
 let lastLineR = -1
 const LINE_INTERVAL_MS = 100
 
-// Obstacle-avoid threshold.
+// Obstacle-avoid + alert thresholds.
 const AVOID_STOP_CM = 20        // back away closer than this
+const ALERT_CM = 25             // notify the app below this
+const ALERT_CLEAR_CM = 40       // ...and only re-arm once well clear again
+let alertActive = false
+// Last distance actually transmitted, so an unchanged reading is not
+// re-sent. -1 = nothing sent yet this session.
+let lastDistSent = -1
 // Avoid runs as a timed reverse-then-turn so nothing blocks the loop.
 let avoidUntil = 0
 let avoidPhase = 0              // 0 = cruising, 1 = reversing, 2 = turning
@@ -657,9 +663,11 @@ bluetooth.onBluetoothDisconnected(function () {
     heartbeat = 0
     // Force the next distance/line readings to be transmitted even if
     // they match the last ones from the previous session — otherwise the
-    // gauge and line LEDs sit blank until something happens to change.
+    // graph and line LEDs sit blank until something happens to change.
+    lastDistSent = -1
     lastLineL = -1
     lastLineR = -1
+    alertActive = false
     // Drop out of any autonomous mode. The loop already stops running
     // behaviours once btConnected goes false, but resetting here means a
     // reconnect starts in a known, stationary state rather than silently
@@ -915,10 +923,19 @@ basic.forever(function () {
     // exactly what you would expect: motors and servos unresponsive,
     // then outright freezing.
     //
-    // So it is now read ONLY in Avoid mode, where the distance IS the
-    // input driving the behaviour and the trade is worth making.
-    // Manual and Line driving never touch it, and pay nothing.
-    if (driveMode == MODE_AVOID && now >= nextDistAt) {
+    // Two mitigations make it survivable while still feeding the graph
+    // and the obstacle alert in every mode:
+    //
+    //   1. SKIPPED WHILE THE WHEELS ARE TURNING (except in Avoid, where
+    //      the distance is the input driving the behaviour). This is the
+    //      important one — a stall you never notice while parked is
+    //      ruinous mid-drive, and driving is when responsiveness counts.
+    //   2. ADAPTIVE BACKOFF — brisk while real distances come back,
+    //      doubling to DIST_INTERVAL_MAX_MS while the sensor reports
+    //      nothing, snapping back on the first good reading. The
+    //      expensive case is exactly the uninformative one.
+    let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
+    if (now >= nextDistAt && !busyDriving) {
         nextDistAt = now + distInterval
         if (cfgSent) {
             let cm = maqueen.Ultrasonic()
@@ -948,6 +965,34 @@ basic.forever(function () {
                 // than inventing a number in either direction.
                 dbg("dist: bad read (" + cm + ")")
             }
+
+            // Only transmit on CHANGE. Comparing the REPORTED value, not
+            // the raw one, so clamped and sentinel readings dedupe too.
+            if (reported >= 0 && reported != lastDistSent) {
+                lastDistSent = reported
+                // The graph widget takes comma-separated numbers, one per
+                // series; a single series means a bare number is the whole
+                // payload. It gains a point when the reading CHANGES
+                // rather than on a fixed cadence, so a stationary robot
+                // draws a flat line instead of a dense one.
+                sendValue("graph_dist", "" + reported)
+            }
+
+            // Obstacle alert, with hysteresis so it fires once on
+            // approach instead of chattering around the threshold: it
+            // arms below ALERT_CM and only re-arms once the path is
+            // clear past ALERT_CLEAR_CM.
+            if (reported >= 0) {
+                if (!alertActive && reported < ALERT_CM) {
+                    alertActive = true
+                    sendValue("alert", "Obstacle " + reported + "cm")
+                    dbg("alert: obstacle at " + reported + "cm")
+                } else if (alertActive && reported > ALERT_CLEAR_CM) {
+                    alertActive = false
+                    dbg("alert: cleared")
+                }
+            }
+
             // Obstacle avoidance: reverse briefly, then pivot, then
             // resume. Phases are driven by timestamps, never by pauses,
             // so the loop keeps servicing the radio and the watchdog.
