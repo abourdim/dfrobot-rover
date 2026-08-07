@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v27"        scrolling at boot   — firmware version (check after every flash)
+ *    "v28"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v27"
+const FIRMWARE_VERSION = "v28"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -152,9 +152,10 @@ let cfgSent = false
 let btConnected = false
 
 // 📦 Remote layout config (Base64 encoded, 1988 bytes, 15 widgets).
-// Laid out in four columns: DRIVE (dpad, line LEDs, mode, alert) |
-// ACTIONS (stop, buzz, headlights, uptime) | SLIDERS (servos, speed) |
-// SENSORS (distance gauge above its history graph).
+// Layout arranged by hand in the app's Build tab and captured here:
+// top row servos / D-pad / speed / alert, middle mode + STOP/Buzz with
+// the distance gauge right, bottom row headlights / line sensors and
+// the distance graph. Canvas 980x620.
 // Generated for the widget ids used below — decoded here for
 // reference (not read by the code):
 // {
@@ -172,7 +173,7 @@ let btConnected = false
 //     { "id": "lbl_heartbeat", "t": "label",    "x": 190, "y": 250, "w": 260, "h": 90,  "label": "Heartbeat" }
 //   ]
 // }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJkcGFkX21vdmUiLCJ0IjoiZHBhZCIsIngiOjIwLCJ5IjoyMCwidyI6MTYwLCJoIjoxNjAsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoibG5fbCIsInQiOiJsZWQiLCJ4IjoyMCwieSI6MTk1LCJ3Ijo3NSwiaCI6NzUsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjEwNSwieSI6MTk1LCJ3Ijo3NSwiaCI6NzUsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjIwLCJ5IjoyODUsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsTGluZSxBdm9pZCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4IjoyMCwieSI6MzcwLCJ3IjoxNjAsImgiOjYwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImJ0bl9zdG9wIiwidCI6ImJ1dHRvbiIsIngiOjIwMCwieSI6MjAsInciOjkwLCJoIjo5MCwibGFiZWwiOiJTVE9QIn0seyJpZCI6ImJ0bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjMwMCwieSI6MjAsInciOjkwLCJoIjo5MCwibGFiZWwiOiJCdXp6In0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyMDAsInkiOjEyMCwidyI6OTAsImgiOjkwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjozMDAsInkiOjEyMCwidyI6OTAsImgiOjkwLCJsYWJlbCI6IkxFRCBSIn0seyJpZCI6ImxibF9oZWFydGJlYXQiLCJ0IjoibGFiZWwiLCJ4IjoyMDAsInkiOjI0MCwidyI6MTkwLCJoIjo4MCwibGFiZWwiOiJVcHRpbWUifSx7ImlkIjoic2xpZGVyX3NydjEiLCJ0Ijoic2xpZGVyIiwieCI6NDEwLCJ5IjoyMCwidyI6ODAsImgiOjE5MCwibGFiZWwiOiJTZXJ2byAxIiwibWluIjowLCJtYXgiOjE4MCwic3RlcCI6MX0seyJpZCI6InNsaWRlcl9zcnYyIiwidCI6InNsaWRlciIsIngiOjUwMCwieSI6MjAsInciOjgwLCJoIjoxOTAsImxhYmVsIjoiU2Vydm8gMiIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NjAwLCJ5IjoyMCwidyI6ODAsImgiOjE5MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjcwMCwieSI6MjAsInciOjE2MCwiaCI6MTc1LCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgiOjIwMCwidW5pdHMiOiJjbSIsImRlY2ltYWxzIjowfSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjcwMCwieSI6MjE1LCJ3IjozMjAsImgiOjE1MCwibGFiZWwiOiJEaXN0YW5jZSBjbSIsIm1vZGVsIjoiZ3JpZCIsIndpbmRvd1NlYyI6MzAsInNlcmllcyI6MX1dfQ=="
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoiYWxlcnQiLCJ0Ijoibm90aWZpY2F0aW9uIiwieCI6NjkwLCJ5Ijo0MCwidyI6MTgwLCJoIjo5MCwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjM1LCJ5IjoyOTAsInciOjE2MCwiaCI6ODUsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsTGluZSxBdm9pZCJ9LHsiaWQiOiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4IjoyNTUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiU1RPUCJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0b24iLCJ4IjozNzUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiQnV6eiJ9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6NjgwLCJ5IjoxOTAsInciOjE4MCwiaCI6MTk1LCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgiOjIwMCwidW5pdHMiOiJjbSIsImRlY2ltYWxzIjowfSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJncmFwaF9kaXN0IiwidCI6ImdyYXBoIiwieCI6NTgwLCJ5Ijo0MjUsInciOjM4MCwiaCI6MTc1LCJsYWJlbCI6IkRpc3RhbmNlIGNtIiwibW9kZWwiOiJncmlkIiwid2luZG93U2VjIjozMCwic2VyaWVzIjoxfV19"
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
