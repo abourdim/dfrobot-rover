@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v31"        scrolling at boot   — firmware version (check after every flash)
+ *    "v32"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v31"
+const FIRMWARE_VERSION = "v32"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -168,12 +168,11 @@ let btConnected = false
 //     { "id": "btn_buzz",      "t": "button",   "x": 290, "y": 20,  "w": 90,  "h": 90,  "label": "Buzz" },
 //     { "id": "slider_srv1",   "t": "slider",   "x": 400, "y": 20,  "w": 90,  "h": 180, "label": "Servo 1", "min": 0, "max": 180, "step": 1 },
 //     { "id": "slider_srv2",   "t": "slider",   "x": 500, "y": 20,  "w": 90,  "h": 180, "label": "Servo 2", "min": 0, "max": 180, "step": 1 },
-//     { "id": "gauge_dist",    "t": "gauge",    "x": 600, "y": 20,  "w": 150, "h": 170, "label": "Distance", "min": 0, "max": 200, "units": "cm", "decimals": 0 },
 //     { "id": "graph_dist",    "t": "graph",    "x": 470, "y": 250, "w": 300, "h": 150, "label": "Distance cm", "model": "grid", "windowSec": 30, "series": 1 },
 //     { "id": "lbl_heartbeat", "t": "label",    "x": 190, "y": 250, "w": 260, "h": 90,  "label": "Heartbeat" }
 //   ]
 // }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoiYWxlcnQiLCJ0Ijoibm90aWZpY2F0aW9uIiwieCI6NjkwLCJ5Ijo0MCwidyI6MTgwLCJoIjo5MCwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjM1LCJ5IjoyOTAsInciOjE2MCwiaCI6ODUsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsTGluZSxBdm9pZCJ9LHsiaWQiOiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4IjoyNTUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiU1RPUCJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0b24iLCJ4IjozNzUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiQnV6eiJ9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6NjgwLCJ5IjoxOTAsInciOjE4MCwiaCI6MTk1LCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgiOjIwMCwidW5pdHMiOiJjbSIsImRlY2ltYWxzIjowfSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJncmFwaF9kaXN0IiwidCI6ImdyYXBoIiwieCI6NTgwLCJ5Ijo0MjUsInciOjM4MCwiaCI6MTc1LCJsYWJlbCI6IkRpc3RhbmNlIGNtIiwibW9kZWwiOiJncmlkIiwid2luZG93U2VjIjozMCwic2VyaWVzIjoxfV19"
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoiYWxlcnQiLCJ0Ijoibm90aWZpY2F0aW9uIiwieCI6NjkwLCJ5Ijo0MCwidyI6MTgwLCJoIjo5MCwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjM1LCJ5IjoyOTAsInciOjE2MCwiaCI6ODUsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsTGluZSxBdm9pZCJ9LHsiaWQiOiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4IjoyNTUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiU1RPUCJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0b24iLCJ4IjozNzUsInkiOjI4NSwidyI6MTAwLCJoIjoxMDUsImxhYmVsIjoiQnV6eiJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6NTUsInkiOjQwMCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJVcHRpbWUifSx7ImlkIjoidG9nZ2xlX2xlZF9sIiwidCI6InRvZ2dsZSIsIngiOjI1LCJ5Ijo0OTAsInciOjkwLCJoIjoxMTAsImxhYmVsIjoiTEVEIEwifSx7ImlkIjoidG9nZ2xlX2xlZF9yIiwidCI6InRvZ2dsZSIsIngiOjE1OCwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBSIn0seyJpZCI6ImxuX2wiLCJ0IjoibGVkIiwieCI6Mjg1LCJ5Ijo1MDAsInciOjcwLCJoIjo5MCwibGFiZWwiOiJMaW5lIEwiLCJtb2RlbCI6ImRvdCIsImNvbG9yT24iOiIjNGFkZTgwIn0seyJpZCI6ImxuX3IiLCJ0IjoibGVkIiwieCI6Mzg4LCJ5Ijo1MDAsInciOjcwLCJoIjo5MCwibGFiZWwiOiJMaW5lIFIiLCJtb2RlbCI6ImRvdCIsImNvbG9yT24iOiIjNGFkZTgwIn0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9XX0="
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
@@ -955,7 +954,6 @@ basic.forever(function () {
             // the raw one, so clamped/sentinel readings dedupe correctly.
             if (reported >= 0 && reported != lastDistSent) {
                 lastDistSent = reported
-                sendValue("gauge_dist", "" + reported)
                 // Same value to the history graph. The graph widget takes
                 // comma-separated numbers (one per series); a single
                 // series means a bare number is the whole payload.
