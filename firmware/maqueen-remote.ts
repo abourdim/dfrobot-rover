@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v29"        scrolling at boot   — firmware version (check after every flash)
+ *    "v30"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v29"
+const FIRMWARE_VERSION = "v30"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -728,7 +728,17 @@ function uptimeString(totalSec: number): string {
 // spotting an obstacle, slow enough that the blocking echo wait and the
 // resulting UPD write do not crowd out drive commands on the radio.
 // Must stay well above the loop's own 100ms tick.
-const DIST_INTERVAL_MS = 300
+// 800ms, NOT 300ms — and skipped entirely while driving in a manual or
+// line-following mode. maqueen.Ultrasonic() is far more expensive than
+// it looks: when there is no echo it retries readUlt() up to FOUR times
+// (see the library source), each one a blocking pulseIn that waits out
+// its full timeout. MakeCode fibers are cooperative, so while this loop
+// sits in pulseIn the BLE receive handler cannot run — and motors and
+// servos are both driven from there. Polling this at 300ms made the
+// robot feel unresponsive or dead to commands, and "no echo" is the
+// normal case for a robot pointing at open space, so it hit the
+// worst-case retry path almost every time.
+const DIST_INTERVAL_MS = 800
 const DIST_MAX_CM = 200          // matches the gauge's max in CFG
 let nextDistAt = 0
 let nextLineAt = 0
@@ -885,7 +895,13 @@ basic.forever(function () {
     // calling fiber while it waits for the echo (tens of ms, longer
     // with no echo at all), which is exactly the kind of stall that
     // must never sit in the receive path.
-    if (now >= nextDistAt) {
+    // Skip the reading entirely while the wheels are turning, unless we
+    // are in Avoid mode where the distance IS the input driving the
+    // behaviour. Responsiveness to the driver's commands matters more
+    // than refreshing a gauge, and the blocking retry described above
+    // is precisely what stole that responsiveness.
+    let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
+    if (now >= nextDistAt && !busyDriving) {
         nextDistAt = now + DIST_INTERVAL_MS
         if (cfgSent) {
             let cm = maqueen.Ultrasonic()
