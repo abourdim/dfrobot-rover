@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v30"        scrolling at boot   — firmware version (check after every flash)
+ *    "v31"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v30"
+const FIRMWARE_VERSION = "v31"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -738,7 +738,24 @@ function uptimeString(totalSec: number): string {
 // robot feel unresponsive or dead to commands, and "no echo" is the
 // normal case for a robot pointing at open space, so it hit the
 // worst-case retry path almost every time.
-const DIST_INTERVAL_MS = 800
+// Adaptive polling, because maqueen.Ultrasonic() is brutally expensive
+// in exactly the case that tells you nothing. Measured from the library
+// source, one readUlt() costs basic.pause(1) + basic.pause(20) +
+// pins.pulseIn(..., 500*58) — a 29ms timeout — so ~50ms per attempt.
+// With no echo it retries up to four more times: ~250ms per call, and
+// pulseIn BUSY-WAITS without yielding, so that is a hard stall of the
+// entire runtime, not just this loop.
+//
+// A robot pointing at open space returns "no echo" every time, so it
+// paid 250ms per poll forever. At the original 300ms interval that was
+// most of the robot's life spent frozen.
+//
+// So: poll briskly while the sensor is actually seeing something, and
+// back off hard once it stops, doubling up to DIST_INTERVAL_MAX_MS. A
+// single good reading snaps straight back to fast.
+const DIST_INTERVAL_MS = 700          // when the sensor is returning real distances
+const DIST_INTERVAL_MAX_MS = 5000     // when it keeps reporting "no echo"
+let distInterval = DIST_INTERVAL_MS
 const DIST_MAX_CM = 200          // matches the gauge's max in CFG
 let nextDistAt = 0
 let nextLineAt = 0
@@ -902,9 +919,18 @@ basic.forever(function () {
     // is precisely what stole that responsiveness.
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
     if (now >= nextDistAt && !busyDriving) {
-        nextDistAt = now + DIST_INTERVAL_MS
+        nextDistAt = now + distInterval
         if (cfgSent) {
             let cm = maqueen.Ultrasonic()
+            // Adapt the next interval to what we just got back. 500 is
+            // the "no echo" sentinel and is the reading that costs the
+            // full ~250ms retry stall, so keep backing off while it
+            // persists; any real distance restores the fast rate.
+            if (cm >= 500 || cm <= 0) {
+                distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
+            } else {
+                distInterval = DIST_INTERVAL_MS
+            }
             // Decide what we'd report; -1 means "nothing to report".
             let reported = -1
             if (cm >= 500) {
