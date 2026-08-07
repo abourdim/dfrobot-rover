@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v28"        scrolling at boot   — firmware version (check after every flash)
+ *    "v29"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v28"
+const FIRMWARE_VERSION = "v29"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -125,7 +125,7 @@ const FIRMWARE_VERSION = "v28"
 // turnaround right as a packet was still being processed. Draining one
 // line per 100ms loop tick, exactly like the heartbeat, avoids both
 // problems.
-let debugEnabled = true
+let debugEnabled = false
 let logQueue: string[] = []
 const LOG_QUEUE_MAX = 20
 function dbg(msg: string) {
