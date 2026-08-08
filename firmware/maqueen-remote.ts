@@ -61,8 +61,8 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v38"        scrolling at boot   — firmware version (check after every flash)
- *    ♥            heart               — powered up, idle, waiting for BLE
+ *    "v39"        scrolling at boot   — firmware version (check after every flash)
+ *    ○            hollow ring         — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
  *    ✗            cross               — BLE link lost (motors auto-stopped)
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v38"
+const FIRMWARE_VERSION = "v39"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -623,7 +623,19 @@ maqueen.motorStop(maqueen.Motors.All)
 maqueen.servoRun(maqueen.Servos.S1, 90)
 maqueen.servoRun(maqueen.Servos.S2, 90)
 basic.showString(FIRMWARE_VERSION)
-basic.showIcon(IconNames.Heart)
+// Idle indicator: a hollow ring, held until BLE connects. Deliberately
+// not a filled shape — ■ already means "STOP pressed" and the centre dot
+// means "motors idle", so a solid glyph here would be confusable. The
+// ring reads as "powered, waiting", and it must be visibly different
+// from a blank screen, otherwise a booted-but-unconnected robot looks
+// indistinguishable from a flat battery.
+basic.showLeds(`
+    . # # # .
+    # . . . #
+    # . . . #
+    # . . . #
+    . # # # .
+    `, 0)
 dbg("Maqueen Remote firmware " + FIRMWARE_VERSION + " ready, waiting for BLE connection...")
 
 bluetooth.onBluetoothConnected(function () {
