@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v41"        scrolling at boot   — firmware version (check after every flash)
+ *    "v42"        scrolling at boot   — firmware version (check after every flash)
  *    ○            hollow ring         — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v41"
+const FIRMWARE_VERSION = "v42"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -171,6 +171,25 @@ const LINK_TIMEOUT_MS = 3000
 // disconnect handler runs.
 let btConnected = false
 
+// ── TELEMETRY LEVEL ──────────────────────────────────────────────
+// How much the robot pushes back to the app. Everything the firmware
+// reports — uptime, distance, line sensors, obstacle alert — is a UPD
+// write, and each one competes with the drive commands coming the other
+// way. Turning it down is the cheapest way to free the radio.
+//
+//   All   — everything (default)
+//   Basic — uptime and version only, so the link still visibly lives
+//   Off   — silence
+//
+// Note this does NOT affect link-loss detection: that measures traffic
+// arriving FROM the app (its PING), so the robot still notices a dead
+// link at Off. Nor does it disable the app's controls, which are the
+// other direction entirely.
+const UPD_OFF = 0
+const UPD_BASIC = 1
+const UPD_ALL = 2
+let updLevel = UPD_ALL
+
 // 📦 Remote layout config (Base64 encoded, 1988 bytes, 15 widgets).
 // Layout arranged by hand in the app's Build tab and captured here:
 // top row servos / D-pad / speed / alert, middle mode + STOP/Buzz with
@@ -196,10 +215,11 @@ let btConnected = false
 //     { "id": "alert", "t": "notification", "x": 690, "y": 40, "w": 180, "h": 90, "label": "Alert" },
 //     { "id": "graph_dist", "t": "graph", "x": 580, "y": 425, "w": 380, "h": 175, "label": "Distance cm", "model": "grid", "windowSec": 30, "series": 1 },
 //     { "id": "lbl_ver", "t": "label", "x": 300, "y": 400, "w": 160, "h": 80, "label": "Firmware" },
-//     { "id": "gauge_dist", "t": "gauge", "x": 690, "y": 190, "w": 180, "h": 195, "label": "Distance", "min": 0, "max": 200, "units": "cm", "decimals": 0 }
+//     { "id": "gauge_dist", "t": "gauge", "x": 690, "y": 190, "w": 180, "h": 195, "label": "Distance", "min": 0, "max": 200, "units": "cm", "decimals": 0 },
+//     { "id": "upd", "t": "select", "x": 490, "y": 290, "w": 170, "h": 85, "label": "Telemetry", "options": "All,Basic,Off" }
 //   ]
 // }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH1dfQ=="
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH0seyJpZCI6InVwZCIsInQiOiJzZWxlY3QiLCJ4Ijo0OTAsInkiOjI5MCwidyI6MTcwLCJoIjo4NSwibGFiZWwiOiJUZWxlbWV0cnkiLCJvcHRpb25zIjoiQWxsLEJhc2ljLE9mZiJ9XX0="
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
@@ -544,6 +564,18 @@ function handleWidget(id: string, val: string) {
         dbg("speed -> " + driveSpeed)
     }
 
+    // Select: Telemetry — how much the robot reports back.
+    if (id == "upd") {
+        if (val == "Off") updLevel = UPD_OFF
+        else if (val == "Basic") updLevel = UPD_BASIC
+        else updLevel = UPD_ALL
+        // Re-announce the version on the way back up, since the label
+        // would otherwise stay blank from whatever was missed while
+        // silenced. Cheap, and it confirms the setting took effect.
+        if (updLevel != UPD_OFF) versionSent = false
+        dbg("telemetry -> " + val)
+    }
+
     // Select: Mode — Manual / Line / Avoid.
     if (id == "mode") {
         // Always stop first. Switching mode while the wheels are turning
@@ -644,7 +676,12 @@ function handleWidget(id: string, val: string) {
 function sendValue(id: string, val: string) {
     // btConnected as well as cfgSent — see the flag's declaration for
     // why writing to a dead UART is not merely wasteful but blocking.
-    if (btConnected && cfgSent) bluetooth.uartWriteLine("UPD " + id + " " + val)
+    if (!btConnected || !cfgSent) return
+    if (updLevel == UPD_OFF) return
+    // Basic keeps the uptime clock and the version label — the two that
+    // answer "is it alive?" and "what is flashed?" — and drops the rest.
+    if (updLevel == UPD_BASIC && id != "lbl_heartbeat" && id != "lbl_ver") return
+    bluetooth.uartWriteLine("UPD " + id + " " + val)
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1009,8 +1046,14 @@ basic.forever(function () {
     //      doubling to DIST_INTERVAL_MAX_MS while the sensor reports
     //      nothing, snapping back on the first good reading. The
     //      expensive case is exactly the uninformative one.
+    // Skip the reading entirely when nothing consumes it. At Basic or
+    // Off the gauge, graph and alert are all silenced, so outside Avoid
+    // mode the poll would cost its ~25-250ms purely to throw the result
+    // away. This turns the Telemetry selector into a genuine
+    // responsiveness control, not just a bandwidth one.
+    let distWanted = (updLevel == UPD_ALL) || driveMode == MODE_AVOID
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
-    if (now >= nextDistAt && !busyDriving) {
+    if (distWanted && now >= nextDistAt && !busyDriving) {
         nextDistAt = now + distInterval
         if (cfgSent) {
             let cm = maqueen.Ultrasonic()
