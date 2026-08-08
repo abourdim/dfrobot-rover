@@ -1558,7 +1558,19 @@ const bleSend = {
   // radio (confirmed root cause of the original dpad bug: only one
   // direction ever arrived). queue is drained ahead of pendingMsg.
   queue: [],
-  minInterval: 200,     // Minimum ms between writes for BLE stability
+  // Minimum ms between writes. Was 200, which was the single biggest
+  // source of control latency: EVERY message waits behind the previous
+  // one, and there is constant background traffic (the 1s link PING, the
+  // 300ms D-pad keepalive) occupying those slots — so a button press
+  // could sit here up to 200ms before it was even transmitted, on top of
+  // the radio's own latency.
+  //
+  // That 200ms was chosen defensively while writes were mysteriously
+  // failing, and the real cause of those failures turned out to be the
+  // 20-byte MTU truncation, which is fixed. A BLE connection interval is
+  // typically 7.5-30ms, so 60ms still leaves ample headroom while making
+  // the D-pad feel immediate. Raise it again if writes start failing.
+  minInterval: 60,
   lastSendTime: 0,      // Timestamp of last successful send
   retryCount: 0,        // Track consecutive failures
   maxRetries: 3         // Max retries before giving up on a message
@@ -6187,7 +6199,7 @@ function bindRuntimeWidget(el, w) {
         const nx = dx / maxDist;        // right positive
         const ny = -dy / maxDist;       // invert so up is positive (forward)
         // Send live position during drag. send()'s queue (bleSend) already
-        // does latest-value-wins coalescing at a 200ms minInterval, so this
+        // does latest-value-wins coalescing at bleSend.minInterval, so this
         // is safe to call on every pointermove without flooding BLE — it's
         // exactly the "continuous controls like joystick" case that queue
         // was built for. Without this, driving robots had to wait for
