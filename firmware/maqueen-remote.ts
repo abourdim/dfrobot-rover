@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v37"        scrolling at boot   — firmware version (check after every flash)
+ *    "v38"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v37"
+const FIRMWARE_VERSION = "v38"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -172,7 +172,7 @@ let btConnected = false
 //     { "id": "lbl_heartbeat", "t": "label",    "x": 190, "y": 250, "w": 260, "h": 90,  "label": "Heartbeat" }
 //   ]
 // }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6NjkwLCJ5IjoxOTAsInciOjE4MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifV19"
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH1dfQ=="
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
@@ -757,7 +757,14 @@ function uptimeString(totalSec: number): string {
 // So: poll briskly while the sensor is actually seeing something, and
 // back off hard once it stops, doubling up to DIST_INTERVAL_MAX_MS. A
 // single good reading snaps straight back to fast.
-const DIST_INTERVAL_MS = 700          // when the sensor is returning real distances
+// 400ms, lowered from 700 now that the ultrasonic is properly connected.
+// The cost of a poll depends entirely on whether an echo comes back:
+// pins.pulseIn returns AS SOON AS it does, but waits out the full 29ms
+// timeout when it does not — and Ultrasonic() then retries four more
+// times. A working sensor at ~30cm costs about 25ms; a disconnected one
+// costs ~250ms. Most of the freezing earlier was a loose connector
+// timing out over and over, not the polling itself.
+const DIST_INTERVAL_MS = 400          // when the sensor is returning real distances
 const DIST_INTERVAL_MAX_MS = 5000     // when it keeps reporting "no echo"
 let distInterval = DIST_INTERVAL_MS
 const DIST_MAX_CM = 200          // matches the gauge's max in CFG
@@ -1014,6 +1021,14 @@ basic.forever(function () {
             // where "no echo == far away" is the correct reading.
             if (cm > 0) {
                 sendValue("graph_dist", "" + cm)
+            }
+            // The gauge gets the MAPPED value: on a dial, "no echo"
+            // should read as a clear path (full scale), not as an
+            // obstacle against the bumper. The graph gets the raw value
+            // instead, so the two together still distinguish a dead
+            // sensor from an empty room.
+            if (reported >= 0) {
+                sendValue("gauge_dist", "" + reported)
             }
 
             // Obstacle alert, with hysteresis so it fires once on
