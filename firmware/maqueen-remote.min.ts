@@ -2,7 +2,7 @@
 // Generated from maqueen-remote.ts, which is the source of record.
 // Extensions needed in MakeCode: pxt-maqueen
 
-const FIRMWARE_VERSION = "v40"
+const FIRMWARE_VERSION = "v41"
 
 let debugEnabled = false
 let logQueue: string[] = []
@@ -361,7 +361,6 @@ function uptimeString(totalSec: number): string {
     if (m > 0) return pad2(m) + ":" + pad2(s)
     return pad2(s)
 }
-
 const DIST_INTERVAL_MS = 400
 const DIST_INTERVAL_MAX_MS = 5000
 let distInterval = DIST_INTERVAL_MS

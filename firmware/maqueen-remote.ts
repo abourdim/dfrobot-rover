@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v40"        scrolling at boot   — firmware version (check after every flash)
+ *    "v41"        scrolling at boot   — firmware version (check after every flash)
  *    ○            hollow ring         — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v40"
+const FIRMWARE_VERSION = "v41"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -181,15 +181,22 @@ let btConnected = false
 // {
 //   "title": "Maqueen Remote",
 //   "widgets": [
-//     { "id": "dpad_move",     "t": "dpad",     "x": 20,  "y": 40,  "w": 140, "h": 140, "label": "Drive", "model": "classic" },
-//     { "id": "btn_stop",      "t": "button",   "x": 190, "y": 20,  "w": 90,  "h": 90,  "label": "STOP" },
-//     { "id": "toggle_led_l",  "t": "toggle",   "x": 190, "y": 130, "w": 90,  "h": 90,  "label": "LED L" },
-//     { "id": "toggle_led_r",  "t": "toggle",   "x": 290, "y": 130, "w": 90,  "h": 90,  "label": "LED R" },
-//     { "id": "btn_buzz",      "t": "button",   "x": 290, "y": 20,  "w": 90,  "h": 90,  "label": "Buzz" },
-//     { "id": "slider_srv1",   "t": "slider",   "x": 400, "y": 20,  "w": 90,  "h": 180, "label": "Servo 1", "min": 0, "max": 180, "step": 1 },
-//     { "id": "slider_srv2",   "t": "slider",   "x": 500, "y": 20,  "w": 90,  "h": 180, "label": "Servo 2", "min": 0, "max": 180, "step": 1 },
-//     { "id": "graph_dist",    "t": "graph",    "x": 470, "y": 250, "w": 300, "h": 150, "label": "Distance cm", "model": "grid", "windowSec": 30, "series": 1 },
-//     { "id": "lbl_heartbeat", "t": "label",    "x": 190, "y": 250, "w": 260, "h": 90,  "label": "Heartbeat" }
+//     { "id": "slider_srv1", "t": "slider", "x": 30, "y": 55, "w": 70, "h": 200, "label": "Servo 1", "min": 0, "max": 180, "step": 1 },
+//     { "id": "slider_srv2", "t": "slider", "x": 140, "y": 55, "w": 70, "h": 200, "label": "Servo 2", "min": 0, "max": 180, "step": 1 },
+//     { "id": "dpad_move", "t": "dpad", "x": 260, "y": 55, "w": 175, "h": 175, "label": "Drive", "model": "classic" },
+//     { "id": "spd", "t": "slider", "x": 495, "y": 55, "w": 70, "h": 200, "label": "Speed", "min": 60, "max": 255, "step": 5 },
+//     { "id": "mode", "t": "select", "x": 35, "y": 290, "w": 160, "h": 85, "label": "Mode", "options": "Manual,Line,Avoid" },
+//     { "id": "btn_stop", "t": "button", "x": 255, "y": 285, "w": 100, "h": 105, "label": "STOP" },
+//     { "id": "btn_buzz", "t": "button", "x": 375, "y": 285, "w": 100, "h": 105, "label": "Buzz" },
+//     { "id": "lbl_heartbeat", "t": "label", "x": 55, "y": 400, "w": 220, "h": 80, "label": "Uptime" },
+//     { "id": "toggle_led_l", "t": "toggle", "x": 25, "y": 490, "w": 90, "h": 110, "label": "LED L" },
+//     { "id": "toggle_led_r", "t": "toggle", "x": 158, "y": 490, "w": 90, "h": 110, "label": "LED R" },
+//     { "id": "ln_l", "t": "led", "x": 285, "y": 500, "w": 70, "h": 90, "label": "Line L", "model": "dot", "colorOn": "#4ade80" },
+//     { "id": "ln_r", "t": "led", "x": 388, "y": 500, "w": 70, "h": 90, "label": "Line R", "model": "dot", "colorOn": "#4ade80" },
+//     { "id": "alert", "t": "notification", "x": 690, "y": 40, "w": 180, "h": 90, "label": "Alert" },
+//     { "id": "graph_dist", "t": "graph", "x": 580, "y": 425, "w": 380, "h": 175, "label": "Distance cm", "model": "grid", "windowSec": 30, "series": 1 },
+//     { "id": "lbl_ver", "t": "label", "x": 300, "y": 400, "w": 160, "h": 80, "label": "Firmware" },
+//     { "id": "gauge_dist", "t": "gauge", "x": 690, "y": 190, "w": 180, "h": 195, "label": "Distance", "min": 0, "max": 200, "units": "cm", "decimals": 0 }
 //   ]
 // }
 const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH1dfQ=="
@@ -780,43 +787,25 @@ function uptimeString(totalSec: number): string {
     if (m > 0) return pad2(m) + ":" + pad2(s)
     return pad2(s)
 }
-
-// Distance polling. 300ms is a compromise: fast enough to be useful for
-// spotting an obstacle, slow enough that the blocking echo wait and the
-// resulting UPD write do not crowd out drive commands on the radio.
-// Must stay well above the loop's own 100ms tick.
-// 800ms, NOT 300ms — and skipped entirely while driving in a manual or
-// line-following mode. maqueen.Ultrasonic() is far more expensive than
-// it looks: when there is no echo it retries readUlt() up to FOUR times
-// (see the library source), each one a blocking pulseIn that waits out
-// its full timeout. MakeCode fibers are cooperative, so while this loop
-// sits in pulseIn the BLE receive handler cannot run — and motors and
-// servos are both driven from there. Polling this at 300ms made the
-// robot feel unresponsive or dead to commands, and "no echo" is the
-// normal case for a robot pointing at open space, so it hit the
-// worst-case retry path almost every time.
-// Adaptive polling, because maqueen.Ultrasonic() is brutally expensive
-// in exactly the case that tells you nothing. Measured from the library
-// source, one readUlt() costs basic.pause(1) + basic.pause(20) +
-// pins.pulseIn(..., 500*58) — a 29ms timeout — so ~50ms per attempt.
-// With no echo it retries up to four more times: ~250ms per call, and
-// pulseIn BUSY-WAITS without yielding, so that is a hard stall of the
-// entire runtime, not just this loop.
+// Ultrasonic polling cadence.
 //
-// A robot pointing at open space returns "no echo" every time, so it
-// paid 250ms per poll forever. At the original 300ms interval that was
-// most of the robot's life spent frozen.
+// maqueen.Ultrasonic() is the most expensive call in this firmware, and
+// its cost depends entirely on whether an echo comes back. From the
+// library source, one readUlt() is basic.pause(1) + basic.pause(20) +
+// pins.pulseIn(..., 500*58) — a 29ms timeout. An echo returns almost at
+// once; no echo waits the timeout out, and Ultrasonic() then retries up
+// to four more times. So a working sensor at ~30cm costs ~25ms, while a
+// disconnected or out-of-range one costs ~250ms — and pulseIn BUSY-WAITS
+// without yielding, freezing the whole runtime rather than just this
+// loop. Polling this carelessly is what made the robot feel frozen.
 //
-// So: poll briskly while the sensor is actually seeing something, and
-// back off hard once it stops, doubling up to DIST_INTERVAL_MAX_MS. A
-// single good reading snaps straight back to fast.
-// 400ms, lowered from 700 now that the ultrasonic is properly connected.
-// The cost of a poll depends entirely on whether an echo comes back:
-// pins.pulseIn returns AS SOON AS it does, but waits out the full 29ms
-// timeout when it does not — and Ultrasonic() then retries four more
-// times. A working sensor at ~30cm costs about 25ms; a disconnected one
-// costs ~250ms. Most of the freezing earlier was a loose connector
-// timing out over and over, not the polling itself.
+// Two mitigations, both still earning their place:
+//   1. Skipped while the wheels are turning (except in Avoid, where the
+//      distance IS the input). A stall nobody notices while parked is
+//      ruinous mid-drive.
+//   2. Adaptive backoff — brisk while real distances come back, doubling
+//      to DIST_INTERVAL_MAX_MS while the sensor reports nothing. The
+//      expensive case is exactly the uninformative one.
 const DIST_INTERVAL_MS = 400          // when the sensor is returning real distances
 const DIST_INTERVAL_MAX_MS = 5000     // when it keeps reporting "no echo"
 let distInterval = DIST_INTERVAL_MS
