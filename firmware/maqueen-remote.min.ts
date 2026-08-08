@@ -2,7 +2,7 @@
 // Generated from maqueen-remote.ts, which is the source of record.
 // Extensions needed in MakeCode: pxt-maqueen
 
-const FIRMWARE_VERSION = "v39"
+const FIRMWARE_VERSION = "v40"
 
 let debugEnabled = false
 let logQueue: string[] = []
@@ -16,12 +16,19 @@ function dbg(msg: string) {
 bluetooth.startUartService()
 let cfgSent = false
 
+let lastRxAt = 0
+let linkLostHandled = false
+const LINK_TIMEOUT_MS = 3000
+
 let btConnected = false
 
 const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH1dfQ=="
 
 bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () {
     let cmd = bluetooth.uartReadUntil(serial.delimiters(Delimiters.NewLine))
+
+    lastRxAt = input.runningTime()
+    linkLostHandled = false
 
     if (cmd == "GETCFG") {
         dbg("GETCFG received (firmware " + FIRMWARE_VERSION + "), sending layout...")
@@ -305,7 +312,9 @@ bluetooth.onBluetoothConnected(function () {
     dbg("BLE connected")
 })
 
-bluetooth.onBluetoothDisconnected(function () {
+function handleLinkLost() {
+    if (linkLostHandled) return
+    linkLostHandled = true
     btConnected = false
     cfgSent = false
     logQueue = []
@@ -328,7 +337,12 @@ bluetooth.onBluetoothDisconnected(function () {
     driveMode = MODE_MANUAL
     avoidPhase = 0
     avoidUntil = 0
-    dbg("BLE disconnected, motors stopped")
+    dbg("link lost, motors stopped")
+}
+
+bluetooth.onBluetoothDisconnected(function () {
+    dbg("BLE disconnect event")
+    handleLinkLost()
 })
 
 const HEARTBEAT_INTERVAL_MS = 1000
@@ -416,6 +430,10 @@ basic.forever(function () {
         } else {
             showDriveDebug(pendingDebugL, pendingDebugR)
         }
+    }
+
+    if (cfgSent && !linkLostHandled && now - lastRxAt > LINK_TIMEOUT_MS) {
+        handleLinkLost()
     }
 
     if (!btConnected) {

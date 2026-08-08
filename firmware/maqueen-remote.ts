@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v39"        scrolling at boot   — firmware version (check after every flash)
+ *    "v40"        scrolling at boot   — firmware version (check after every flash)
  *    ○            hollow ring         — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v39"
+const FIRMWARE_VERSION = "v40"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -141,6 +141,26 @@ function dbg(msg: string) {
 bluetooth.startUartService()
 let cfgSent = false
 
+// ── LINK LOSS DETECTION BY SILENCE ───────────────────────────────
+// bluetooth.onBluetoothDisconnected does NOT fire on this board. Tested
+// directly: an explicit gatt.disconnect() from the app never produced
+// the ✗, so every safety behaviour hanging off that event — stopping the
+// motors when the link drops — has never actually run. A robot driving
+// when the connection died would have kept going.
+//
+// onBluetoothConnected DOES fire (the heartbeat is gated on btConnected
+// and it counts), so it is specifically the disconnect event that is
+// unreliable. Rather than depend on it, the link is now judged by
+// traffic: the app pings once a second, lastRxAt is stamped on ANY line
+// received, and silence past LINK_TIMEOUT_MS means the peer is gone.
+//
+// 3s allows two missed pings before declaring the link dead, which is
+// tolerant of a momentarily busy radio without leaving a runaway robot
+// driving for long.
+let lastRxAt = 0
+let linkLostHandled = false
+const LINK_TIMEOUT_MS = 3000
+
 // True only between onBluetoothConnected and onBluetoothDisconnected.
 // Every bluetooth.uartWriteLine() in this file is gated on it, because
 // writing to a UART with no peer BLOCKS THE CALLING FIBER once the
@@ -180,6 +200,12 @@ const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJ
 
 bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () {
     let cmd = bluetooth.uartReadUntil(serial.delimiters(Delimiters.NewLine))
+
+    // Stamp on EVERY line, whatever it is — including the app's PING,
+    // which exists purely to keep this fresh while nobody is driving.
+    // This is what the link-loss timeout below measures against.
+    lastRxAt = input.runningTime()
+    linkLostHandled = false
 
     if (cmd == "GETCFG") {
         dbg("GETCFG received (firmware " + FIRMWARE_VERSION + "), sending layout...")
@@ -643,9 +669,16 @@ bluetooth.onBluetoothConnected(function () {
     dbg("BLE connected")
 })
 
-// Safety: kill motors if the BLE link drops so the robot doesn't
+// Safety: kill motors when the link goes away, so the robot does not
 // keep driving on the last command it received.
-bluetooth.onBluetoothDisconnected(function () {
+//
+// Called from TWO places: the BLE disconnect event (which does not fire
+// on this board, but costs nothing to keep wired up in case another one
+// behaves) and the silence timeout in the forever loop, which is what
+// actually catches it here. Idempotent — whichever arrives first wins.
+function handleLinkLost() {
+    if (linkLostHandled) return
+    linkLostHandled = true
     // FIRST: stop anything else from touching the radio. Every write
     // after this point would block on a dead link and wedge the BLE
     // stack, which is what made the next connect hang in service
@@ -692,7 +725,15 @@ bluetooth.onBluetoothDisconnected(function () {
     driveMode = MODE_MANUAL
     avoidPhase = 0
     avoidUntil = 0
-    dbg("BLE disconnected, motors stopped")
+    dbg("link lost, motors stopped")
+}
+
+// Kept wired up even though it does not fire on this board — it costs
+// nothing, and handleLinkLost() is idempotent so it cannot double-run
+// with the silence timeout.
+bluetooth.onBluetoothDisconnected(function () {
+    dbg("BLE disconnect event")
+    handleLinkLost()
 })
 
 // ═══════════════════════════════════════════════════════════════
@@ -867,6 +908,17 @@ basic.forever(function () {
         } else {
             showDriveDebug(pendingDebugL, pendingDebugR)
         }
+    }
+
+    // ── LINK LOSS BY SILENCE ─────────────────────────────────────
+    // The real disconnect detector on this board, since the BLE event
+    // never fires. The app pings once a second, so silence past
+    // LINK_TIMEOUT_MS means the peer is gone — a closed tab, a reload,
+    // a crashed browser, or simply walking out of range. Checked BEFORE
+    // the radio gate below, because btConnected is set by an event that
+    // is exactly the thing we cannot trust here.
+    if (cfgSent && !linkLostHandled && now - lastRxAt > LINK_TIMEOUT_MS) {
+        handleLinkLost()
     }
 
     // Everything below talks to the radio, so it is all gated on

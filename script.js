@@ -1715,6 +1715,31 @@ function clearAllDpadKeepalives() {
   dpadKeepalives.clear();
 }
 
+// Link-liveness ping. The micro:bit's bluetooth.onBluetoothDisconnected
+// event does NOT fire on this hardware — verified by an explicit
+// gatt.disconnect() from here never producing the firmware's ✗ — so the
+// robot had no way to know the link had gone. Its motors would keep
+// running on the last command after a closed tab, a reload, a crash, or
+// walking out of range.
+//
+// The firmware now judges the link by traffic instead, so this keeps a
+// trickle flowing while nobody is driving. Sent through the coalescing
+// slot rather than the FIFO: a dropped ping is harmless, the next one is
+// a second away, and it must never delay a real command.
+let pingTimer = null;
+const PING_INTERVAL_MS = 1000;
+function startLinkPing() {
+  clearInterval(pingTimer);
+  pingTimer = setInterval(() => {
+    if (!state.ble.connected) { clearInterval(pingTimer); pingTimer = null; return; }
+    send('PING');
+  }, PING_INTERVAL_MS);
+}
+function stopLinkPing() {
+  clearInterval(pingTimer);
+  pingTimer = null;
+}
+
 // One-click Demo - creates full showcase with ALL widgets
 function showDemo() {
   // Create a demo with ALL 16 widget types - complete showcase!
@@ -5217,6 +5242,8 @@ async function connectBle() {
     showLoading(tr('loadingTitle'), tr('loadingRequesting'));
     cfgAttempts = 0;
     setTimeout(requestConfig, 500);
+    // Keeps the firmware's link-loss timeout fed while nobody is driving.
+    startLinkPing();
   } catch (err) {
     console.error('[BLE] Connection error:', err);
     // Tear the half-built connection down. Without this the GATT server
@@ -5321,6 +5348,7 @@ function onDisconnect() {
   // A held direction at drop time would otherwise leave its keepalive
   // running and resume clobbering the send slot on the next connect.
   clearAllDpadKeepalives();
+  stopLinkPing();
   cancelConfigRetry();
   bleSend.queue.length = 0;
   bleSend.pendingMsg = null;
