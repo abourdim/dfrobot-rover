@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v1.4';
+const APP_VERSION = 'v2.0';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -640,6 +640,8 @@ const I18N = {
     propsEmptyHint: "Tap any widget on the canvas to change its color, label, and size.",
     backToBuild: "← Back to Build",
     arrange: "📐 Arrange", arrangeDone: "✓ Done",
+    reloadConfig: "↻ Reload Config",
+    reloadConfigTitle: "Clear this device's cached config and fetch it again from the micro:bit",
     fullscreen: "⛶ Fullscreen",
     arrangeHint: '👆 Drag widgets to rearrange • Tap "Done" when finished',
     connect: "Tap to Connect!", connected: "Connected! 🎉",
@@ -658,7 +660,7 @@ const I18N = {
     },
     loadingTitle: "🧩 Loading your remote...",
     loadingSub: "Getting layout from micro:bit",
-    loadingRequesting: "Requesting layout (GETCFG)…",
+    loadingRequesting: "Checking layout version…",
     loadingReceiving: "Receiving layout…",
     loadingDecoding: "Decoding layout…",
     loadingReady: "Ready!",
@@ -713,6 +715,8 @@ const I18N = {
       connectionFailed: "Connection failed",
       disconnected: "Disconnected",
       remoteLoaded: "Remote loaded!",
+      configReloading: "Reloading fresh config from micro:bit…",
+      configCacheCleared: "Device config cache cleared. Connect to fetch it again.",
       configError: "Config error",
       editInBuildOffer: "📥 Edit this layout in Build?",
       editInBuildBtn: "Edit in Build",
@@ -753,6 +757,8 @@ const I18N = {
     propsEmptyHint: "Touche un widget sur le tableau pour changer sa couleur, son texte et sa taille.",
     backToBuild: "← Retour à la Construction",
     arrange: "📐 Organiser", arrangeDone: "✓ Terminé",
+    reloadConfig: "↻ Recharger config",
+    reloadConfigTitle: "Effacer la configuration en cache de cet appareil et la relire depuis le micro:bit",
     fullscreen: "⛶ Plein écran",
     arrangeHint: '👆 Glisse les widgets pour les réorganiser • Appuie sur « Terminé » à la fin',
     connect: "Connecter!", connected: "Connecté! 🎉",
@@ -771,7 +777,7 @@ const I18N = {
     },
     loadingTitle: "🧩 Chargement de ta télécommande...",
     loadingSub: "Récupération depuis le micro:bit",
-    loadingRequesting: "Demande de la disposition (GETCFG)…",
+    loadingRequesting: "Vérification de la version de la disposition…",
     loadingReceiving: "Réception de la disposition…",
     loadingDecoding: "Décodage de la disposition…",
     loadingReady: "Prêt !",
@@ -826,6 +832,8 @@ const I18N = {
       connectionFailed: "Échec de connexion",
       disconnected: "Déconnecté",
       remoteLoaded: "Télécommande chargée !",
+      configReloading: "Rechargement de la configuration depuis le micro:bit…",
+      configCacheCleared: "Cache de configuration effacé. Connecte-toi pour la recharger.",
       configError: "Erreur de configuration",
       editInBuildOffer: "📥 Modifier cette disposition dans Construire ?",
       editInBuildBtn: "Modifier",
@@ -866,6 +874,8 @@ const I18N = {
     propsEmptyHint: "اضغط على أي أداة في اللوحة لتغيير لونها ونصها وحجمها.",
     backToBuild: "→ العودة للبناء",
     arrange: "📐 ترتيب", arrangeDone: "✓ تم",
+    reloadConfig: "↻ إعادة تحميل الإعداد",
+    reloadConfigTitle: "مسح إعداد هذا الجهاز من الذاكرة المؤقتة وقراءته من micro:bit من جديد",
     fullscreen: "⛶ ملء الشاشة",
     arrangeHint: '👆 اسحب الأدوات لإعادة ترتيبها • اضغط "تم" عند الانتهاء',
     connect: "اضغط للاتصال!", connected: "متصل! 🎉",
@@ -884,7 +894,7 @@ const I18N = {
     },
     loadingTitle: "🧩 جارٍ تحميل جهاز التحكم...",
     loadingSub: "الحصول على التخطيط من micro:bit",
-    loadingRequesting: "جارٍ طلب التخطيط (GETCFG)…",
+    loadingRequesting: "جارٍ التحقق من إصدار التخطيط…",
     loadingReceiving: "جارٍ استقبال التخطيط…",
     loadingDecoding: "جارٍ فك ترميز التخطيط…",
     loadingReady: "جاهز!",
@@ -939,6 +949,8 @@ const I18N = {
       connectionFailed: "فشل الاتصال",
       disconnected: "تم قطع الاتصال",
       remoteLoaded: "تم تحميل جهاز التحكم!",
+      configReloading: "جارٍ إعادة تحميل الإعداد من micro:bit…",
+      configCacheCleared: "تم مسح إعداد الجهاز من الذاكرة المؤقتة. اتصل لتحميله من جديد.",
       configError: "خطأ في الإعدادات",
       editInBuildOffer: "📥 تعديل هذا التخطيط في وضع البناء؟",
       editInBuildBtn: "تعديل",
@@ -1030,6 +1042,11 @@ function setLang(lang){
   // Runtime connect screen
   const ct = document.querySelector(".connect-text"); if (ct) ct.textContent = t.runtimeConnectText;
   const cb = $("#connectBtn"); if (cb) cb.textContent = t.runtimeConnectBtn;
+  const rcb = $("#reloadConfigBtn");
+  if (rcb) {
+    rcb.textContent = t.reloadConfig || "↻ Reload Config";
+    rcb.title = t.reloadConfigTitle || "Clear cached device config and reload it from the micro:bit";
+  }
 
   // Subtitle (not the whole .hero-subtitle — that would wipe out the
   // version badge span sitting next to it)
@@ -1901,6 +1918,8 @@ function showDemo() {
   
   // Show fullscreen button in demo mode
   const fullscreenBtn = $('#fullscreenBtn');
+  const reloadConfigBtn = $('#reloadConfigBtn');
+  if (reloadConfigBtn) reloadConfigBtn.classList.add('visible');
   if (fullscreenBtn) fullscreenBtn.classList.add('visible');
   
   // Show runtime content
@@ -2489,6 +2508,9 @@ try{ placeToolbarWhereHintWas(); }catch(e){}
   // Arrange mode button
   const arrangeBtn = $('#arrangeModeBtn');
   if (arrangeBtn) arrangeBtn.onclick = toggleArrangeMode;
+
+  const reloadConfigBtn = $('#reloadConfigBtn');
+  if (reloadConfigBtn) reloadConfigBtn.onclick = forceReloadRemoteConfig;
   
   // Auto-save on title change
   const titleInput = $('#titleInput');
@@ -5334,10 +5356,16 @@ async function connectBle() {
     updateBleUI();
     toast(tr('toast.connected'), 'success');
     
-    console.log('[BLE] Waiting 500ms then sending GETCFG...');
+    // v47: do NOT download the same ~2 KB layout on every reconnect.
+    // First ask for a tiny config revision. If it matches the cached layout
+    // for this exact BluetoothDevice, the app is ready after one short line.
+    // Only a missing/mismatched revision falls back to the full GETCFG stream.
+    console.log('[BLE] Checking config version...');
     showLoading(tr('loadingTitle'), tr('loadingRequesting'));
     cfgAttempts = 0;
-    setTimeout(requestConfig, 500);
+    cfgVersionAttempts = 0;
+    pendingCfgVersion = '';
+    setTimeout(requestConfigVersion, 150);
     // Keeps the firmware's link-loss timeout fed while nobody is driving.
     startLinkPing();
   } catch (err) {
@@ -5400,17 +5428,33 @@ let disconnectHandled = false;
 // When the last teardown happened, so a reconnect can wait for the BLE
 // stack to settle instead of racing it.
 let lastDisconnectAt = 0;
-const BLE_SETTLE_MS = 400;
+// v46 firmware software-resets its BLE stack after a disconnect. Give the
+// peripheral time to reboot/advertise cleanly before opening the next GATT.
+const BLE_SETTLE_MS = 1800;
 
 // Explicit hang-up from the app. Dropping the GATT link makes the
 // firmware's onBluetoothDisconnected() fire, which stops the motors and
 // paints ✗ on the LED matrix. onDisconnect() is called directly rather
 // than waiting for the event so the UI updates immediately; whichever
 // path arrives second is absorbed by the disconnectHandled guard.
-function disconnectBle() {
+async function disconnectBle() {
   console.log('[BLE] Disconnect requested by user');
+  // v46: tell firmware we are intentionally leaving BEFORE dropping GATT.
+  // Firmware stops the motors, shows X, and software-resets its BLE stack so
+  // the next connection does not require a physical micro:bit reset.
+  const device = state.ble.device;
+  stopLinkPing();
+  clearAllDpadKeepalives();
   try {
-    if (state.ble.device?.gatt?.connected) state.ble.device.gatt.disconnect();
+    if (device?.gatt?.connected && state.ble.writeChar) {
+      await bleWrite('BYE');
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+  } catch (err) {
+    console.warn('[BLE] BYE handshake failed:', err?.message || err);
+  }
+  try {
+    if (device?.gatt?.connected) device.gatt.disconnect();
   } catch (err) {
     console.warn('[BLE] disconnect() threw:', err.message);
   }
@@ -5441,11 +5485,14 @@ function onDisconnect() {
     state.ble.notifyChar.removeEventListener('characteristicvaluechanged', onNotify);
   }
   state.ble = { device:null, server:null, service:null, notifyChar:null, writeChar:null, connected:false };
+  forceFullConfigAfterVersion = false;
   // A held direction at drop time would otherwise leave its keepalive
   // running and resume clobbering the send slot on the next connect.
   clearAllDpadKeepalives();
   stopLinkPing();
   cancelConfigRetry();
+  cancelConfigVersionRetry();
+  pendingCfgVersion = '';
   bleSend.queue.length = 0;
   bleSend.pendingMsg = null;
   updateBleUI();
@@ -5458,6 +5505,11 @@ function updateBleUI() {
   const btn = $('#bleBtn');
   const arrangeBtn = $('#arrangeModeBtn');
   const fullscreenBtn = $('#fullscreenBtn');
+  const reloadConfigBtn = $('#reloadConfigBtn');
+  // Keep this utility available in Play mode even while disconnected:
+  // disconnected click clears remote-layout caches so the next connect
+  // cannot take the CFGVER/CFGOK cache-hit path.
+  if (reloadConfigBtn) reloadConfigBtn.classList.add('visible');
   if (state.ble.connected) {
     btn.classList.add('connected');
     btn.querySelector('span:last-child').textContent = (I18N[state.lang]||I18N.en).connected;
@@ -5503,21 +5555,203 @@ function updateBleUI() {
 let configBuffer = '';
 var configChunks = 0;
 
-// GETCFG handshake with retry. The firmware answers GETCFG within
-// ~70ms (two 35ms paces before the first chunk), so if no CFGBEGIN has
-// arrived after CFG_RETRY_MS the request itself was lost — not slow.
-// Without a retry there was no recovery path at all: one dropped
-// GETCFG left the loader sitting at 0% until the user clicked Connect
-// again. Sent via sendReliable() so it goes through the FIFO and can
-// never be overwritten by coalesced traffic (keepalives, sliders).
+// ═══════════════════════════════════════════════════════════════
+// ⚡ v47 CONFIG REVISION CACHE
+// ═══════════════════════════════════════════════════════════════
+//
+// v46 made reconnect reliable, but every session still paid for the exact
+// same CFGBEGIN + ~125 CFG chunks + CFGEND transfer. That is unnecessary:
+// the remote layout changes rarely, while reconnecting happens often.
+//
+// New handshake:
+//   App -> robot     GETCFGVER
+//   Robot -> app     CFGVER 56caff8f        (tiny, one notification)
+//   cache matches -> App -> robot CFGOK 56caff8f
+//   cache differs  -> App -> robot GETCFG   (full transfer only then)
+//
+// The cache is keyed by BluetoothDevice.id, not just the display name, so two
+// robots named "BBC micro:bit" do not accidentally share layouts. The robot
+// remains the source of truth: a different revision automatically invalidates
+// the cache. If localStorage is unavailable/corrupt, we simply fall back to
+// GETCFG — correctness first, speed second.
+const REMOTE_CFG_CACHE_PREFIX = 'maqueen_remote_cfg_v47:';
+let pendingCfgVersion = '';
+
+function remoteCfgCacheKey() {
+  const d = state.ble.device;
+  if (!d) return null;
+  return REMOTE_CFG_CACHE_PREFIX + String(d.id || d.name || 'unknown');
+}
+
+function loadCachedRemoteConfig(version) {
+  if (!version) return null;
+  const key = remoteCfgCacheKey();
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const rec = JSON.parse(raw);
+    if (!rec || rec.version !== version || !rec.config || !Array.isArray(rec.config.widgets)) {
+      return null;
+    }
+    return rec.config;
+  } catch (e) {
+    console.warn('[BLE] Config cache read failed:', e);
+    return null;
+  }
+}
+
+function saveCachedRemoteConfig(version, config) {
+  if (!version || !config || !Array.isArray(config.widgets)) return;
+  const key = remoteCfgCacheKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      version,
+      config,
+      savedAt: Date.now()
+    }));
+    console.log('[BLE] Cached remote config revision', version);
+  } catch (e) {
+    console.warn('[BLE] Config cache write failed:', e);
+  }
+}
+
+// v48.3: explicit cache bypass / hard config refresh, always visible in header.
+// The robot remains the source of truth; this clears only the remote-layout
+// cache, not language/theme/projects or any other browser settings.
+function clearCurrentRemoteConfigCache() {
+  const key = remoteCfgCacheKey();
+  if (!key) return false;
+  try {
+    localStorage.removeItem(key);
+    console.log('[BLE] Cleared remote config cache:', key);
+    return true;
+  } catch (e) {
+    console.warn('[BLE] Config cache clear failed:', e);
+    return false;
+  }
+}
+
+function clearAllRemoteConfigCaches() {
+  let removed = 0;
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(REMOTE_CFG_CACHE_PREFIX)) keys.push(key);
+    }
+    keys.forEach(key => { localStorage.removeItem(key); removed++; });
+    console.log('[BLE] Cleared', removed, 'remote config cache record(s)');
+  } catch (e) {
+    console.warn('[BLE] Remote config cache clear failed:', e);
+  }
+  return removed;
+}
+
+// Set only when we must learn CFGVER first but still want a full GETCFG.
+let forceFullConfigAfterVersion = false;
+
+function forceReloadRemoteConfig() {
+  // When disconnected there is no BluetoothDevice.id in state. Clear only
+  // remote-layout cache records; the next connection must therefore GETCFG.
+  if (!state.ble.connected) {
+    // v48.3: this button is a real one-step hard refresh. Clearing the cache
+    // while disconnected used to leave the user staring at an empty Build
+    // screen with no obvious next action. Because this function runs directly
+    // from the button click, requestDevice() still has browser user activation.
+    // After the user selects the micro:bit there can be no CFGVER cache hit, so
+    // the normal connect handshake must fall through to a full GETCFG.
+    clearAllRemoteConfigCaches();
+    toast(tr('toast.configCacheCleared'), 'success');
+    return connectBle();
+  }
+
+  // Preserve the revision we already learned this session so the freshly
+  // downloaded CFG can immediately be cached again under the same revision.
+  // If revision is unknown (e.g. older/odd firmware), force the version probe
+  // first and bypass its normal cache-hit path exactly once.
+  clearCurrentRemoteConfigCache();
+  cancelConfigVersionRetry();
+  cancelConfigRetry();
+  state.rxBuffer = '';
+  configBuffer = '';
+  configChunks = 0;
+  cfgAttempts = 0;
+  cfgVersionAttempts = 0;
+
+  state._allowLoadingOverlay = true;
+  showLoading(tr('loadingTitle'), tr('loadingReceiving'));
+  setLoadingProgress(5, tr('loadingRequesting'));
+  toast(tr('toast.configReloading'), 'success');
+
+  if (pendingCfgVersion) {
+    // True hard refresh: bypass cache/version decision and ask the firmware
+    // for CFGBEGIN/CFG/CFGEND immediately.
+    forceFullConfigAfterVersion = false;
+    requestConfig();
+  } else {
+    forceFullConfigAfterVersion = true;
+    requestConfigVersion();
+  }
+}
+
+// Shared success path for a freshly downloaded config and a cache hit.
+// Cache hits deliberately skip the "Edit in Build" banner: reconnecting should
+// feel instant and quiet, not repeat UI meant for a newly discovered layout.
+function activateRemoteConfig(config, fromCache = false) {
+  state.config = config;
+  if (state.config?.widgets) state.config.widgets.forEach(applyWidgetDefaults);
+  console.log(fromCache ? '[BLE] Config restored from cache:' : '[BLE] Config decoded:', state.config);
+  renderRuntime();
+  setLoadingProgress(100, tr('loadingReady'));
+  state._allowLoadingOverlay = false;
+  hideLoading();
+  toast(tr('toast.remoteLoaded'), 'success');
+  switchTab('runtime', { skipFullscreen: true, skipConfigRebuild: true });
+  if (!fromCache) offerLoadCfgIntoBuild(state.config);
+}
+
+// Fast revision probe. Three short retries cover a lost first UART packet.
+// If the firmware is older than v47 and never understands GETCFGVER, fall back
+// to the existing GETCFG path so the app remains backwards-compatible.
+let cfgVersionRetryTimer = null;
+let cfgVersionAttempts = 0;
+const CFGVER_RETRY_MS = 900;
+const CFGVER_MAX_ATTEMPTS = 3;
+
+function requestConfigVersion() {
+  if (!state.ble.connected) {
+    console.warn('[BLE] requestConfigVersion skipped — not connected');
+    return;
+  }
+  cfgVersionAttempts++;
+  console.log('[BLE] Sending GETCFGVER (attempt ' + cfgVersionAttempts + ')');
+  sendReliable('GETCFGVER');
+  clearTimeout(cfgVersionRetryTimer);
+  cfgVersionRetryTimer = setTimeout(() => {
+    if (!state.ble.connected) return;
+    if (cfgVersionAttempts >= CFGVER_MAX_ATTEMPTS) {
+      console.warn('[BLE] No CFGVER reply; falling back to full GETCFG');
+      pendingCfgVersion = '';
+      cfgAttempts = 0;
+      requestConfig();
+      return;
+    }
+    requestConfigVersion();
+  }, CFGVER_RETRY_MS);
+}
+
+function cancelConfigVersionRetry() {
+  clearTimeout(cfgVersionRetryTimer);
+  cfgVersionRetryTimer = null;
+}
+
+// Full config transfer is now the fallback, not the default reconnect path.
+// It is still retained for first connect, changed layouts, cleared browser
+// cache, corrupted cache, and older firmware.
 let cfgRetryTimer = null;
 let cfgAttempts = 0;
-// Must comfortably exceed the transfer itself, not just the firmware's
-// ~70ms reply latency: the config is 56 chunks paced at 35ms, so a full
-// CFGBEGIN..CFGEND run takes ~2s. At 1500ms a retry could fire in the
-// MIDDLE of a perfectly healthy transfer, reset configBuffer, and make
-// the firmware start a second transfer that interleaves with the first
-// — turning a slow-but-working connect into corrupted base64.
 const CFG_RETRY_MS = 3000;
 const CFG_MAX_ATTEMPTS = 4;
 
@@ -5526,6 +5760,7 @@ function requestConfig() {
     console.warn('[BLE] requestConfig skipped — not connected');
     return;
   }
+  cancelConfigVersionRetry();
   cfgAttempts++;
   state.rxBuffer = '';
   configBuffer = '';
@@ -5550,6 +5785,7 @@ function cancelConfigRetry() {
   clearTimeout(cfgRetryTimer);
   cfgRetryTimer = null;
 }
+
 function onNotify(event) {
   const value = event.target.value;
   let str = '';
@@ -5569,7 +5805,36 @@ function onNotify(event) {
 
 function processLine(line) {
   console.log('[BLE] Processing line:', line);
-  if (line.startsWith('CFGBEGIN')) {
+
+  if (line.startsWith('CFGVER ')) {
+    cancelConfigVersionRetry();
+    const version = line.substring(7).trim();
+    pendingCfgVersion = version;
+    console.log('[BLE] Robot config revision:', version);
+
+    if (forceFullConfigAfterVersion) {
+      console.log('[BLE] Forced refresh requested — bypassing cache and sending GETCFG');
+      forceFullConfigAfterVersion = false;
+      cfgAttempts = 0;
+      requestConfig();
+      return;
+    }
+
+    const cached = loadCachedRemoteConfig(version);
+    if (cached) {
+      console.log('[BLE] Config revision unchanged — skipping GETCFG');
+      activateRemoteConfig(cached, true);
+      // This ACK is important: firmware gates autonomous modes + telemetry on
+      // cfgSent/config-ready. A cache hit must advance that state even though
+      // no CFGBEGIN/CFG/CFGEND stream occurred this session.
+      sendReliable('CFGOK ' + version);
+    } else {
+      console.log('[BLE] No matching cache — downloading layout once');
+      cfgAttempts = 0;
+      requestConfig();
+    }
+  }
+  else if (line.startsWith('CFGBEGIN')) {
     console.log('[BLE] Config begin');
     cancelConfigRetry();   // firmware answered — stop the retry timer
     configBuffer = '';
@@ -5587,25 +5852,16 @@ function processLine(line) {
   }
   else if (line === 'CFGEND') {
     console.log('[BLE] Config end, decoding...');
+    cancelConfigRetry();
     setLoadingProgress(96, tr('loadingDecoding'));
-    try { 
+    try {
       // Unicode-safe base64 decoding (handles emojis!)
-      state.config = JSON.parse(decodeURIComponent(escape(atob(configBuffer))));
-      if (state.config?.widgets) state.config.widgets.forEach(applyWidgetDefaults); 
-      console.log('[BLE] Config decoded:', state.config);
-      renderRuntime();
-      setLoadingProgress(100, tr('loadingReady'));
-      setTimeout(hideLoading, 250);
-      state._allowLoadingOverlay = false;
-      hideLoading();
-      toast(tr('toast.remoteLoaded'), 'success');
-      // Jump straight to the live controls once a config loads successfully
-      // — no reason to leave the user staring at the Build tab. Not
-      // fullscreen, just the normal Play view. (The Play tab's actual
-      // data-tab value is "runtime", not "play" — switchTab()'s own tab-
-      // highlighting keys off that exact string.)
-      switchTab('runtime', { skipFullscreen: true, skipConfigRebuild: true });
-      offerLoadCfgIntoBuild(state.config);
+      const decodedConfig = JSON.parse(decodeURIComponent(escape(atob(configBuffer))));
+      // CFGVER was received before GETCFG in v47. Save only after the full
+      // stream parses successfully, so a partial/corrupt transfer can never
+      // poison future reconnects.
+      saveCachedRemoteConfig(pendingCfgVersion, decodedConfig);
+      activateRemoteConfig(decodedConfig, false);
     }
     catch(e) { console.error('[BLE] Config parse error:', e); hideLoading();
       toast(tr('toast.configError'), 'error'); }
@@ -5664,7 +5920,7 @@ function renderRuntime() {
   cfg.widgets.forEach(w => {
     applyWidgetDefaults(w);
     if (w.t === 'graph') drawGraphWidget(w);
-    if (w.t === 'gauge') updateGaugeWidget(w, state.values[w.id] || '0');
+    if (w.t === 'gauge') updateGaugeWidget(w, getRuntimeWidgetValue(w));
   });
   
   // Re-apply arrange mode if it was active
@@ -5988,10 +6244,38 @@ function syncRuntimeToBuild() {
 }
 
 
+
+// v48.1 — CONFIG-NATIVE GAUGE LINKING
+// A gauge may declare `source:"slider_id"` in the MakeCode-delivered CFG.
+// The web app does NOT create a second gauge. It only mirrors that source
+// value into the real configured gauge for instant visual feedback; firmware
+// UPD packets remain authoritative and keep other clients compatible too.
+function getRuntimeWidgetValue(w) {
+  if (Object.prototype.hasOwnProperty.call(state.values, w.id)) return String(state.values[w.id]);
+  if (w.t === 'gauge' && w.source) {
+    if (Object.prototype.hasOwnProperty.call(state.values, w.source)) return String(state.values[w.source]);
+    const src = state.config?.widgets?.find(x => x.id === w.source);
+    if (src && src.value !== undefined) return String(src.value);
+  }
+  if (w.value !== undefined) return String(w.value);
+  return '0';
+}
+
+function mirrorConfiguredGaugeSources(sourceId, value) {
+  if (!state.config?.widgets) return;
+  const text = String(value);
+  state.config.widgets.forEach(g => {
+    if (g.t !== 'gauge' || g.source !== sourceId) return;
+    state.values[g.id] = text;
+    const gaugeEl = document.querySelector(`.rt-widget[data-id="${g.id}"]`);
+    if (gaugeEl) updateGaugeWidget(g, text);
+  });
+}
+
 function createRuntimeWidget(w) {
-  const val = esc(state.values[w.id] || '0');
+  const rawVal = getRuntimeWidgetValue(w);
+  const val = esc(rawVal);
   const label = esc(w.label || w.t);
-  const rawVal = state.values[w.id] || '0';
   const model = (w.model || '').trim();
 
   switch (w.t) {
@@ -6007,13 +6291,17 @@ function createRuntimeWidget(w) {
       const min = (w.min ?? 0);
       const max = (w.max ?? 100);
       const step = (w.step ?? 1);
-      const clamped = Math.max(min, Math.min(max, parseFloat(rawVal) || min));
+      const numericRaw = parseFloat(rawVal);
+      const numericVal = Number.isFinite(numericRaw) ? numericRaw : min;
+      const clamped = Math.max(min, Math.min(max, numericVal));
       const isVertical = (w.h || 100) > (w.w || 100);
       const orientClass = isVertical ? ' vertical' : '';
       return `<div class="rt-slider-wrap${orientClass}">
         <div class="rt-slider-label">${label}</div>
-        <input type="range" class="rt-slider model-${m}" min="${min}" max="${max}" step="${step}" value="${clamped}"${isVertical ? ' orient="vertical"' : ''}>
-        <div class="rt-slider-val">${esc(String(clamped))}</div>
+        <div class="rt-slider-body">
+          <input type="range" class="rt-slider model-${m}" min="${min}" max="${max}" step="${step}" value="${clamped}"${isVertical ? ' orient="vertical"' : ''}>
+          <div class="rt-slider-val" aria-live="polite">${esc(String(clamped))}</div>
+        </div>
       </div>`;
     }
 
@@ -6231,19 +6519,82 @@ function bindRuntimeWidget(el, w) {
       break;
     case 'slider':
       let sliderEl = el.querySelector('.rt-slider');
-      // Live-update both the display and BLE during drag -- safe to call
-      // send() on every input event because it queues through bleSend's
-      // own 200ms-coalesced writer (same pattern as the joystick), not a
-      // direct BLE write per event.
+      const sliderValueEl = el.querySelector('.rt-slider-val');
+      // v48.1: the gauge is a REAL MakeCode CFG widget, not HTML injected
+      // inside the slider. We only mirror the slider value into CFG gauges
+      // that explicitly name this slider in their `source` field.
+      const reflectSliderValue = value => {
+        if (sliderValueEl) sliderValueEl.textContent = String(value);
+        state.values[w.id] = String(value);
+        mirrorConfiguredGaugeSources(w.id, value);
+      };
+      // Wide hit area + explicit pointer mapping retained from v47.
+      const sliderMin = parseFloat(sliderEl.min || w.min || 0);
+      const sliderMax = parseFloat(sliderEl.max || w.max || 100);
+      const sliderStep = Math.abs(parseFloat(sliderEl.step || w.step || 1)) || 1;
+      const sliderVertical = el.querySelector('.rt-slider-wrap')?.classList.contains('vertical');
+      let sliderPointerId = null;
+
+      const quantizeSliderValue = raw => {
+        const bounded = Math.max(sliderMin, Math.min(sliderMax, raw));
+        const stepped = sliderMin + Math.round((bounded - sliderMin) / sliderStep) * sliderStep;
+        const decimals = ((String(sliderStep).split('.')[1] || '').length);
+        return Number(Math.max(sliderMin, Math.min(sliderMax, stepped)).toFixed(decimals));
+      };
+
+      const commitSliderValue = (value, final = false) => {
+        const val = quantizeSliderValue(value);
+        sliderEl.value = String(val);
+        reflectSliderValue(val);
+        send(`SET ${w.id} ${val}`);
+        if (final) sliderEl.dispatchEvent(new Event('slidercommit'));
+      };
+
+      const valueFromPointer = e => {
+        const r = sliderEl.getBoundingClientRect();
+        let pct;
+        if (sliderVertical) pct = 1 - ((e.clientY - r.top) / Math.max(1, r.height));
+        else pct = (e.clientX - r.left) / Math.max(1, r.width);
+        pct = Math.max(0, Math.min(1, pct));
+        return sliderMin + pct * (sliderMax - sliderMin);
+      };
+
+      sliderEl.addEventListener('pointerdown', e => {
+        if (e.button !== undefined && e.button !== 0) return;
+        sliderPointerId = e.pointerId;
+        sliderEl.classList.add('adjusting');
+        try { sliderEl.setPointerCapture(e.pointerId); } catch (_) {}
+        commitSliderValue(valueFromPointer(e));
+        e.preventDefault();
+      });
+      sliderEl.addEventListener('pointermove', e => {
+        if (sliderPointerId !== e.pointerId) return;
+        commitSliderValue(valueFromPointer(e));
+        e.preventDefault();
+      });
+      const endSliderPointer = e => {
+        if (sliderPointerId !== e.pointerId) return;
+        commitSliderValue(valueFromPointer(e), true);
+        try { sliderEl.releasePointerCapture(e.pointerId); } catch (_) {}
+        sliderPointerId = null;
+        sliderEl.classList.remove('adjusting');
+        e.preventDefault();
+      };
+      sliderEl.addEventListener('pointerup', endSliderPointer);
+      sliderEl.addEventListener('pointercancel', e => {
+        if (sliderPointerId !== e.pointerId) return;
+        sliderPointerId = null;
+        sliderEl.classList.remove('adjusting');
+      });
+
       sliderEl.oninput = e => {
-        const val = Math.round(parseFloat(e.target.value) || 0);
-        el.querySelector('.rt-slider-val').textContent = val;
+        const val = quantizeSliderValue(parseFloat(e.target.value) || sliderMin);
+        reflectSliderValue(val);
         send(`SET ${w.id} ${val}`);
       };
-      // Also send on release, so the final value always lands even if the
-      // last drag-frame's coalesced send got superseded before it fired.
       sliderEl.onchange = e => {
-        const val = Math.round(parseFloat(e.target.value) || 0);
+        const val = quantizeSliderValue(parseFloat(e.target.value) || sliderMin);
+        reflectSliderValue(val);
         send(`SET ${w.id} ${val}`);
       };
       break;
@@ -6486,7 +6837,7 @@ function bindRuntimeWidget(el, w) {
         // Mode changes transfer ownership of the motors. They must never be
         // replaced by a later PING/continuous-control value in the generic
         // latest-value-wins slot.
-        if (w.id === 'mode') sendReliable(msg);
+        if (w.id === 'mode' || w.id === 'dist_read') sendReliable(msg);
         else send(msg);
       };
       break;
@@ -6896,7 +7247,15 @@ function updateRuntimeWidget(id, val) {
     return;
   }
   switch (w.t) {
-    case 'slider': el.querySelector('.rt-slider').value = val; el.querySelector('.rt-slider-val').textContent = val; break;
+    case 'slider': {
+      const slider = el.querySelector('.rt-slider');
+      if (slider) slider.value = val;
+      const valueEl = el.querySelector('.rt-slider-val');
+      if (valueEl) valueEl.textContent = String(val);
+      state.values[id] = String(val);
+      mirrorConfiguredGaugeSources(id, val);
+      break;
+    }
     case 'editfield': {
       const input = el.querySelector('.rt-editfield');
       // Don't clobber text the user is actively typing — only sync when
@@ -6927,6 +7286,12 @@ function updateRuntimeWidget(id, val) {
       }
 
       console.log('[UI] LED', id, 'is now', on ? 'ON' : 'OFF');
+      break;
+    }
+    case 'select': {
+      const sel = el.querySelector('.rt-select');
+      if (sel) sel.value = String(val);
+      state.values[id] = String(val);
       break;
     }
     case 'label': el.querySelector('.rt-label-text').textContent = val; break;

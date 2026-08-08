@@ -93,9 +93,11 @@
  *
  * 8) BACKGROUND BLE TRAFFIC MATTERS
  *    Telemetry/logs/heartbeat traffic shares the same BLE link with motor
- *    commands. Manual driving defaults telemetry to Off, app PING traffic
- *    is sparse/suppressed around driving, and the D-pad writer has
- *    priority. bluetooth.setTransmitPower(7) is used for the strongest
+ *    commands. The Telemetry selector is the explicit policy switch:
+ *    All/Basic may send the lightweight heartbeat, while Off is fully
+ *    silent. Expensive sensor work is still suppressed in Manual, app PING
+ *    traffic is sparse around driving, and the D-pad writer has priority.
+ *    bluetooth.setTransmitPower(7) is used for the strongest
  *    link available from MakeCode.
  *
  * 9) MOTOR I2C WRITES: CHANGE IMMEDIATELY, DO NOT SPAM
@@ -113,6 +115,26 @@
  * IMPORTANT DESIGN RULE: for real-time drive controls, optimize for the
  * newest desired STATE, not guaranteed delivery of every EVENT. Reliability
  * for an old steering command is often indistinguishable from latency.
+ *
+ *
+ * ════════════════════════════════════════════════════════════════
+ * 💓 v50 — HEARTBEAT FOLLOWS TELEMETRY, NOT DRIVE MODE
+ * ════════════════════════════════════════════════════════════════
+ * Earlier builds suppressed heartbeat whenever the motors had been
+ * updated recently. That was useful while chasing Manual D-pad latency,
+ * but in Line/Avoid the motors are updated continuously by autonomous
+ * code, so the UI looked as if the heartbeat had stopped.
+ *
+ * v50 makes the Telemetry selector the single source of truth:
+ *   • All   -> heartbeat + full telemetry
+ *   • Basic -> heartbeat + firmware version only
+ *   • Off   -> no heartbeat / no optional telemetry
+ *
+ * The heartbeat counter still advances once per second internally.
+ * sendValue() applies the selected telemetry level before anything is
+ * written over BLE. Therefore Manual, Line and Avoid now have the same
+ * heartbeat semantics, and changing mode no longer changes whether the
+ * connection appears alive.
  *
  * Extension required (MakeCode → Extensions):
  *   • pxt-maqueen   (https://github.com/DFRobot/pxt-maqueen)
@@ -167,7 +189,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v46"
+const FIRMWARE_VERSION = "v50"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -221,6 +243,16 @@ bluetooth.startUartService()
 bluetooth.setTransmitPower(7)
 let cfgSent = false
 
+// v48 CONFIG-NATIVE GAUGES + v47 FAST RECONNECT + v46 HARDENING
+// ----------------------------------------------
+// v46 fixed stale BLE sessions, but still retransmitted an unchanged layout
+// on every reconnect. v47 adds a revision handshake:
+//   GETCFGVER -> CFGVER <hash>
+//   cache hit -> CFGOK <hash>        (no layout transfer)
+//   cache miss -> GETCFG             (existing paced transfer)
+// The browser caches by BluetoothDevice.id and the robot remains source of
+// truth because any layout change produces a different CFG_REV.
+//
 // v46 RECONNECT HARDENING
 // -----------------------
 // GETCFG used to send ~2 seconds of CFGBEGIN/CFG/CFGEND notifications from
@@ -236,6 +268,12 @@ let cfgTxChunkIdx = 0
 let cfgTxLit = 0
 let cfgTxNextAt = 0
 const CFG_TX_GAP_MS = 35
+
+// v47: config revision probe. Never write the reply from inside the UART RX
+// callback; even this tiny response is queued to the main loop to preserve the
+// reconnect hardening learned in v46.
+let cfgVerPending = false
+let cfgVerReplyAt = 0
 
 // A real disconnect can also leave the Nordic/MakeCode BLE peripheral in a
 // connectable-but-unusable GATT state until reset. v46 schedules a SOFTWARE
@@ -300,36 +338,35 @@ const UPD_BASIC = 1
 const UPD_ALL = 2
 let updLevel = UPD_ALL
 
-// 📦 Remote layout config (Base64 encoded, 1988 bytes, 15 widgets).
-// Layout arranged by hand in the app's Build tab and captured here:
-// top row servos / D-pad / speed / alert, middle mode + STOP/Buzz with
-// the distance gauge right, bottom row headlights / line sensors and
-// the distance graph. Canvas 980x620.
-// Generated for the widget ids used below — decoded here for
-// reference (not read by the code):
-// {
-//   "title": "Maqueen Remote",
-//   "widgets": [
-//     { "id": "slider_srv1", "t": "slider", "x": 30, "y": 55, "w": 70, "h": 200, "label": "Servo 1", "min": 0, "max": 180, "step": 1 },
-//     { "id": "slider_srv2", "t": "slider", "x": 140, "y": 55, "w": 70, "h": 200, "label": "Servo 2", "min": 0, "max": 180, "step": 1 },
-//     { "id": "dpad_move", "t": "dpad", "x": 260, "y": 55, "w": 175, "h": 175, "label": "Drive", "model": "classic" },
-//     { "id": "spd", "t": "slider", "x": 495, "y": 55, "w": 70, "h": 200, "label": "Speed", "min": 60, "max": 255, "step": 5 },
-//     { "id": "mode", "t": "select", "x": 35, "y": 290, "w": 160, "h": 85, "label": "Mode", "options": "Manual,Line,Avoid" },
-//     { "id": "btn_stop", "t": "button", "x": 255, "y": 285, "w": 100, "h": 105, "label": "STOP" },
-//     { "id": "btn_buzz", "t": "button", "x": 375, "y": 285, "w": 100, "h": 105, "label": "Buzz" },
-//     { "id": "lbl_heartbeat", "t": "label", "x": 55, "y": 400, "w": 220, "h": 80, "label": "Uptime" },
-//     { "id": "toggle_led_l", "t": "toggle", "x": 25, "y": 490, "w": 90, "h": 110, "label": "LED L" },
-//     { "id": "toggle_led_r", "t": "toggle", "x": 158, "y": 490, "w": 90, "h": 110, "label": "LED R" },
-//     { "id": "ln_l", "t": "led", "x": 285, "y": 500, "w": 70, "h": 90, "label": "Line L", "model": "dot", "colorOn": "#4ade80" },
-//     { "id": "ln_r", "t": "led", "x": 388, "y": 500, "w": 70, "h": 90, "label": "Line R", "model": "dot", "colorOn": "#4ade80" },
-//     { "id": "alert", "t": "notification", "x": 690, "y": 40, "w": 180, "h": 90, "label": "Alert" },
-//     { "id": "graph_dist", "t": "graph", "x": 580, "y": 425, "w": 380, "h": 175, "label": "Distance cm", "model": "grid", "windowSec": 30, "series": 1 },
-//     { "id": "lbl_ver", "t": "label", "x": 300, "y": 400, "w": 160, "h": 80, "label": "Firmware" },
-//     { "id": "gauge_dist", "t": "gauge", "x": 690, "y": 190, "w": 180, "h": 195, "label": "Distance", "min": 0, "max": 200, "units": "cm", "decimals": 0 },
-//     { "id": "upd", "t": "select", "x": 490, "y": 290, "w": 170, "h": 85, "label": "Telemetry", "options": "All,Basic,Off" }
-//   ]
-// }
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoyMDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjF9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4IjoxNDAsInkiOjU1LCJ3Ijo3MCwiaCI6MjAwLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxfSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4IjoyNjAsInkiOjU1LCJ3IjoxNzUsImgiOjE3NSwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NDk1LCJ5Ijo1NSwidyI6NzAsImgiOjIwMCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1fSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3QiLCJ4IjozNSwieSI6MjkwLCJ3IjoxNjAsImgiOjg1LCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6MjU1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6Mzc1LCJ5IjoyODUsInciOjEwMCwiaCI6MTA1LCJsYWJlbCI6IkJ1enoifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjU1LCJ5Ijo0MDAsInciOjIyMCwiaCI6ODAsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NDkwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjQ5MCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTAwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQyNSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6MzAwLCJ5Ijo0MDAsInciOjE2MCwiaCI6ODAsImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH0seyJpZCI6InVwZCIsInQiOiJzZWxlY3QiLCJ4Ijo0OTAsInkiOjI5MCwidyI6MTcwLCJoIjo4NSwibGFiZWwiOiJUZWxlbWV0cnkiLCJvcHRpb25zIjoiQWxsLEJhc2ljLE9mZiJ9XX0="
+// 📦 Remote layout config (Base64 encoded, 2241 bytes, 20 widgets).
+// v48 CONFIG-NATIVE GAUGES
+// ------------------------
+// Servo 1, Servo 2 and Speed now each have a REAL `t:"gauge"` widget
+// stored here in the MakeCode-delivered configuration. The gauges are no
+// longer synthesized by one particular web app, so every compatible app
+// receives the same IDs, positions, ranges, labels and model.
+//
+// Control/gauge pairs:
+//   slider_srv1 -> gauge_srv1   0..180°
+//   slider_srv2 -> gauge_srv2   0..180°
+//   spd         -> gauge_spd    60..255
+//
+// Each gauge also carries `source:"<slider id>"`. Newer clients can mirror
+// it locally with zero BLE traffic; older clients still receive paced
+// `UPD gauge_* <value>` packets from this firmware.
+//
+// The config also includes initial `value` fields (90°, 90°, 200), matching
+// the actual boot state, so even before telemetry arrives the controls do
+// not falsely show minimum.
+//
+// DESIGN RULE LEARNED:
+// If a visual relationship must look the same in several apps, define it
+// as widgets + metadata in CFG. Do not hide it in app-specific CSS/JS.
+//
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4IjozMCwieSI6NTUsInciOjcwLCJoIjoxNDAsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjEsInZhbHVlIjo5MH0seyJpZCI6InNsaWRlcl9zcnYyIiwidCI6InNsaWRlciIsIngiOjE0MCwieSI6NTUsInciOjcwLCJoIjoxNDAsImxhYmVsIjoiU2Vydm8gMiIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjEsInZhbHVlIjo5MH0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6MjYwLCJ5Ijo1NSwidyI6MTc1LCJoIjoxNzUsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNsaWRlciIsIngiOjQ5NSwieSI6NTUsInciOjcwLCJoIjoxNDAsImxhYmVsIjoiU3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwic3RlcCI6NSwidmFsdWUiOjIwMH0seyJpZCI6ImdhdWdlX3NydjEiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMiwieSI6MjA1LCJ3IjoxMTAsImgiOjEyMCwibGFiZWwiOiJTZXJ2byAxIiwibWluIjowLCJtYXgiOjE4MCwidW5pdHMiOiLCsCIsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNsaWRlcl9zcnYxIiwidmFsdWUiOjkwfSx7ImlkIjoiZ2F1Z2Vfc3J2MiIsInQiOiJnYXVnZSIsIngiOjEyMiwieSI6MjA1LCJ3IjoxMTAsImgiOjEyMCwibGFiZWwiOiJTZXJ2byAyIiwibWluIjowLCJtYXgiOjE4MCwidW5pdHMiOiLCsCIsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNsaWRlcl9zcnYyIiwidmFsdWUiOjkwfSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6ImdhdWdlIiwieCI6NDc1LCJ5IjoyMDUsInciOjExMCwiaCI6MTIwLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsInVuaXRzIjoiIiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3BkIiwidmFsdWUiOjIwMH0seyJpZCI6Im1vZGUiLCJ0Ijoic2VsZWN0IiwieCI6MzUsInkiOjM0MCwidyI6MTYwLCJoIjo4NSwibGFiZWwiOiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxMaW5lLEF2b2lkIn0seyJpZCI6ImJ0bl9zdG9wIiwidCI6ImJ1dHRvbiIsIngiOjI1NSwieSI6MzM1LCJ3IjoxMDAsImgiOjEwNSwibGFiZWwiOiJTVE9QIn0seyJpZCI6ImJ0bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjM3NSwieSI6MzM1LCJ3IjoxMDAsImgiOjEwNSwibGFiZWwiOiJCdXp6In0seyJpZCI6InVwZCIsInQiOiJzZWxlY3QiLCJ4Ijo0OTAsInkiOjM0MCwidyI6MTcwLCJoIjo4NSwibGFiZWwiOiJUZWxlbWV0cnkiLCJvcHRpb25zIjoiQWxsLEJhc2ljLE9mZiJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6NTUsInkiOjQ1NSwidyI6MjIwLCJoIjo3MCwibGFiZWwiOiJVcHRpbWUifSx7ImlkIjoibGJsX3ZlciIsInQiOiJsYWJlbCIsIngiOjMwMCwieSI6NDU1LCJ3IjoxNjAsImgiOjcwLCJsYWJlbCI6IkZpcm13YXJlIn0seyJpZCI6InRvZ2dsZV9sZWRfbCIsInQiOiJ0b2dnbGUiLCJ4IjoyNSwieSI6NTMwLCJ3Ijo5MCwiaCI6MTEwLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4IjoxNTgsInkiOjUzMCwidyI6OTAsImgiOjExMCwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJsbl9sIiwidCI6ImxlZCIsIngiOjI4NSwieSI6NTQwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjM4OCwieSI6NTQwLCJ3Ijo3MCwiaCI6OTAsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4Ijo2OTAsInkiOjQwLCJ3IjoxODAsImgiOjkwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImRpc3RfcmVhZCIsInQiOiJzZWxlY3QiLCJ4Ijo2OTAsInkiOjEzNSwidyI6MTgwLCJoIjo1MCwibGFiZWwiOiJEaXN0YW5jZSByZWFkIiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjY5MCwieSI6MTkwLCJ3IjoxODAsImgiOjE5NSwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijo1ODAsInkiOjQ2NSwidyI6MzgwLCJoIjoxNzUsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9XX0="
+// v48: precomputed SHA-256 prefix of the decoded layout JSON. Change the
+// layout => this revision changes => the browser automatically reloads CFG.
+const CFG_REV = "294e087e"
 
 // ═══════════════════════════════════════════════════════════════
 // 📡 BLUETOOTH COMMUNICATION
@@ -363,6 +400,27 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
         // Intentional app disconnect: stop safely and schedule a clean BLE
         // peripheral reboot before the next session.
         handleLinkLost()
+    }
+    else if (cmd == "GETCFGVER") {
+        // v47 fast reconnect: answer with only the layout revision first.
+        // The browser can reuse its cached config and avoid the ~2 second
+        // CFGBEGIN/CFG/CFGEND stream when nothing changed.
+        cfgVerPending = true
+        cfgVerReplyAt = input.runningTime() + 20
+    }
+    else if (cmd.indexOf("CFGOK ") == 0) {
+        // Cache-hit acknowledgement from the browser. cfgSent means
+        // "the peer has a usable layout", not strictly "we transmitted CFG
+        // this session". This keeps Line/Avoid + telemetry enabled on the
+        // fast reconnect path.
+        let rev = cmd.substr(6)
+        if (rev == CFG_REV) {
+            cfgSent = true
+            cfgTxActive = false
+            versionSent = false
+            scheduleInitialUiSync()
+            requestGlyph(GLYPH_CONNECTED)
+        }
     }
     else if (cmd == "GETCFG") {
         // v46: arm the transfer and RETURN from the RX callback immediately.
@@ -414,6 +472,35 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
 // maxing out the motor driver. Autonomous modes below use it too, so
 // one slider governs manual and self-driving alike.
 let driveSpeed = 200
+
+// v48 UI MIRROR STATE
+// -------------------
+// The Servo 1, Servo 2 and Speed gauges are real widgets in CFG.
+// Do NOT transmit their UPD messages from the BLE RX callback: v46 showed
+// that callback-side TX can destabilize reconnects. Handlers only mark the
+// latest value dirty; the forever loop coalesces and publishes it later.
+let uiServo1 = 90
+let uiServo2 = 90
+let uiGaugeSrv1Dirty = false
+let uiGaugeSrv2Dirty = false
+let uiGaugeSpdDirty = false
+let uiGaugeLastInputAt = 0
+let uiGaugeTxNextAt = 0
+let uiInitialSyncStage = 0
+const UI_GAUGE_SETTLE_MS = 90
+const UI_GAUGE_TX_GAP_MS = 45
+
+function scheduleInitialUiSync() {
+    uiInitialSyncStage = 1
+    uiGaugeTxNextAt = input.runningTime() + 80
+}
+
+function sendUiValue(id: string, val: string) {
+    // These are control-state mirrors, not optional sensor telemetry.
+    if (!btConnected || !cfgSent) return
+    bluetooth.uartWriteLine("UPD " + id + " " + val)
+}
+
 const DRIVE_SPEED_MIN = 60      // below this the motors stall rather than crawl
 const DRIVE_SPEED_MAX = 255
 const DEAD_ZONE = 0.12  // below this magnitude on both axes, treat as stopped
@@ -730,6 +817,8 @@ function handleWidget(id: string, val: string) {
     // Slider: Speed — top speed for BOTH manual and autonomous driving.
     if (id == "spd") {
         driveSpeed = Math.constrain(parseInt(val), DRIVE_SPEED_MIN, DRIVE_SPEED_MAX)
+        uiGaugeSpdDirty = true
+        uiGaugeLastInputAt = input.runningTime()
         requestGlyphValue(GLYPH_SERVO, Math.idiv(driveSpeed * 180, DRIVE_SPEED_MAX))
         dbg("speed -> " + driveSpeed)
     }
@@ -744,6 +833,20 @@ function handleWidget(id: string, val: string) {
         // silenced. Cheap, and it confirms the setting took effect.
         if (updLevel != UPD_OFF) versionSent = false
         dbg("telemetry -> " + val)
+    }
+
+    // Select: Distance read — Auto / Read now.
+    //
+    // "Read now" is intentionally a ONE-SHOT override. It may be used in
+    // Manual, Line or Avoid without enabling continuous ultrasonic polling.
+    // That preserves the low-latency lesson from v43: a no-echo HC-SR04 read
+    // can busy-wait for ~250 ms, so polling it continuously in Manual/Line
+    // makes motor control feel laggy. The forever loop performs the actual
+    // measurement (never this BLE callback), updates gauge + graph, then
+    // publishes UPD dist_read Auto so compatible clients reset the selector.
+    if (id == "dist_read" && val == "Read now") {
+        forceDistanceOnce = true
+        dbg("distance: forced one-shot requested")
     }
 
     // Select: Mode — Manual / Line / Avoid.
@@ -783,7 +886,10 @@ function handleWidget(id: string, val: string) {
     // freeze the WHOLE firmware (confirmed: the heartbeat, which never
     // touches I2C, stopped incrementing the moment Servo 1 was dragged).
     if (id == "slider_srv1") {
-        let angle1 = parseInt(val)
+        let angle1 = Math.constrain(parseInt(val), 0, 180)
+        uiServo1 = angle1
+        uiGaugeSrv1Dirty = true
+        uiGaugeLastInputAt = input.runningTime()
         // Glyph updates on EVERY message, outside the rate-limit gate:
         // the guard exists to protect the I2C bus, not the display, and
         // suppressing feedback while dragging would look like a dropped
@@ -795,7 +901,10 @@ function handleWidget(id: string, val: string) {
         }
     }
     if (id == "slider_srv2") {
-        let angle2 = parseInt(val)
+        let angle2 = Math.constrain(parseInt(val), 0, 180)
+        uiServo2 = angle2
+        uiGaugeSrv2Dirty = true
+        uiGaugeLastInputAt = input.runningTime()
         requestGlyphValue(GLYPH_SERVO, angle2)
         if (servoWriteAllowed(2, angle2)) {
             maqueen.servoRun(maqueen.Servos.S2, angle2)
@@ -907,6 +1016,13 @@ function handleLinkLost() {
     cfgTxStage = 0
     cfgTxPos = 0
     cfgTxChunkIdx = 0
+    cfgVerPending = false
+    cfgVerReplyAt = 0
+    uiInitialSyncStage = 0
+    uiGaugeSrv1Dirty = false
+    uiGaugeSrv2Dirty = false
+    uiGaugeSpdDirty = false
+    uiGaugeTxNextAt = 0
     logQueue = []
     // v46: reboot the BLE peripheral after the X is painted. This is the
     // automatic replacement for the physical RESET that was previously
@@ -1033,6 +1149,7 @@ const DIST_INTERVAL_MAX_MS = 5000     // when it keeps reporting "no echo"
 let distInterval = DIST_INTERVAL_MS
 const DIST_MAX_CM = 200          // matches the gauge's max in CFG
 let nextDistAt = 0
+let forceDistanceOnce = false   // v49: selector-triggered one-shot in ANY mode
 let nextLineAt = 0
 basic.forever(function () {
     let now = input.runningTime()
@@ -1139,6 +1256,17 @@ basic.forever(function () {
         return
     }
 
+    // ── CONFIG REVISION REPLY (v47) ─────────────────────────────
+    // This one short notification is the normal reconnect path. If the
+    // browser already cached this revision it answers CFGOK and the robot is
+    // ready immediately; otherwise it asks for the full transfer below.
+    if (btConnected && cfgVerPending && now >= cfgVerReplyAt) {
+        bluetooth.uartWriteLine("CFGVER " + CFG_REV)
+        cfgVerPending = false
+        basic.pause(20)
+        return
+    }
+
     // ── CONFIG TX STATE MACHINE (v46) ───────────────────────────
     // Never stream the whole layout from onUartDataReceived(). Sending one
     // notification per pass keeps RX and TX decoupled and lets disconnect
@@ -1168,6 +1296,7 @@ basic.forever(function () {
                 bluetooth.uartWriteLine("CFGEND")
                 cfgTxActive = false
                 cfgSent = true
+                scheduleInitialUiSync()
                 requestGlyph(GLYPH_CONNECTED)
                 dbg("layout sent, cfgSent = true")
             }
@@ -1192,6 +1321,48 @@ basic.forever(function () {
         return
     }
 
+
+    // ── CONFIG-NATIVE CONTROL GAUGES (v48) ───────────────────────
+    // First publish the true boot/control values for both sliders and
+    // gauges. After that, publish only a coalesced gauge update when a
+    // slider has been quiet for a moment. A client that understands the
+    // CFG `source` field mirrors instantly with zero BLE; older clients
+    // still receive the firmware UPD shortly after the drag settles.
+    if (cfgSent && now >= uiGaugeTxNextAt) {
+        let uiSent = false
+        if (uiInitialSyncStage > 0) {
+            if (uiInitialSyncStage == 1) sendUiValue("slider_srv1", "" + uiServo1)
+            else if (uiInitialSyncStage == 2) sendUiValue("gauge_srv1", "" + uiServo1)
+            else if (uiInitialSyncStage == 3) sendUiValue("slider_srv2", "" + uiServo2)
+            else if (uiInitialSyncStage == 4) sendUiValue("gauge_srv2", "" + uiServo2)
+            else if (uiInitialSyncStage == 5) sendUiValue("spd", "" + driveSpeed)
+            else if (uiInitialSyncStage == 6) sendUiValue("gauge_spd", "" + driveSpeed)
+            uiInitialSyncStage += 1
+            if (uiInitialSyncStage > 6) uiInitialSyncStage = 0
+            uiGaugeTxNextAt = now + UI_GAUGE_TX_GAP_MS
+            uiSent = true
+        } else if (now - uiGaugeLastInputAt >= UI_GAUGE_SETTLE_MS) {
+            if (uiGaugeSrv1Dirty) {
+                sendUiValue("gauge_srv1", "" + uiServo1)
+                uiGaugeSrv1Dirty = false
+                uiSent = true
+            } else if (uiGaugeSrv2Dirty) {
+                sendUiValue("gauge_srv2", "" + uiServo2)
+                uiGaugeSrv2Dirty = false
+                uiSent = true
+            } else if (uiGaugeSpdDirty) {
+                sendUiValue("gauge_spd", "" + driveSpeed)
+                uiGaugeSpdDirty = false
+                uiSent = true
+            }
+            if (uiSent) uiGaugeTxNextAt = now + UI_GAUGE_TX_GAP_MS
+        }
+        if (uiSent) {
+            basic.pause(20)
+            return
+        }
+    }
+
     // Scheduled off runningTime(), NOT by accumulating an assumed
     // 100ms per iteration. Each pass is pause(100) PLUS however long
     // the work took, so the old counter drifted slow exactly when the
@@ -1201,7 +1372,14 @@ basic.forever(function () {
         nextHeartbeatAt = now + HEARTBEAT_INTERVAL_MS
         if (cfgSent) {
             heartbeat += 1
-            if ((lastDriveL == 0 && lastDriveR == 0) || now - lastDriveCmdAt > 500) sendValue("lbl_heartbeat", uptimeString(heartbeat))
+            // v50: heartbeat visibility follows the Telemetry selector, not
+            // the drive mode. sendValue() already enforces the policy:
+            //   All/Basic -> heartbeat is transmitted
+            //   Off       -> heartbeat is silent
+            // Do not suppress heartbeat merely because Line/Avoid motors
+            // are moving; autonomous drive is local to the micro:bit and
+            // should not make the connection appear frozen.
+            sendValue("lbl_heartbeat", uptimeString(heartbeat))
         }
     }
 
@@ -1273,28 +1451,38 @@ basic.forever(function () {
     // Earlier experiments tried mitigations such as skipping reads while
     // driving and adaptive backoff. The final latency fix is stronger:
     //
-    //   - Manual/Line: NEVER call Ultrasonic(). Responsiveness wins.
+    //   - Manual/Line: never POLL Ultrasonic(); only an explicit v49 one-shot may read it.
     //   - Avoid: distance is required, so poll there and use adaptive
     //     backoff when the expensive no-echo result persists.
     // This is why Telemetry alone is not enough: even an unsent sensor
     // reading can freeze the runtime before BLE gets a chance to run.
-    // Low-latency control build: never call Ultrasonic() in Manual/Line.
+    // Low-latency control build: never POLL Ultrasonic() in Manual/Line; v49 permits one explicit read.
     // A no-echo read can busy-wait for ~250ms and freeze BLE command
-    // handling. Avoid mode is the only mode where distance is required.
-    let distWanted = driveMode == MODE_AVOID
+    // handling. Avoid is the only mode with automatic distance polling; v49 also supports an explicit one-shot in any mode.
+    // v49: distance has TWO triggers:
+    //   1) normal automatic polling in Avoid mode;
+    //   2) an explicit one-shot from the CFG selector in ANY mode.
+    // The one-shot deliberately ignores busyDriving because the operator asked
+    // for it explicitly. It can therefore cause one brief HC-SR04 timeout stall,
+    // but it never turns continuous polling back on in Manual/Line.
+    let forceDist = forceDistanceOnce
+    let autoDistDue = driveMode == MODE_AVOID && now >= nextDistAt
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
-    if (distWanted && now >= nextDistAt && !busyDriving) {
-        nextDistAt = now + distInterval
-        if (cfgSent) {
+    if (cfgSent && (forceDist || (autoDistDue && !busyDriving))) {
+        if (forceDist) forceDistanceOnce = false
+        if (driveMode == MODE_AVOID) nextDistAt = now + distInterval
+        {
             let cm = maqueen.Ultrasonic()
             // Adapt the next interval to what we just got back. 500 is
             // the "no echo" sentinel and is the reading that costs the
             // full ~250ms retry stall, so keep backing off while it
             // persists; any real distance restores the fast rate.
-            if (cm >= 500 || cm <= 0) {
-                distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
-            } else {
-                distInterval = DIST_INTERVAL_MS
+            if (driveMode == MODE_AVOID) {
+                if (cm >= 500 || cm <= 0) {
+                    distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
+                } else {
+                    distInterval = DIST_INTERVAL_MS
+                }
             }
             // Decide what we'd report; -1 means "nothing to report".
             let reported = -1
@@ -1346,7 +1534,8 @@ basic.forever(function () {
             // `reported` is still what drives the alert and Avoid mode,
             // where "no echo == far away" is the correct reading.
             if (cm > 0) {
-                sendValue("graph_dist", "" + cm)
+                if (forceDist) sendUiValue("graph_dist", "" + cm)
+                else sendValue("graph_dist", "" + cm)
             }
             // The gauge gets the MAPPED value: on a dial, "no echo"
             // should read as a clear path (full scale), not as an
@@ -1354,8 +1543,14 @@ basic.forever(function () {
             // instead, so the two together still distinguish a dead
             // sensor from an empty room.
             if (reported >= 0) {
-                sendValue("gauge_dist", "" + reported)
+                if (forceDist) sendUiValue("gauge_dist", "" + reported)
+                else sendValue("gauge_dist", "" + reported)
             }
+
+            // Reset the momentary CFG selector after the requested sample.
+            // sendUiValue bypasses the Telemetry selector on purpose: this is
+            // direct feedback to an explicit user action, not background data.
+            if (forceDist) sendUiValue("dist_read", "Auto")
 
             // Obstacle alert, with hysteresis so it fires once on
             // approach instead of chattering around the threshold: it

@@ -4,9 +4,9 @@
   "GITHUB_REPO": "bit-rxy",
   "GITHUB_USER": "abourdim",
   "LIVE_DEMO_URL": "https://abourdim.github.io/bit-rxy/",
-  "VERSION": "v1.0.0",
-  "VERSION_UPPER": "V1.0.0",
-  "VERSION_PLAIN": "1.0.0",
+  "VERSION": "v2.0",
+  "VERSION_UPPER": "V2.0",
+  "VERSION_PLAIN": "2.0",
   "TAGLINE": "Build • Pair • Play — no code required",
   "HARDWARE": "BBC micro:bit V1 or V2",
   "PRICE_LAUNCH": "12.99",
@@ -17,5 +17,13 @@
   "PRICE_DISTRICT": "499",
   "PROMO_CODE": "RXYLAUNCH",
   "PROMO_PRICE": "7",
-  "ALLOWED_TERMS": ["servo", "servos", "GamePad", "gamepad", "LED Matrix", "Graph", "Sensors"]
+  "ALLOWED_TERMS": [
+    "servo",
+    "servos",
+    "GamePad",
+    "gamepad",
+    "LED Matrix",
+    "Graph",
+    "Sensors"
+  ]
 }

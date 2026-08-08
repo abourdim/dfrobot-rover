@@ -335,6 +335,28 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   background: var(--surface);
   border-color: var(--accent);
 }
+
+/* Reload the robot-owned layout without clearing unrelated app settings.
+   This is an app-shell action because the cache itself lives in the browser. */
+.reload-config-btn {
+  position: static;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: 2px solid var(--text-dim);
+  display: none;
+  transition: all 0.2s ease;
+}
+.reload-config-btn.visible { display: block; }
+.reload-config-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.reload-config-btn:active { transform: scale(0.96); }
 .arrange-mode-btn.active {
   background: linear-gradient(135deg, var(--orange), var(--yellow));
   color: #000;
@@ -543,6 +565,7 @@ body.runtime-fullscreen .app {
 body.runtime-fullscreen .app > header,
 body.runtime-fullscreen .back-to-build-btn,
 body.runtime-fullscreen .arrange-mode-btn,
+body.runtime-fullscreen .reload-config-btn,
 body.runtime-fullscreen #arrangeHint,
 body.runtime-fullscreen .fullscreen-btn,
 body.runtime-fullscreen .builder-view,
@@ -1623,6 +1646,18 @@ body.theme-sunset .canvas { background: linear-gradient(135deg, #6a0572, #ab0a78
 @keyframes slider-gradient {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
+}
+
+/* v48.1: slider itself contains only the control and numeric value.
+   Any gauge is a separate MakeCode CFG widget. */
+.rt-slider-body {
+  width: 100%; flex: 1; min-width: 0; min-height: 0;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.rt-slider-body > .rt-slider { flex: 1; min-width: 0; }
+.rt-slider-wrap.vertical .rt-slider-body { flex-direction: column; gap: 3px; }
+.rt-slider-wrap.vertical .rt-slider-body > .rt-slider {
+  width: 52px; height: auto; min-height: 76px; flex: 1 1 auto;
 }
 .rt-slider::-webkit-slider-thumb { 
   width: 34px; height: 34px; -webkit-appearance: none; 
@@ -5999,4 +6034,150 @@ body.dev-mode #logCard:not(.collapsed){ display: flex !important; flex-direction
   font-weight: 700;
   letter-spacing: .03em;
   vertical-align: middle;
+}
+
+/* ================================================================
+   v47 EASY SLIDER CONTROL
+   ----------------------------------------------------------------
+   Goal: keep the compact vertical appearance, but make the sliders
+   comfortable with mouse, touch and pen.
+
+   The input itself is deliberately MUCH wider than the painted rail.
+   JavaScript maps the full pointer rectangle to min..max, so users do
+   not have to grab the tiny colored rail or hit the thumb precisely.
+   ================================================================ */
+.rt-slider {
+  touch-action: none;
+  user-select: none;
+}
+
+.rt-slider-wrap.vertical .rt-slider-body > .rt-slider,
+.rt-slider-wrap.vertical .rt-slider {
+  width: 52px !important;              /* large interaction target */
+  min-width: 52px !important;
+  min-height: 76px;
+  cursor: ns-resize;
+  border: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Paint a slim rail in the middle of the 52px interaction target. */
+.rt-slider-wrap.vertical .rt-slider.model-track {
+  background: linear-gradient(to top, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff) center / 18px 100% no-repeat !important;
+}
+.rt-slider-wrap.vertical .rt-slider.model-min {
+  background: linear-gradient(to top, #a29bfe, #fd79a8) center / 14px 100% no-repeat !important;
+}
+.rt-slider-wrap.vertical .rt-slider.model-neon {
+  background: linear-gradient(to top, #00ff87, #60efff, #00ff87) center / 18px 100% no-repeat !important;
+}
+
+/* A smaller, flatter thumb leaves more visible travel and is easier to
+   position precisely than the old 36x36 square. The 52px input remains
+   the actual hit zone, so reducing the visible thumb does not hurt touch. */
+.rt-slider-wrap.vertical .rt-slider::-webkit-slider-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-track::-webkit-slider-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-min::-webkit-slider-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-neon::-webkit-slider-thumb {
+  width: 32px !important;
+  height: 24px !important;
+  border-radius: 9px !important;
+  transform: none !important;
+}
+.rt-slider-wrap.vertical .rt-slider::-moz-range-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-track::-moz-range-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-min::-moz-range-thumb,
+.rt-slider-wrap.vertical .rt-slider.model-neon::-moz-range-thumb {
+  width: 32px !important;
+  height: 24px !important;
+  border-radius: 9px !important;
+}
+
+/* Remove decorative hover rotation/zoom while adjusting; a control
+   should stay under the pointer instead of moving away from it. */
+.rt-slider::-webkit-slider-thumb:hover,
+.rt-slider.adjusting::-webkit-slider-thumb,
+.rt-slider:active::-webkit-slider-thumb {
+  transform: none !important;
+}
+.rt-slider.adjusting {
+  filter: brightness(1.12);
+}
+
+
+
+/* v48.3 — Always-visible hard config refresh in the app header.
+   This is intentionally app chrome, not a robot CFG widget, because the
+   cache being cleared belongs to the browser. */
+.hero-pill-config {
+  color: var(--text);
+  border-color: rgba(0, 212, 255, .32);
+  white-space: nowrap;
+}
+.hero-pill-config:hover {
+  border-color: var(--accent);
+}
+
+
+/* ============================================================
+   v50.1 — discreet Bismillah at the absolute top of the app
+   Purely visual: no layout-widget, MakeCode, BLE or runtime effect.
+   ============================================================ */
+.bismillah-top {
+  position: fixed;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: calc(100vw - 32px);
+  padding: 0 10px 1px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-family: "Amiri", "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42), 0 0 8px rgba(255, 255, 255, 0.05);
+}
+
+/* Delicate calligraphic accent: visible enough to feel intentional,
+   still quiet enough not to compete with the app controls. */
+.bismillah-top::after {
+  content: "";
+  display: block;
+  width: 42%;
+  min-width: 48px;
+  max-width: 112px;
+  height: 1px;
+  margin: -1px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+}
+
+/* Give the fixed invocation a little breathing room without
+   changing the header's internal geometry. */
+body { padding-top: 17px; }
+.app { height: calc(100dvh - 17px); }
+
+@media (max-width: 700px) {
+  .bismillah-top {
+    top: 1px;
+    font-size: 13px;
+    line-height: 16px;
+    color: rgba(255, 255, 255, 0.46);
+    padding-inline: 6px;
+  }
+  .bismillah-top::after {
+    width: 36%;
+    min-width: 40px;
+  }
+  body { padding-top: 15px; }
+  .app { height: calc(100dvh - 15px); }
 }
