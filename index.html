@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=2.0.1">
+<link rel="stylesheet" href="styles.css?v=2.1.0">
 </head>
 <body>
 <div class="bismillah-top" lang="ar" dir="rtl" aria-label="Bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
@@ -149,7 +149,8 @@
             </button>
             <div class="collapsible-card-body action-card" id="actionsBody">
               <button class="header-btn btn-demo" id="demoBtn">🎮 Try All Widgets!</button>
-              <button class="header-btn btn-code" id="exportJsonBtn">📦 Export</button>
+              <button class="header-btn btn-code" id="exportJsonBtn">📦 Layout JSON</button>
+              <button class="header-btn btn-code" id="exportMakeCodeCfgBtn">🧠 MakeCode CFG</button>
               <button class="header-btn btn-code" id="importJsonBtn">📂 Import</button>
               <button class="header-btn btn-template" id="templateBtn">🎨 Templates</button>
               <button class="header-btn btn-code" id="codeBtn">📄 Code</button>
@@ -208,10 +209,12 @@
       <button id="backToBuildBtn" class="back-to-build-btn">← Back to Build</button>
       <div class="runtime-top-btns">
         <button id="arrangeModeBtn" class="arrange-mode-btn">📐 Arrange</button>
+        <button id="runtimeExportJsonBtn" class="arrange-export-btn" title="Export the arranged layout as JSON">📦 JSON</button>
+        <button id="runtimeExportMakeCodeBtn" class="arrange-export-btn" title="Export the arranged layout as MakeCode CFG">🧠 CFG</button>
         <button id="fullscreenBtn" class="fullscreen-btn">⛶ Fullscreen</button>
       </div>
       <button id="fullscreenExitBtn" class="fullscreen-exit-btn">✕</button>
-      <span class="fullscreen-version">v2.0</span>
+      <span class="fullscreen-version">v2.1</span>
       <div id="quickActionsMenu" class="quick-actions-menu">
         <button class="quick-action-btn" data-action="duplicate">📋 Duplicate</button>
         <button class="quick-action-btn" data-action="color">🎨 Random Color</button>
@@ -313,6 +316,6 @@
   <button class="zoom-btn" id="zoomResetBtn" title="Reset to 100%">1:1</button>
 </div>
 
-<script src="script.js?v=2.0"></script>
+<script src="script.js?v=2.1.0"></script>
 </body>
 </html>

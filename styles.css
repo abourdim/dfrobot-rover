@@ -6181,3 +6181,23 @@ body { padding-top: 17px; }
   body { padding-top: 15px; }
   .app { height: calc(100dvh - 15px); }
 }
+
+
+/* v2.1 — arrangement export controls. Visible only while Arrange is active. */
+.arrange-export-btn {
+  position: static;
+  display: none;
+  padding: 8px 12px;
+  border-radius: 18px;
+  border: 2px solid var(--text-dim);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.arrange-export-btn.visible { display: block; }
+.arrange-export-btn:hover { background: var(--surface); border-color: var(--accent); }
+.arrange-export-btn:active { transform: scale(0.96); }
+body.runtime-fullscreen .arrange-export-btn { display: none !important; }

@@ -1,3 +1,14 @@
+# v51 — Reference layout stored in MakeCode CFG
+
+- The MakeCode-delivered layout now matches the approved **1372 × 776** reference arrangement.
+- Widget **positions and sizes** are stored in the firmware CFG.
+- CFG now also contains `"canvas":{"w":1372,"h":776}`, so compatible clients can reproduce the same board dimensions.
+- The web app v2.1 now honors CFG canvas geometry and keeps it when Arrange mode resizes the board.
+- Config revision is **`47c78c1f`**, so clients with an older cached layout automatically request the new CFG.
+- Control behavior remains the v50 behavior: low-latency Manual drive, Line/Avoid, distance selector, reconnect, and Telemetry-controlled heartbeat.
+
+---
+
 # v50 — Heartbeat follows Telemetry
 
 - Heartbeat is now governed only by the **Telemetry** selector, not by Manual/Line/Avoid mode.
@@ -196,3 +207,13 @@ A small, low-contrast Bismillah is shown at the absolute top of the web interfac
 
 ### Web app 2.0
 The web application version is now **2.0**. A single very discreet Bismillah is shown at the absolute top of the interface. This is a web-only release label/visual change; the MakeCode firmware remains v50 and its BLE behavior is unchanged.
+
+
+## v2.1 — portable layout export
+
+Build and Arrange mode can now export the exact design in two forms:
+
+- **Layout JSON** — includes widgets, reference canvas size and a deterministic config revision; import it back into Build on any compatible app.
+- **MakeCode CFG** — a small `.ts` snippet containing `CFG` and `CFG_REV`; paste those two constants into the existing v51+ firmware without replacing robot behavior.
+
+While **Arrange** is active in Play mode, compact **JSON** and **CFG** export buttons appear next to Arrange, so the live arranged layout can be exported directly.

@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.0';
+const APP_VERSION = 'v2.1';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -572,7 +572,8 @@ wrap.style.width = newW + 'px';
     document.body.style.cursor = '';
     try{
       const r = wrap.getBoundingClientRect();
-      localStorage.setItem('kid_canvas_size', JSON.stringify({w: Math.round(r.width), h: Math.round(r.height)}));
+      state.buildCanvasSize = {w: Math.round(r.width), h: Math.round(r.height)};
+      localStorage.setItem('kid_canvas_size', JSON.stringify(state.buildCanvasSize));
     }catch(e){}
     window.removeEventListener('mousemove', onMove);
     window.removeEventListener('mouseup', onUp);
@@ -622,7 +623,7 @@ const I18N = {
     chooseTpl: "🎨 Choose a Template!",
     pickTpl: "Pick one to start building your remote",
     templates: { gamepad:"Game Pad", robot:"Robot", mixer:"DJ Mixer", racing:"Race Car", lights:"Lights", blank:"Start Fresh" },
-    buttons: { demo:"🎮 Try All Widgets!", export:"📦 Export", import:"📂 Import", templates:"🎨 Templates", code:"📄 Code" },
+    buttons: { demo:"🎮 Try All Widgets!", export:"📦 Layout JSON", exportMakeCode:"🧠 MakeCode CFG", import:"📂 Import", templates:"🎨 Templates", code:"📄 Code" },
     hint: "👆 Tap a widget below, then tap the board to place it!",
     titlePlaceholder: "🏷️ Name your remote...",
     toolbar: {
@@ -692,6 +693,8 @@ const I18N = {
       nothingToRedo: "Nothing to redo",
       redoDone: "↪️ Redo",
       downloaded: "💾 Downloaded!",
+      layoutJsonExported: "📦 Layout JSON exported!",
+      makeCodeCfgExported: "🧠 MakeCode CFG exported!",
       idMustBeUnique: "❌ ID must be unique",
       idUpdated: "✅ ID updated",
       modelUpdated: "✅ Model updated",
@@ -739,7 +742,7 @@ const I18N = {
     chooseTpl: "🎨 Choisis un modèle !",
     pickTpl: "Prends-en un pour commencer",
     templates: { gamepad:"Manette", robot:"Robot", mixer:"DJ Mixer", racing:"Course", lights:"Lumières", blank:"Nouveau" },
-    buttons: { demo:"🎮 Démo widgets !", export:"📦 Export", import:"📂 Import", templates:"🎨 Modèles", code:"📄 Code" },
+    buttons: { demo:"🎮 Démo widgets !", export:"📦 JSON disposition", exportMakeCode:"🧠 CFG MakeCode", import:"📂 Import", templates:"🎨 Modèles", code:"📄 Code" },
     hint: "👆 Choisis un widget, puis tape sur le tableau pour le placer !",
     titlePlaceholder: "🏷️ Nomme ta télécommande...",
     toolbar: {
@@ -809,6 +812,8 @@ const I18N = {
       nothingToRedo: "Rien à rétablir",
       redoDone: "↪️ Rétabli",
       downloaded: "💾 Téléchargé !",
+      layoutJsonExported: "📦 JSON de disposition exporté !",
+      makeCodeCfgExported: "🧠 CFG MakeCode exporté !",
       idMustBeUnique: "❌ L'ID doit être unique",
       idUpdated: "✅ ID mis à jour",
       modelUpdated: "✅ Modèle mis à jour",
@@ -856,7 +861,7 @@ const I18N = {
     chooseTpl: "🎨 اختر قالبًا!",
     pickTpl: "اختر واحدًا للبدء",
     templates: { gamepad:"ذراع تحكم", robot:"روبوت", mixer:"موسيقى", racing:"سباق", lights:"أضواء", blank:"ابدأ" },
-    buttons: { demo:"🎮 عرض كل الأدوات!", export:"📦 تصدير", import:"📂 استيراد", templates:"🎨 قوالب", code:"📄 الكود" },
+    buttons: { demo:"🎮 عرض كل الأدوات!", export:"📦 JSON التخطيط", exportMakeCode:"🧠 إعداد MakeCode", import:"📂 استيراد", templates:"🎨 قوالب", code:"📄 الكود" },
     hint: "👆 اختر أداة، ثم اضغط على اللوحة لوضعها!",
     titlePlaceholder: "🏷️ اسمِّ جهاز التحكم...",
     toolbar: {
@@ -926,6 +931,8 @@ const I18N = {
       nothingToRedo: "لا يوجد ما يمكن إعادته",
       redoDone: "↪️ تمت الإعادة",
       downloaded: "💾 تم التنزيل!",
+      layoutJsonExported: "📦 تم تصدير JSON التخطيط!",
+      makeCodeCfgExported: "🧠 تم تصدير إعداد MakeCode!",
       idMustBeUnique: "❌ المعرف يجب أن يكون فريدًا",
       idUpdated: "✅ تم تحديث المعرف",
       modelUpdated: "✅ تم تحديث النموذج",
@@ -1017,6 +1024,7 @@ function setLang(lang){
   // Builder header buttons
   const demoBtn = $("#demoBtn"); if (demoBtn) demoBtn.textContent = t.buttons.demo;
   const exportBtn = $("#exportJsonBtn"); if (exportBtn) exportBtn.textContent = t.buttons.export;
+  const exportMakeCodeBtn = $("#exportMakeCodeCfgBtn"); if (exportMakeCodeBtn) exportMakeCodeBtn.textContent = t.buttons.exportMakeCode || "🧠 MakeCode CFG";
   const importBtn = $("#importJsonBtn"); if (importBtn) importBtn.textContent = t.buttons.import;
   const codeBtn = $("#codeBtn"); if (codeBtn) codeBtn.textContent = t.buttons.code;
 
@@ -1095,6 +1103,8 @@ function setLang(lang){
   const arrangeBtn = $("#arrangeModeBtn"); if (arrangeBtn) arrangeBtn.textContent = state.arrangeMode ? t.arrangeDone : t.arrange;
   const fsBtn = $("#fullscreenBtn"); if (fsBtn) fsBtn.textContent = t.fullscreen;
   const arrangeHint = $("#arrangeHint"); if (arrangeHint) arrangeHint.textContent = t.arrangeHint;
+  const rtJsonBtn = $("#runtimeExportJsonBtn"); if (rtJsonBtn) rtJsonBtn.title = t.buttons.export;
+  const rtCfgBtn = $("#runtimeExportMakeCodeBtn"); if (rtCfgBtn) rtCfgBtn.title = t.buttons.exportMakeCode || "MakeCode CFG";
 
   // Quick actions menu (runtime/arrange context menu)
   const quickMenu = $("#quickActionsMenu");
@@ -1124,23 +1134,143 @@ function setLang(lang){
 }
 
 // ---- Export / Import JSON layout ----
-function exportLayoutJson(){
-  const t = I18N[state.lang] || I18N.en;
-  if (!state.widgets || state.widgets.length === 0){
-    if (typeof toast === "function") toast(tr('toast.addWidgetsFirst'), "error");
+// v2.1: a layout export is now a complete, self-describing design artifact.
+// It contains the exact widget geometry, reference canvas size and a deterministic
+// revision. The same arranged design can therefore be imported back into Build or
+// embedded into MakeCode without manually copying x/y/w/h values.
+function cloneSerializable(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function fnv1a32Hex(text) {
+  let hash = 0x811c9dc5;
+  const bytes = encoder.encode(String(text));
+  for (let i = 0; i < bytes.length; i++) {
+    hash ^= bytes[i];
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+function getBuildCanvasSizeForExport() {
+  // Prefer the logical size remembered from an imported CFG. A Build canvas may
+  // be visually clamped to the browser viewport, but that must not silently turn
+  // a 1372×776 reference design into a smaller firmware layout on export.
+  if (state.buildCanvasSize && state.buildCanvasSize.w && state.buildCanvasSize.h) {
+    return { w: Math.round(state.buildCanvasSize.w), h: Math.round(state.buildCanvasSize.h) };
+  }
+  const wrap = document.querySelector('.resizable-wrap') || findCanvasDropzone();
+  if (wrap) {
+    const r = wrap.getBoundingClientRect();
+    return { w: Math.max(300, Math.round(r.width)), h: Math.max(200, Math.round(r.height)) };
+  }
+  let maxX = 0, maxY = 0;
+  (state.widgets || []).forEach(w => {
+    maxX = Math.max(maxX, Number(w.x || 0) + Number(w.w || 0));
+    maxY = Math.max(maxY, Number(w.y || 0) + Number(w.h || 0));
+  });
+  return { w: Math.max(300, maxX + 20), h: Math.max(200, maxY + 20) };
+}
+
+function makeExportConfig(source = 'build') {
+  let title = 'My Remote';
+  let widgets = [];
+  let canvas = null;
+
+  if (source === 'runtime') {
+    if (!state.config || !Array.isArray(state.config.widgets) || state.config.widgets.length === 0) return null;
+    title = state.config.title || ($('#titleInput')?.value || 'My Remote');
+    widgets = cloneSerializable(state.config.widgets);
+    const grid = $('#runtimeGrid');
+    canvas = state.runtimeCanvasSize ? cloneSerializable(state.runtimeCanvasSize) : null;
+    if (!canvas && grid) {
+      canvas = {
+        w: Math.max(300, parseInt(grid.style.width, 10) || Math.round(grid.getBoundingClientRect().width)),
+        h: Math.max(200, parseInt(grid.style.height, 10) || Math.round(grid.getBoundingClientRect().height))
+      };
+    }
+    if (!canvas && state.config.canvas) canvas = cloneSerializable(state.config.canvas);
+  } else {
+    if (!state.widgets || state.widgets.length === 0) return null;
+    title = $('#titleInput')?.value || 'My Remote';
+    widgets = cloneSerializable(state.widgets);
+    canvas = getBuildCanvasSizeForExport();
+  }
+
+  const core = {
+    title,
+    widgets,
+    canvas: canvas || { w: 400, h: 320 }
+  };
+  // Hash exactly what firmware will embed; do not include the hash inside itself.
+  const configRevision = fnv1a32Hex(JSON.stringify(core));
+  return {
+    schemaVersion: 2,
+    ...core,
+    configRevision
+  };
+}
+
+function safeProjectName(title) {
+  return String(title || 'my-remote').toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'my-remote';
+}
+
+function downloadTextFile(filename, text, mime = 'text/plain') {
+  const blob = new Blob([text], { type: mime });
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportLayoutJson(source = 'build') {
+  const cfg = makeExportConfig(source);
+  if (!cfg) {
+    if (typeof toast === 'function') toast(tr('toast.addWidgetsFirst'), 'error');
     return;
   }
-  const title = ($("#titleInput") && $("#titleInput").value) ? $("#titleInput").value : "My Remote";
-  const cfg = { schemaVersion: 1, title: title, widgets: state.widgets };
+  const safe = safeProjectName(cfg.title);
+  downloadTextFile(`${safe}-layout-${cfg.configRevision}.json`, JSON.stringify(cfg, null, 2), 'application/json');
+  if (typeof toast === 'function') toast(tr('toast.layoutJsonExported'), 'success');
+}
 
-  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  const safe = String(title).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-  a.download = (safe || "my-remote") + ".json";
-  a.click();
+function unicodeBase64(text) {
+  const bytes = encoder.encode(String(text));
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
 
-  if (typeof toast === "function") toast(t.toastExport, "success");
+function makeMakeCodeCfgSnippet(cfg) {
+  // Firmware reads only title/widgets/canvas. schemaVersion/configRevision are
+  // export metadata, so keep the BLE payload lean and put the revision in its
+  // dedicated constant (same protocol used by v47+ firmware).
+  const payload = { title: cfg.title, widgets: cfg.widgets, canvas: cfg.canvas };
+  const json = JSON.stringify(payload);
+  const b64 = unicodeBase64(json);
+  const readable = JSON.stringify(payload, null, 2).split('\n').map(line => '// ' + line).join('\n');
+  return `/**\n * Layout exported by Micro:bit Remote Builder ${APP_VERSION}\n * Revision: ${cfg.configRevision}\n * Canvas: ${cfg.canvas.w} x ${cfg.canvas.h}\n *\n * HOW TO USE WITH THE EXISTING ROBOT FIRMWARE:\n * Replace only the existing CFG and CFG_REV constants with the two constants\n * below. Keep the rest of your v51+ Maqueen firmware unchanged.\n */\n\n// Human-readable reference:\n${readable}\n\nconst CFG = "${b64}"\nconst CFG_REV = "${cfg.configRevision}"\n`;
+}
+
+function exportMakeCodeCfg(source = 'build') {
+  const cfg = makeExportConfig(source);
+  if (!cfg) {
+    if (typeof toast === 'function') toast(tr('toast.addWidgetsFirst'), 'error');
+    return;
+  }
+  const safe = safeProjectName(cfg.title);
+  const ts = makeMakeCodeCfgSnippet(cfg);
+  downloadTextFile(`${safe}-makecode-layout-${cfg.configRevision}.ts`, ts, 'text/plain');
+  if (typeof toast === 'function') toast(tr('toast.makeCodeCfgExported'), 'success');
 }
 
 // Shared by importLayoutJsonFile() and loadCfgIntoBuild() (the "edit this
@@ -1156,6 +1286,9 @@ function applyCfgToBuildState(cfg){
   });
   state.nextId = Math.max(10, maxNum + 1);
   if ($("#titleInput")) $("#titleInput").value = cfg.title || "My Remote";
+  if (cfg.canvas && Number.isFinite(Number(cfg.canvas.w)) && Number.isFinite(Number(cfg.canvas.h))) {
+    state.buildCanvasSize = { w: Math.round(Number(cfg.canvas.w)), h: Math.round(Number(cfg.canvas.h)) };
+  }
   if (typeof applyWidgetDefaults === "function") state.widgets.forEach(applyWidgetDefaults);
   state.selected = null;
   if (typeof renderWidgets === "function") renderWidgets();
@@ -1303,7 +1436,8 @@ const state = {
   livePreview: true,
   canvasBg: null, // background image
   history: [], // visual history
-  arrangeMode: false // runtime arrange mode
+  arrangeMode: false, // runtime arrange mode
+  buildCanvasSize: null // logical Build canvas size used for portable layout export
 };
 state._allowLoadingOverlay = false;
 
@@ -2559,7 +2693,10 @@ try{ placeToolbarWhereHintWas(); }catch(e){}
       e.target.value = '';
     };
   }
-  const exp = $('#exportJsonBtn'); if (exp) exp.addEventListener('click', exportLayoutJson);
+  const exp = $('#exportJsonBtn'); if (exp) exp.addEventListener('click', () => exportLayoutJson('build'));
+  const expCfg = $('#exportMakeCodeCfgBtn'); if (expCfg) expCfg.addEventListener('click', () => exportMakeCodeCfg('build'));
+  const rtExpJson = $('#runtimeExportJsonBtn'); if (rtExpJson) rtExpJson.addEventListener('click', () => exportLayoutJson('runtime'));
+  const rtExpCfg = $('#runtimeExportMakeCodeBtn'); if (rtExpCfg) rtExpCfg.addEventListener('click', () => exportMakeCodeCfg('runtime'));
   const imp = $('#importJsonBtn'); if (imp) imp.addEventListener('click', () => $('#jsonFileInput').click());
   $('#modalClose').onclick = () => $('#modalBg').classList.remove('show');
   $('#modalBg').onclick = e => { if (e.target === $('#modalBg')) $('#modalBg').classList.remove('show'); };
@@ -3483,6 +3620,8 @@ function switchTab(tab, opts = {}) {
       if (grid) grid.classList.remove('arrange-mode');
       const hint = $('#arrangeHint');
       if (hint) hint.style.display = 'none';
+      const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
+      const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
       
       // Sync any changes made
       syncRuntimeToBuild();
@@ -5549,6 +5688,8 @@ function updateBleUI() {
       }
     }
     if (fullscreenBtn) fullscreenBtn.classList.remove('visible');
+    const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
+    const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
   }
 }
 
@@ -5701,6 +5842,21 @@ function forceReloadRemoteConfig() {
 // feel instant and quiet, not repeat UI meant for a newly discovered layout.
 function activateRemoteConfig(config, fromCache = false) {
   state.config = config;
+
+  // v51: the MakeCode CFG may define the reference canvas geometry too.
+  // This keeps widget positions/sizes reproducible across compatible apps
+  // instead of letting each client infer a different canvas from max extents.
+  if (config?.canvas &&
+      Number.isFinite(Number(config.canvas.w)) &&
+      Number.isFinite(Number(config.canvas.h))) {
+    state.runtimeCanvasSize = {
+      w: Math.max(300, Number(config.canvas.w)),
+      h: Math.max(200, Number(config.canvas.h))
+    };
+  } else {
+    state.runtimeCanvasSize = null;
+  }
+
   if (state.config?.widgets) state.config.widgets.forEach(applyWidgetDefaults);
   console.log(fromCache ? '[BLE] Config restored from cache:' : '[BLE] Config decoded:', state.config);
   renderRuntime();
@@ -5891,8 +6047,8 @@ function renderRuntime() {
   cfg.widgets.forEach(w => { maxX = Math.max(maxX, w.x + w.w); maxY = Math.max(maxY, w.y + w.h); });
   
   // Use saved canvas size or calculate from widgets - with reasonable limits
-  const canvasW = state.runtimeCanvasSize?.w || Math.max(350, maxX + 20);
-  const canvasH = state.runtimeCanvasSize?.h || Math.max(300, maxY + 20);
+  const canvasW = state.runtimeCanvasSize?.w || cfg.canvas?.w || Math.max(350, maxX + 20);
+  const canvasH = state.runtimeCanvasSize?.h || cfg.canvas?.h || Math.max(300, maxY + 20);
   grid.style.width = `${canvasW}px`;
   grid.style.height = `${canvasH}px`;
   grid.innerHTML = '';
@@ -5946,6 +6102,8 @@ function toggleArrangeMode() {
     grid.querySelectorAll('.rt-resize-handle').forEach(h => h.style.display = 'block');
 
     setupArrangeMode();
+    const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.add('visible');
+    const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.add('visible');
     toast(tr('toast.arrangeModeOn'), 'success');
   } else {
     btn.classList.remove('active');
@@ -5957,6 +6115,8 @@ function toggleArrangeMode() {
     grid.querySelectorAll('.rt-resize-handle').forEach(h => h.style.display = 'none');
 
     teardownArrangeMode();
+    const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
+    const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
 
     // Sync changes back to build mode widgets
     syncRuntimeToBuild();
@@ -6017,6 +6177,8 @@ function setupArrangeMode() {
         w: parseInt(grid.style.width) || 400,
         h: parseInt(grid.style.height) || 320
       };
+      // Keep the live config self-describing after Arrange-mode resizing.
+      if (state.config) state.config.canvas = { ...state.runtimeCanvasSize };
     };
     
     canvasHandle.addEventListener('mousedown', onCanvasResizeStart);
