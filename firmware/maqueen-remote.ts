@@ -23,19 +23,96 @@
  * with the same 12%-of-full-scale dead zone before treating input as
  * "stopped", so behavior should match what Maqueen Lab's own UI does.
  *
- * ON THE DPAD WIDGET: an earlier version of this firmware used 4
- * separate button widgets instead of bit-rxy's "dpad" widget, because
- * the dpad sends all 4 directions under ONE shared widget id
- * ("SET dpad_move up 1", "SET dpad_move down 1", ...) and the app's
- * send queue used to keep only a single "latest pending message"
- * slot — a rapid press on one direction could overwrite an unflushed
- * message from another direction sharing that same id (Up worked,
- * Down/Left/Right never arrived at all). This has since been fixed on
- * the app side (maqueen-rxy/script.js): dpad press/release now goes
- * through a small reliable FIFO queue (sendReliable()/bleSend.queue)
- * that's drained ahead of the "latest wins" slot, so no direction can
- * get silently dropped by another one anymore — the dpad widget is
- * safe to use here.
+ * ════════════════════════════════════════════════════════════════
+ * ⚡ LOW-LATENCY D-PAD — REAL-HARDWARE LESSONS (v43)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * This section records the latency investigation so the same problems
+ * do not get reintroduced later. The final v43 path was reached by
+ * testing each layer separately: browser pointer event → Web Bluetooth
+ * write → micro:bit UART receive callback → Maqueen I2C motor write.
+ * v43 was the first build that felt immediate in real driving tests.
+ *
+ * 1) REMOVE ARTIFICIAL UI/QUEUE DELAYS
+ *    - The browser originally waited ~60 ms between BLE writes.
+ *    - D-pad release had a 100 ms debounce.
+ *    Those two delays were directly visible as press/stop latency and
+ *    were removed. D-pad uses Pointer Events so touch devices do not
+ *    generate a second synthetic mouse sequence after the touch.
+ *
+ * 2) DO NOT REPLAY OLD MOTOR EVENTS
+ *    A reliable FIFO sounds safe, but it is wrong for steering: a stale
+ *    press/release queued ahead of the newest direction makes the robot
+ *    faithfully execute OLD intentions. Manual drive therefore uses
+ *    "latest complete state wins", not "deliver every historical click".
+ *    The state is a 4-bit mask: Up=1, Down=2, Left=4, Right=8. This also
+ *    preserves diagonals naturally.
+ *
+ * 3) KEEP THE RADIO PACKET TINY
+ *    The old text protocol could exceed the BLE UART payload used by the
+ *    app. For example "SET dpad_move up 1" fit while down/left/right were
+ *    longer and could require another BLE write/connection event. We
+ *    first shortened the command, then removed text parsing entirely.
+ *    FINAL FORMAT: one ASCII byte 'a'..'p' encodes mask 0..15, followed
+ *    by newline. The browser therefore writes exactly TWO bytes for a
+ *    D-pad state change.
+ *
+ * 4) BYPASS THE GENERAL BLE QUEUE FOR MOTORS
+ *    Sliders, PINGs and other controls may be serialized/coalesced by the
+ *    normal app queue. The D-pad has its own writer and replaces any
+ *    pending motor state with the newest one. At most the GATT write
+ *    already in progress can finish first; stale motor states do not
+ *    build a backlog.
+ *
+ * 5) EXECUTE MOTORS DIRECTLY IN THE RECEIVE CALLBACK
+ *    The one-byte packet is detected before GETCFG/SET parsing and goes
+ *    straight to handleDpadMask(). That hot path does only: decode mask,
+ *    calculate left/right speed, and call motorStop()/motorRun(). It does
+ *    NOT call handleWidget(), dbg(), LED rendering, telemetry, or the
+ *    generic drive refresh/rate-limit path.
+ *
+ * 6) NEVER BLOCK THE BLE RECEIVE CALLBACK WITH DISPLAY OR LOGGING
+ *    basic.showArrow/showIcon/showLeds normally include hundreds of ms
+ *    of display time unless interval 0 is supplied. Earlier firmware
+ *    rendered arrows inside the receive path, producing ~400-600 ms of
+ *    apparent control lag. Display work is now deferred to the forever
+ *    loop and uses interval 0.
+ *
+ *    serial.writeLine() was another trap: with no USB serial reader it
+ *    can block the calling fiber. bluetooth.uartWriteLine() from inside
+ *    onUartDataReceived was also found to interfere with BLE turnaround.
+ *    dbg() therefore only queues text; optional BLE logs drain later from
+ *    the main loop, and debugging defaults OFF.
+ *
+ * 7) ULTRASONIC POLLING CAN FREEZE THE WHOLE RUNTIME
+ *    pxt-maqueen Ultrasonic() retries pulseIn() when there is no echo.
+ *    On open space this can busy-wait for roughly 250 ms. That freeze
+ *    also freezes BLE command handling, so a perfectly fast D-pad packet
+ *    still appears late. The latency build NEVER polls Ultrasonic() in
+ *    Manual or Line mode; distance sensing is reserved for Avoid mode.
+ *
+ * 8) BACKGROUND BLE TRAFFIC MATTERS
+ *    Telemetry/logs/heartbeat traffic shares the same BLE link with motor
+ *    commands. Manual driving defaults telemetry to Off, app PING traffic
+ *    is sparse/suppressed around driving, and the D-pad writer has
+ *    priority. bluetooth.setTransmitPower(7) is used for the strongest
+ *    link available from MakeCode.
+ *
+ * 9) MOTOR I2C WRITES: CHANGE IMMEDIATELY, DO NOT SPAM
+ *    Maqueen motors are controlled over I2C. Generic joystick/servo code
+ *    still avoids redundant writes, but the D-pad hot path writes a real
+ *    state change immediately. Do not restore a fixed 125 ms/8 Hz delay
+ *    to handleDpadMask(); that turns directly into steering latency.
+ *
+ * 10) KEEP SAFETY WITHOUT MAKING CONTROL SLUGGISH
+ *    A held direction is periodically re-sent as the SAME complete mask.
+ *    The firmware watchdog stops the motors if those refreshes disappear,
+ *    protecting against a lost release/link while still letting a held
+ *    button stay active. Link-loss handling also stops both motors.
+ *
+ * IMPORTANT DESIGN RULE: for real-time drive controls, optimize for the
+ * newest desired STATE, not guaranteed delivery of every EVENT. Reliability
+ * for an old steering command is often indistinguishable from latency.
  *
  * Extension required (MakeCode → Extensions):
  *   • pxt-maqueen   (https://github.com/DFRobot/pxt-maqueen)
@@ -55,13 +132,13 @@
  * "LOG <msg>" lines — the app already console.logs every raw BLE line
  * it receives, so dbg() output shows up in the browser DevTools
  * console (F12) with nothing but the BLE connection already open, no
- * USB cable needed. Every drive command also flashes an LED-matrix
- * symbol (arrow / square dot) so you can debug untethered, purely by
- * watching the robot — see showDriveDebug() below.
+ * USB cable needed. General controls can request LED-matrix diagnostics,
+ * but the v43 D-pad hot path intentionally does no display work at all;
+ * nothing visual is allowed between the BLE packet and motorRun().
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v42"        scrolling at boot   — firmware version (check after every flash)
+ *    "v43"        scrolling at boot   — firmware version (check after every flash)
  *    ○            hollow ring         — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -75,10 +152,12 @@
  *    ♪            quarter note        — Buzz pressed
  *    bar graph    rising bar          — servo angle (0-180)
  *
- * Every control now leaves a mark, so you can confirm a command
- * actually reached the robot without a cable or a console.
+ * Most non-drive controls leave a visual mark. The D-pad is the one
+ * deliberate exception: visual feedback was removed from its hot path
+ * because responsiveness is more important than per-packet animation.
  *
  * 🔌 Wire protocol (bit-rxy's own, NOT Maqueen Lab's #N/ECHO: dialect):
+ *    App → micro:bit   <a..p> + newline        (FAST D-pad: 1-byte mask)
  *    App → micro:bit   SET <widgetId> <value...>
  *    App → micro:bit   GETCFG                 (asks for the layout once, on connect)
  *    micro:bit → App   CFGBEGIN / CFG <b64 chunk> / CFGEND
@@ -88,7 +167,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v42"
+const FIRMWARE_VERSION = "v46"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -139,7 +218,30 @@ function dbg(msg: string) {
 // ═══════════════════════════════════════════════════════════════
 
 bluetooth.startUartService()
+bluetooth.setTransmitPower(7)
 let cfgSent = false
+
+// v46 RECONNECT HARDENING
+// -----------------------
+// GETCFG used to send ~2 seconds of CFGBEGIN/CFG/CFGEND notifications from
+// INSIDE onUartDataReceived(). That works on a cold boot, but after a real
+// disconnect/reconnect the BLE UART stack can be in a fragile turnaround
+// state; a large callback-side write burst can leave the device visible in
+// the chooser while config notifications no longer flow. Queue the transfer
+// here and let the main loop send ONE notification at a time instead.
+let cfgTxActive = false
+let cfgTxStage = 0       // 0=CFGBEGIN, 1=CFG chunks, 2=CFGEND
+let cfgTxPos = 0
+let cfgTxChunkIdx = 0
+let cfgTxLit = 0
+let cfgTxNextAt = 0
+const CFG_TX_GAP_MS = 35
+
+// A real disconnect can also leave the Nordic/MakeCode BLE peripheral in a
+// connectable-but-unusable GATT state until reset. v46 schedules a SOFTWARE
+// reset after showing X, so the user no longer needs the physical reset button.
+let bleStackResetAt = 0
+const BLE_STACK_RESET_DELAY_MS = 600
 
 // ── LINK LOSS DETECTION BY SILENCE ───────────────────────────────
 // bluetooth.onBluetoothDisconnected does NOT fire on this board. Tested
@@ -151,17 +253,21 @@ let cfgSent = false
 // onBluetoothConnected DOES fire (the heartbeat is gated on btConnected
 // and it counts), so it is specifically the disconnect event that is
 // unreliable. Rather than depend on it, the link is now judged by
-// traffic: the app pings once a second, lastRxAt is stamped on ANY line
+// traffic: the app pings every three seconds, lastRxAt is stamped on ANY line
 // received, and silence past LINK_TIMEOUT_MS means the peer is gone.
 //
-// 3s allows two missed pings before declaring the link dead, which is
+// 9s allows roughly two missed 3s pings before declaring the link dead, which is
 // tolerant of a momentarily busy radio without leaving a runaway robot
 // driving for long.
 let lastRxAt = 0
 let linkLostHandled = false
-const LINK_TIMEOUT_MS = 3000
+const LINK_TIMEOUT_MS = 9000
 
-// True only between onBluetoothConnected and onBluetoothDisconnected.
+// True while the link is known alive. Set by onBluetoothConnected() AND,
+// from v45 onward, by every successfully received UART line. The receive
+// fallback matters because Manual commands can work in the UART callback even
+// when a missed connection event would otherwise leave Line/Avoid and UPD
+// telemetry disabled in the forever loop.
 // Every bluetooth.uartWriteLine() in this file is gated on it, because
 // writing to a UART with no peer BLOCKS THE CALLING FIBER once the
 // buffer stops draining — the identical failure mode as serial.
@@ -180,6 +286,10 @@ let btConnected = false
 //   All   — everything (default)
 //   Basic — uptime and version only, so the link still visibly lives
 //   Off   — silence
+//
+// Firmware starts at All to match the first/default option shown by the app.
+// Manual driving still suppresses expensive sensor work, so this does not
+// reintroduce the old D-pad latency problem.
 //
 // Note this does NOT affect link-loss detection: that measures traffic
 // arriving FROM the app (its PING), so the robot still notices a dead
@@ -234,47 +344,53 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
     lastRxAt = input.runningTime()
     linkLostHandled = false
 
-    if (cmd == "GETCFG") {
-        dbg("GETCFG received (firmware " + FIRMWARE_VERSION + "), sending layout...")
-        // Small pause before the very first write too — replying
-        // immediately after just having received a packet can race the
-        // BLE stack's own turnaround on some connections. 20ms wasn't
-        // enough margin on at least one real device/connection, so this
-        // is bumped to 35ms with an extra pause after CFGBEGIN as well.
-        basic.pause(35)
-        bluetooth.uartWriteLine("CFGBEGIN")
-        basic.pause(35)
+    // v45: receiving a UART packet is stronger evidence of a live BLE link
+    // than the platform connection callback. Manual D-pad commands execute
+    // inside this receive handler, but Line/Avoid + telemetry run in the
+    // forever loop and are gated on btConnected. If onBluetoothConnected()
+    // is missed on a device/browser combination, Manual still appears to
+    // work while BOTH autonomous modes and all UPD telemetry stay dead.
+    // Any successfully received packet proves the peer is connected, so
+    // recover the flag here. Link loss is still detected by RX silence.
+    btConnected = true
 
-        // Progress animation: fill the 5x5 matrix pixel by pixel as the
-        // chunks go out, so the ~2s transfer is visibly "doing something"
-        // instead of looking frozen. led.plot() is a direct pixel write —
-        // no pause, unlike basic.show*, so it adds nothing to the
-        // transfer time. Drawing straight from this handler is safe here
-        // ONLY because the loop's renderer is idle during the handshake
-        // (debugDirty is cleared just below, and nothing sets it until
-        // CFGEND requests the ✓).
+    // Fastest D-pad wire format: one byte 'a'..'p' encodes mask 0..15.
+    // The browser sends exactly two bytes total: command + newline.
+    if (cmd.length == 1 && cmd.charCodeAt(0) >= 97 && cmd.charCodeAt(0) <= 112) {
+        handleDpadMask(cmd.charCodeAt(0) - 97)
+    }
+    else if (cmd == "BYE") {
+        // Intentional app disconnect: stop safely and schedule a clean BLE
+        // peripheral reboot before the next session.
+        handleLinkLost()
+    }
+    else if (cmd == "GETCFG") {
+        // v46: arm the transfer and RETURN from the RX callback immediately.
+        // The forever loop below emits CFGBEGIN/chunks/CFGEND one at a time.
+        dbg("GETCFG received (firmware " + FIRMWARE_VERSION + "), queueing layout...")
+        cfgSent = false
+        cfgTxActive = true
+        cfgTxStage = 0
+        cfgTxPos = 0
+        cfgTxChunkIdx = 0
+        cfgTxLit = 0
+        cfgTxNextAt = input.runningTime() + 20
         debugDirty = false
         basic.clearScreen()
-        let totalChunks = Math.idiv(CFG.length + 17, 18)
-        let chunkIdx = 0
-        let lit = 0
-        for (let i = 0; i < CFG.length; i += 18) {
-            bluetooth.uartWriteLine("CFG " + CFG.substr(i, 18))
-            chunkIdx += 1
-            // Light however many of the 25 pixels this chunk earned.
-            let target = Math.idiv(chunkIdx * 25, totalChunks)
-            while (lit < target) {
-                led.plot(lit % 5, Math.idiv(lit, 5))
-                lit += 1
-            }
-            basic.pause(35)
-        }
-        bluetooth.uartWriteLine("CFGEND")
-        cfgSent = true
-        // ✓ = connected and layout delivered. Requested, not drawn: the
-        // forever loop is the single renderer (see pendingGlyph).
-        requestGlyph(GLYPH_CONNECTED)
-        dbg("layout sent, cfgSent = true")
+    }
+    else if (cmd.indexOf("M ") == 0) {
+        // Ultra-low-latency D-pad packet. The number is the COMPLETE
+        // current button state (U=1,D=2,L=4,R=8), so stale queued events
+        // never need to be replayed.
+        handleDpadMask(parseInt(cmd.substr(2)))
+    }
+    else if (cmd.indexOf("D ") == 0) {
+        // Compact D-pad packet: D <u|d|l|r> <0|1>. Keeping this under
+        // one 20-byte BLE payload avoids an extra connection event.
+        let parts = cmd.split(" ")
+        let d = parts[1]
+        let dir = d == "u" ? "up" : d == "d" ? "down" : d == "l" ? "left" : "right"
+        handleWidget("dpad_move", dir + " " + parts[2])
     }
     else if (cmd.indexOf("SET ") == 0) {
         let parts = cmd.substr(4).split(" ")
@@ -399,37 +515,29 @@ function requestStopIcon() {
     requestGlyph(GLYPH_STOP)
 }
 
-// The Maqueen Lite's motor driver is I2C-based (not direct PWM), and
-// Maqueen Lab's own firmware explicitly rate-limits drive commands to
-// 8 Hz for this reason — re-writing motorRun() faster than that, or
-// with a value barely different from what's already spinning, can
-// prevent the motor from ever settling into visible motion even
-// though every individual command is correct. Guard against both:
-// skip the I2C write entirely if the values haven't changed enough to
-// matter, and never re-issue faster than ~125 ms (8 Hz) once something
-// IS moving. Kept even though the D-pad only calls driveMix() once per
-// press/diagonal-change (not a continuous stream like a joystick would),
-// since it also protects the case where two directions are toggled in
-// quick succession.
+// The Maqueen Lite motor driver is I2C-based (not direct PWM). Generic
+// continuous controls still use change detection so they do not hammer
+// I2C with essentially identical values. HOWEVER, real-hardware latency
+// testing showed that a fixed 125 ms / 8 Hz gate is unacceptable for
+// manual steering. MIN_DRIVE_INTERVAL_MS is therefore ZERO in this
+// latency build, and the dedicated D-pad path below bypasses driveMix()
+// altogether so every actual state change reaches motorRun immediately.
+// Keep the change threshold for noisy continuous controls; do not add a
+// fixed time gate back into handleDpadMask().
 let lastDriveL = 0, lastDriveR = 0
 let lastDriveAt = 0
-const MIN_DRIVE_INTERVAL_MS = 125  // 8 Hz, matches Maqueen Lab's own cap
+const MIN_DRIVE_INTERVAL_MS = 0    // latency build: state changes write immediately
 const DRIVE_CHANGE_THRESHOLD = 15  // ignore jitter smaller than this
 
-// Watchdog: a held D-pad direction sends ONE "press" packet and ONE
-// "release" packet ("SET dpad_move <dir> 0"). If the release is
-// dropped over BLE (this app has shown dropped/late packets elsewhere
-// — CFG chunks, connect races), the firmware would never learn the
-// direction was let go and would keep driving forever.
-//
-// The timeout only works because the app KEEPS RE-SENDING the held
-// direction every ~300ms while your finger is down (see the dpad
-// keepalive in maqueen-rxy/script.js). Without that keepalive a held
-// button goes silent by design, and an earlier 500ms watchdog cut the
-// motors off mid-hold — the firmware fighting the user. 700ms leaves
-// room for two missed keepalives before giving up.
+// Safety watchdog for the final state-mask protocol. A held D-pad
+// periodically re-sends the SAME complete mask (currently ~1000 ms in
+// script.js). That refresh is not for steering fidelity; it is a safety
+// heartbeat. If the physical release or BLE link disappears, the robot
+// must not keep driving forever. 2500 ms leaves room for missed refreshes
+// without making a normal held button cut out. Every fresh mask stamps
+// lastDriveCmdAt, and link-loss handling independently stops the motors.
 let lastDriveCmdAt = 0
-const DRIVE_WATCHDOG_MS = 700
+const DRIVE_WATCHDOG_MS = 2500
 
 // ═══════════════════════════════════════════════════════════════
 // 🤖 DRIVING MODES
@@ -535,9 +643,71 @@ function updateButtonDrive() {
     driveMix(nx, ny)
 }
 
+function handleDpadMask(mask: number) {
+    if (driveMode != MODE_MANUAL) return
+    // HOT PATH: a D-pad packet goes straight to the Maqueen motor driver.
+    // Do not route through handleWidget()/dbg()/LED rendering/rate limiting.
+    // Those are useful for general controls but add scheduler and BLE work
+    // exactly when manual driving needs the lowest possible latency.
+    lastDriveCmdAt = input.runningTime()
+    btnFwd = (mask & 1) != 0
+    btnBack = (mask & 2) != 0
+    btnLeft = (mask & 4) != 0
+    btnRight = (mask & 8) != 0
+
+    let ny = 0, nx = 0
+    if (btnFwd) ny += 1
+    if (btnBack) ny -= 1
+    if (btnLeft) nx -= 1
+    if (btnRight) nx += 1
+
+    if (nx == 0 && ny == 0) {
+        maqueen.motorStop(maqueen.Motors.All)
+        lastDriveL = 0
+        lastDriveR = 0
+        lastDriveAt = lastDriveCmdAt
+        return
+    }
+
+    let l = Math.constrain((ny + nx) * driveSpeed, -driveSpeed, driveSpeed)
+    let r = Math.constrain((ny - nx) * driveSpeed, -driveSpeed, driveSpeed)
+    maqueen.motorRun(maqueen.Motors.M1, l >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(l))
+    maqueen.motorRun(maqueen.Motors.M2, r >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(r))
+    lastDriveL = l
+    lastDriveR = r
+    lastDriveAt = lastDriveCmdAt
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 🎮 WIDGET HANDLERS — driving real Maqueen hardware via pxt-maqueen
 // ═══════════════════════════════════════════════════════════════
+
+// v44 autonomous motor path. Manual D-pad packets have their own direct
+// path above; Line/Avoid need the same ownership model. Autonomous motion
+// is generated on the micro:bit, so it must not depend on browser D-pad
+// keepalives or the Manual drive watchdog.
+function driveAuto(nx: number, ny: number) {
+    if (driveMode == MODE_MANUAL) return
+    let now = input.runningTime()
+    if (Math.abs(nx) < DEAD_ZONE && Math.abs(ny) < DEAD_ZONE) {
+        maqueen.motorStop(maqueen.Motors.All)
+        lastDriveL = 0
+        lastDriveR = 0
+        lastDriveAt = now
+        lastDriveCmdAt = now
+        requestDriveDebug(0, 0)
+        return
+    }
+    let l = Math.constrain(Math.round((ny + nx) * driveSpeed), -driveSpeed, driveSpeed)
+    let r = Math.constrain(Math.round((ny - nx) * driveSpeed), -driveSpeed, driveSpeed)
+    maqueen.motorRun(maqueen.Motors.M1, l >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(l))
+    maqueen.motorRun(maqueen.Motors.M2, r >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(r))
+    lastDriveL = l
+    lastDriveR = r
+    lastDriveAt = now
+    lastDriveCmdAt = now
+    requestDriveDebug(l, r)
+}
 
 function handleWidget(id: string, val: string) {
     // Every SET command lands here first — logged unconditionally so
@@ -592,6 +762,9 @@ function handleWidget(id: string, val: string) {
         if (val == "Line") driveMode = MODE_LINE
         else if (val == "Avoid") driveMode = MODE_AVOID
         else driveMode = MODE_MANUAL
+        // Reset ownership timing at the mode boundary. The age of the last
+        // Manual D-pad packet must never decide whether autonomous motors run.
+        lastDriveCmdAt = input.runningTime()
         requestDriveDebug(0, 0)
         dbg("mode -> " + val)
     }
@@ -730,7 +903,15 @@ function handleLinkLost() {
     // a peer that is gone.
     btConnected = false
     cfgSent = false
+    cfgTxActive = false
+    cfgTxStage = 0
+    cfgTxPos = 0
+    cfgTxChunkIdx = 0
     logQueue = []
+    // v46: reboot the BLE peripheral after the X is painted. This is the
+    // automatic replacement for the physical RESET that was previously
+    // required before GETCFG would work after a disconnect.
+    bleStackResetAt = input.runningTime() + BLE_STACK_RESET_DELAY_MS
     maqueen.motorStop(maqueen.Motors.All)
     // Clear the drive state too, not just the motors. Otherwise, if the
     // link dropped mid-drive, lastDriveL/R stay non-zero and the loop's
@@ -778,6 +959,10 @@ function handleLinkLost() {
 bluetooth.onBluetoothDisconnected(function () {
     dbg("BLE disconnect event")
     handleLinkLost()
+    // If the main loop is ever stuck in a UART write, reset from this event
+    // fiber anyway. X remains visible briefly, then Bluetooth starts clean.
+    basic.pause(BLE_STACK_RESET_DELAY_MS)
+    control.reset()
 })
 
 // ═══════════════════════════════════════════════════════════════
@@ -855,7 +1040,10 @@ basic.forever(function () {
     // Drive watchdog runs every 100ms (finer than the 1s heartbeat
     // cadence below) so a stalled/dropped "stop" packet gets caught
     // within DRIVE_WATCHDOG_MS instead of up to a full second late.
-    if ((lastDriveL != 0 || lastDriveR != 0) && now - lastDriveCmdAt > DRIVE_WATCHDOG_MS) {
+    // Manual safety watchdog only. v43 accidentally supervised Line/Avoid
+    // with the D-pad keepalive timeout too. Avoid can legitimately spend
+    // longer than that between ultrasonic polls after no-echo backoff.
+    if (driveMode == MODE_MANUAL && (lastDriveL != 0 || lastDriveR != 0) && now - lastDriveCmdAt > DRIVE_WATCHDOG_MS) {
         maqueen.motorStop(maqueen.Motors.All)
         dbg("watchdog: no drive update for " + DRIVE_WATCHDOG_MS + "ms, auto-stop")
         requestDriveDebug(0, 0)
@@ -943,6 +1131,53 @@ basic.forever(function () {
     // a crashed browser, or simply walking out of range. Checked BEFORE
     // the radio gate below, because btConnected is set by an event that
     // is exactly the thing we cannot trust here.
+    // ── BLE STACK RECOVERY (v46) ────────────────────────────────
+    // The disconnect event resets from its own fiber too, but the silence
+    // detector uses this path when the platform callback is missed.
+    if (bleStackResetAt > 0 && now >= bleStackResetAt) {
+        control.reset()
+        return
+    }
+
+    // ── CONFIG TX STATE MACHINE (v46) ───────────────────────────
+    // Never stream the whole layout from onUartDataReceived(). Sending one
+    // notification per pass keeps RX and TX decoupled and lets disconnect
+    // handling run between chunks.
+    if (btConnected && cfgTxActive) {
+        if (now >= cfgTxNextAt) {
+            if (cfgTxStage == 0) {
+                bluetooth.uartWriteLine("CFGBEGIN")
+                cfgTxStage = 1
+                cfgTxNextAt = now + CFG_TX_GAP_MS
+            } else if (cfgTxStage == 1) {
+                if (cfgTxPos < CFG.length) {
+                    bluetooth.uartWriteLine("CFG " + CFG.substr(cfgTxPos, 18))
+                    cfgTxPos += 18
+                    cfgTxChunkIdx += 1
+                    let totalChunks = Math.idiv(CFG.length + 17, 18)
+                    let target = Math.idiv(cfgTxChunkIdx * 25, totalChunks)
+                    while (cfgTxLit < target) {
+                        led.plot(cfgTxLit % 5, Math.idiv(cfgTxLit, 5))
+                        cfgTxLit += 1
+                    }
+                    cfgTxNextAt = now + CFG_TX_GAP_MS
+                } else {
+                    cfgTxStage = 2
+                }
+            } else {
+                bluetooth.uartWriteLine("CFGEND")
+                cfgTxActive = false
+                cfgSent = true
+                requestGlyph(GLYPH_CONNECTED)
+                dbg("layout sent, cfgSent = true")
+            }
+        }
+        // Keep the transfer loop tighter than the normal 100 ms control loop,
+        // and do not mix heartbeat/sensor/log notifications into CFG traffic.
+        basic.pause(20)
+        return
+    }
+
     if (cfgSent && !linkLostHandled && now - lastRxAt > LINK_TIMEOUT_MS) {
         handleLinkLost()
     }
@@ -966,7 +1201,7 @@ basic.forever(function () {
         nextHeartbeatAt = now + HEARTBEAT_INTERVAL_MS
         if (cfgSent) {
             heartbeat += 1
-            sendValue("lbl_heartbeat", uptimeString(heartbeat))
+            if ((lastDriveL == 0 && lastDriveR == 0) || now - lastDriveCmdAt > 500) sendValue("lbl_heartbeat", uptimeString(heartbeat))
         }
     }
 
@@ -977,14 +1212,14 @@ basic.forever(function () {
     // plugging in USB. That question cost real time more than once.
     if (cfgSent && !versionSent) {
         versionSent = true
-        sendValue("lbl_ver", FIRMWARE_VERSION)
+        if ((lastDriveL == 0 && lastDriveR == 0) || now - lastDriveCmdAt > 500) sendValue("lbl_ver", FIRMWARE_VERSION)
     }
 
     // ── Line sensors ─────────────────────────────────────────────
     // Polled every 100ms and pushed to the two LED widgets on CHANGE
     // only. readPatrol is a plain digital pin read — no echo wait, so
     // unlike the ultrasonic it costs nothing to poll often.
-    if (now >= nextLineAt) {
+    if (driveMode != MODE_MANUAL && now >= nextLineAt) {
         nextLineAt = now + LINE_INTERVAL_MS
         let rawL = maqueen.readPatrol(maqueen.Patrol.PatrolLeft)
         let rawR = maqueen.readPatrol(maqueen.Patrol.PatrolRight)
@@ -994,25 +1229,25 @@ basic.forever(function () {
         let onR = rawR == 0 ? 1 : 0
         if (cfgSent && onL != lastLineL) {
             lastLineL = onL
-            sendValue("ln_l", "" + onL)
+            if ((lastDriveL == 0 && lastDriveR == 0) || driveMode != MODE_MANUAL) sendValue("ln_l", "" + onL)
         }
         if (cfgSent && onR != lastLineR) {
             lastLineR = onR
-            sendValue("ln_r", "" + onR)
+            if ((lastDriveL == 0 && lastDriveR == 0) || driveMode != MODE_MANUAL) sendValue("ln_r", "" + onR)
         }
 
         // Line-following: steer toward whichever side has left the line.
         if (driveMode == MODE_LINE) {
             if (onL == 1 && onR == 1) {
-                driveMix(0, 1)          // both on the line -> straight
+                driveAuto(0, 1)          // both on the line -> straight
             } else if (onL == 1 && onR == 0) {
-                driveMix(-0.6, 0.4)     // drifted right -> bear left
+                driveAuto(-0.6, 0.4)     // drifted right -> bear left
             } else if (onL == 0 && onR == 1) {
-                driveMix(0.6, 0.4)      // drifted left -> bear right
+                driveAuto(0.6, 0.4)      // drifted left -> bear right
             } else {
                 // Both off the line. Pivot in place to hunt for it again
                 // rather than driving on blind.
-                driveMix(0.8, 0)
+                driveAuto(0.8, 0)
             }
             lastDriveCmdAt = now        // keep the watchdog satisfied
         }
@@ -1035,23 +1270,18 @@ basic.forever(function () {
     // exactly what you would expect: motors and servos unresponsive,
     // then outright freezing.
     //
-    // Two mitigations make it survivable while still feeding the graph
-    // and the obstacle alert in every mode:
+    // Earlier experiments tried mitigations such as skipping reads while
+    // driving and adaptive backoff. The final latency fix is stronger:
     //
-    //   1. SKIPPED WHILE THE WHEELS ARE TURNING (except in Avoid, where
-    //      the distance is the input driving the behaviour). This is the
-    //      important one — a stall you never notice while parked is
-    //      ruinous mid-drive, and driving is when responsiveness counts.
-    //   2. ADAPTIVE BACKOFF — brisk while real distances come back,
-    //      doubling to DIST_INTERVAL_MAX_MS while the sensor reports
-    //      nothing, snapping back on the first good reading. The
-    //      expensive case is exactly the uninformative one.
-    // Skip the reading entirely when nothing consumes it. At Basic or
-    // Off the gauge, graph and alert are all silenced, so outside Avoid
-    // mode the poll would cost its ~25-250ms purely to throw the result
-    // away. This turns the Telemetry selector into a genuine
-    // responsiveness control, not just a bandwidth one.
-    let distWanted = (updLevel == UPD_ALL) || driveMode == MODE_AVOID
+    //   - Manual/Line: NEVER call Ultrasonic(). Responsiveness wins.
+    //   - Avoid: distance is required, so poll there and use adaptive
+    //     backoff when the expensive no-echo result persists.
+    // This is why Telemetry alone is not enough: even an unsent sensor
+    // reading can freeze the runtime before BLE gets a chance to run.
+    // Low-latency control build: never call Ultrasonic() in Manual/Line.
+    // A no-echo read can busy-wait for ~250ms and freeze BLE command
+    // handling. Avoid mode is the only mode where distance is required.
+    let distWanted = driveMode == MODE_AVOID
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
     if (distWanted && now >= nextDistAt && !busyDriving) {
         nextDistAt = now + distInterval
@@ -1150,14 +1380,14 @@ basic.forever(function () {
                     if (reported >= 0 && reported < AVOID_STOP_CM) {
                         avoidPhase = 1
                         avoidUntil = now + 600
-                        driveMix(0, -1)         // back up
+                        driveAuto(0, -1)         // back up
                     } else {
-                        driveMix(0, 1)          // path clear -> cruise
+                        driveAuto(0, 1)          // path clear -> cruise
                     }
                 } else if (avoidPhase == 1 && now >= avoidUntil) {
                     avoidPhase = 2
                     avoidUntil = now + 500
-                    driveMix(1, 0)              // pivot away
+                    driveAuto(1, 0)              // pivot away
                 } else if (avoidPhase == 2 && now >= avoidUntil) {
                     avoidPhase = 0
                 }
@@ -1170,7 +1400,7 @@ basic.forever(function () {
     // this can't happen synchronously from onUartDataReceived). At
     // most 10/sec — plenty for discrete dpad/button/servo events,
     // and naturally paced by the same 100ms this loop already pauses.
-    if (cfgSent && logQueue.length > 0) {
+    if (cfgSent && logQueue.length > 0 && (lastDriveL == 0 && lastDriveR == 0) && now - lastDriveCmdAt > 500) {
         bluetooth.uartWriteLine("LOG " + logQueue.shift())
     }
 

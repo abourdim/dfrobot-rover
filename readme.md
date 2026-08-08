@@ -91,3 +91,18 @@ side. The app splits outgoing writes into 20-byte packets; the UART service reas
 ## Licence
 
 MIT
+
+
+## v44: Line/Avoid motor fix
+- Mode changes use the reliable BLE FIFO instead of the latest-value-wins slot.
+- Dedicated D-pad GATT writes and ordinary GATT writes are serialized to prevent operation collisions.
+- The D-pad safety watchdog applies only in Manual mode.
+- Line and Avoid use a direct autonomous motor path and refresh their own activity time.
+
+
+## v45: autonomous modes + distance telemetry fix
+
+- Treat every received BLE UART line as proof that the connection is alive (`btConnected = true`).
+- This fixes the case where Manual D-pad works in the receive callback but the forever loop remains gated off, which disables Line, Avoid, heartbeat, line LEDs, and distance telemetry together.
+- Telemetry now defaults to **All**, matching the UI selector's default value.
+- Link-loss safety is unchanged: RX silence still clears the connection and stops the motors.

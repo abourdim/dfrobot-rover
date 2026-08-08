@@ -1570,7 +1570,7 @@ const bleSend = {
   // 20-byte MTU truncation, which is fixed. A BLE connection interval is
   // typically 7.5-30ms, so 60ms still leaves ample headroom while making
   // the D-pad feel immediate. Raise it again if writes start failing.
-  minInterval: 60,
+  minInterval: 0,
   lastSendTime: 0,      // Timestamp of last successful send
   retryCount: 0,        // Track consecutive failures
   maxRetries: 3         // Max retries before giving up on a message
@@ -1642,6 +1642,15 @@ async function bleWrite(msg) {
 
 // Process the write queue - ensures serialized GATT operations
 async function processWriteQueue() {
+  // Web Bluetooth permits only one GATT operation at a time. The v43
+  // dedicated motor writer had a separate lock, so a mode/slider/PING
+  // write could collide with a motor write and be dropped with
+  // "GATT operation already in progress". Motor traffic stays priority;
+  // ordinary traffic waits until the motor write is finished.
+  if (motorWriteBusy) {
+    setTimeout(processWriteQueue, 1);
+    return;
+  }
   // If already writing, exit - the current write will pick up pending
   if (bleSend.isWriting) return;
 
@@ -1682,7 +1691,7 @@ async function processWriteQueue() {
     // If new message arrived while we were writing, process it
     if (bleSend.queue.length > 0 || bleSend.pendingMsg) {
       // Small delay to respect minimum interval
-      setTimeout(processWriteQueue, bleSend.minInterval);
+      bleSend.minInterval > 0 ? setTimeout(processWriteQueue, bleSend.minInterval) : queueMicrotask(processWriteQueue);
     }
   }
 }
@@ -1713,6 +1722,78 @@ function sendReliable(msg) {
   processWriteQueue();
 }
 
+// Motor-state send: unlike ordinary reliable button events, motion should
+// NEVER replay stale history. Each packet carries the complete current
+// D-pad state, so replace any older queued motor packet and put the newest
+// one at the front of the queue. At most the write already in progress can
+// be ahead of it.
+function sendMotorState(msg) {
+  if (!state.ble.connected) return;
+  msg = String(msg || '').replace(/[\r\n]+/g, '').trim();
+  if (!msg) return;
+  bleSend.queue = bleSend.queue.filter(m => !String(m).startsWith('M '));
+  if (bleSend.pendingMsg === 'PING') bleSend.pendingMsg = null;
+  bleSend.queue.unshift(msg);
+  processWriteQueue();
+}
+
+// Complete D-pad state bitmask: U=1, D=2, L=4, R=8.
+//
+// LATENCY PATH: D-pad traffic no longer goes through the generic BLE queue
+// at all. Each state is encoded as ONE ASCII byte 'a'..'p' (mask 0..15)
+// plus '\n', so a complete motor command is exactly 2 bytes.
+let dpadMotionMask = 0;
+let motorWriteBusy = false;
+let motorPendingMask = null;
+let lastDpadEventAt = 0;
+
+async function flushMotorWrite() {
+  if (motorWriteBusy || motorPendingMask === null) return;
+  if (!state.ble.connected || !state.ble.writeChar || !state.ble.device?.gatt?.connected) return;
+  // Never overlap GATT operations. An ordinary write already in progress
+  // is allowed to finish; the pending motor mask remains latest-state-wins
+  // and is flushed immediately afterward.
+  if (bleSend.isWriting) {
+    setTimeout(flushMotorWrite, 1);
+    return;
+  }
+
+  motorWriteBusy = true;
+  try {
+    while (motorPendingMask !== null && state.ble.connected) {
+      const mask = motorPendingMask & 15;
+      motorPendingMask = null;
+      const packet = new Uint8Array([97 + mask, 10]); // 'a'+mask, newline
+      const ch = state.ble.writeChar;
+      if (ch.writeValueWithoutResponse) {
+        await ch.writeValueWithoutResponse(packet);
+      } else {
+        await ch.writeValue(packet);
+      }
+    }
+  } catch (err) {
+    console.error('[DPAD] Direct motor write failed:', err?.message || err);
+  } finally {
+    motorWriteBusy = false;
+    if (motorPendingMask !== null) queueMicrotask(flushMotorWrite);
+  }
+}
+
+function sendMotorMaskNow(mask) {
+  if (!state.ble.connected) return;
+  lastDpadEventAt = performance.now();
+  motorPendingMask = mask & 15; // latest state wins
+  flushMotorWrite();
+}
+function dpadBit(dir) {
+  return dir === 'up' ? 1 : dir === 'down' ? 2 : dir === 'left' ? 4 : 8;
+}
+function setDpadMotion(dir, pressed) {
+  const bit = dpadBit(dir);
+  dpadMotionMask = pressed ? (dpadMotionMask | bit) : (dpadMotionMask & ~bit);
+  sendMotorMaskNow(dpadMotionMask);
+}
+
 // Registry of live D-pad keepalive intervals (see the dpad binding).
 // These are setInterval timers that are NOT tied to the lifetime of the
 // button element, so they survive both a disconnect while a direction
@@ -1725,6 +1806,9 @@ const dpadKeepalives = new Set();
 function clearAllDpadKeepalives() {
   dpadKeepalives.forEach(id => clearInterval(id));
   dpadKeepalives.clear();
+  dpadMotionMask = 0;
+  motorPendingMask = null;
+  bleSend.queue = bleSend.queue.filter(m => !String(m).startsWith('M '));
 }
 
 // Link-liveness ping. The micro:bit's bluetooth.onBluetoothDisconnected
@@ -1739,12 +1823,12 @@ function clearAllDpadKeepalives() {
 // slot rather than the FIFO: a dropped ping is harmless, the next one is
 // a second away, and it must never delay a real command.
 let pingTimer = null;
-const PING_INTERVAL_MS = 1000;
+const PING_INTERVAL_MS = 3000;
 function startLinkPing() {
   clearInterval(pingTimer);
   pingTimer = setInterval(() => {
     if (!state.ble.connected) { clearInterval(pingTimer); pingTimer = null; return; }
-    send('PING');
+    if (dpadMotionMask === 0 && performance.now() - lastDpadEventAt > 1500) send('PING');
   }, PING_INTERVAL_MS);
 }
 function stopLinkPing() {
@@ -6245,10 +6329,10 @@ function bindRuntimeWidget(el, w) {
           if (dpadPressed) return;
           dpadPressed = true;
           clearTimeout(releaseTimer);
+          setDpadMotion(dir, true);
           btn.classList.add('active');
           beepClick();
           console.log('[DPAD] Pressed:', dir);
-          sendReliable(`SET ${w.id} ${dir} 1`);
           // Keepalive: a held direction otherwise sends NOTHING between
           // press and release, so the firmware's drive watchdog can't
           // tell "still held" from "release packet was dropped" and used
@@ -6270,8 +6354,8 @@ function bindRuntimeWidget(el, w) {
               dpadKeepalives.delete(keepaliveTimer);
               return;
             }
-            send(`SET ${w.id} ${dir} 1`);
-          }, 300);
+            sendMotorMaskNow(dpadMotionMask);
+          }, 1000);
           dpadKeepalives.add(keepaliveTimer);
         };
 
@@ -6287,24 +6371,21 @@ function bindRuntimeWidget(el, w) {
           clearInterval(keepaliveTimer);
           dpadKeepalives.delete(keepaliveTimer);
           keepaliveTimer = null;
-          // Debounce release to avoid rapid press/release
+          // Release immediately: avoid 100 ms motor-stop latency.
           clearTimeout(releaseTimer);
-          releaseTimer = setTimeout(() => {
-            dpadPressed = false;
-            console.log('[DPAD] Released:', dir);
-            sendReliable(`SET ${w.id} ${dir} 0`);
-          }, 100);
+          dpadPressed = false;
+          console.log('[DPAD] Released:', dir);
+          setDpadMotion(dir, false);
         };
         
-        // Use addEventListener for better compatibility
-        btn.addEventListener('mousedown', press, { passive: false });
-        btn.addEventListener('touchstart', press, { passive: false });
-        btn.addEventListener('mouseup', release, { passive: false });
-        btn.addEventListener('touchend', release, { passive: false });
-        btn.addEventListener('touchcancel', release, { passive: false });
+        // Pointer Events provide one immediate path for mouse/touch/pen and
+        // avoid the duplicate synthetic mouse sequence that follows touch.
+        btn.addEventListener('pointerdown', press, { passive: false });
+        btn.addEventListener('pointerup', release, { passive: false });
+        btn.addEventListener('pointercancel', release, { passive: false });
         
-        // Only release on mouseleave if the button is pressed (mouse left the button while down)
-        btn.addEventListener('mouseleave', e => {
+        // Only release on pointerleave if the button is pressed.
+        btn.addEventListener('pointerleave', e => {
           if (dpadPressed && e.buttons === 0) {
             release(e);
           }
@@ -6401,7 +6482,12 @@ function bindRuntimeWidget(el, w) {
       const sel = el.querySelector('.rt-select');
       sel.onchange = () => {
         beepClick();
-        send(`SET ${w.id} ${sel.value}`);
+        const msg = `SET ${w.id} ${sel.value}`;
+        // Mode changes transfer ownership of the motors. They must never be
+        // replaced by a later PING/continuous-control value in the generic
+        // latest-value-wins slot.
+        if (w.id === 'mode') sendReliable(msg);
+        else send(msg);
       };
       break;
     }
