@@ -61,7 +61,7 @@
  *
  * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
  * robot can be read untethered without a cable or console:
- *    "v36"        scrolling at boot   — firmware version (check after every flash)
+ *    "v37"        scrolling at boot   — firmware version (check after every flash)
  *    ♥            heart               — powered up, idle, waiting for BLE
  *    filling grid pixel by pixel      — sending the layout (GETCFG)
  *    ✓            tick                — connected, layout delivered
@@ -88,7 +88,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v36"
+const FIRMWARE_VERSION = "v37"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -980,6 +980,10 @@ basic.forever(function () {
                 // than inventing a number in either direction.
                 dbg("dist: bad read (" + cm + ")")
             }
+            // Raw value logged on every poll, so flipping debugEnabled
+            // on answers "is this sensor alive at all?" directly rather
+            // than by inference from the graph.
+            dbg("dist raw=" + cm + " next=" + distInterval + "ms")
 
             // Sent on EVERY poll, deliberately not deduped. A change-only
             // rule is right for a gauge — a repeated identical number
@@ -995,8 +999,21 @@ basic.forever(function () {
             //
             // The graph widget takes comma-separated numbers, one per
             // series; a single series means a bare number is the payload.
-            if (reported >= 0) {
-                sendValue("graph_dist", "" + reported)
+            //
+            // The RAW cm goes to the graph, not the mapped `reported`.
+            // `reported` folds pxt-maqueen's 500 "no echo" sentinel down
+            // to DIST_MAX_CM (200), which made "nothing bounced back"
+            // indistinguishable from "an object exactly 200cm away" — so
+            // a sensor that never echoes looked identical to a clear
+            // path, and the graph could not tell us which. Raw values
+            // are unambiguous: a flat line at 500 means no echo, ever;
+            // anything under 400 is a real measurement. The graph
+            // auto-scales, so the wider range costs nothing.
+            //
+            // `reported` is still what drives the alert and Avoid mode,
+            // where "no echo == far away" is the correct reading.
+            if (cm > 0) {
+                sendValue("graph_dist", "" + cm)
             }
 
             // Obstacle alert, with hysteresis so it fires once on
