@@ -6476,3 +6476,49 @@ body.runtime-fullscreen .fullscreen-exit-btn {
     max-width: calc(100vw - 12px);
   }
 }
+
+
+/* =========================================================
+   v2.12 — Stable Play Fit viewport
+   The logical runtime grid can be much larger than the useful controls.
+   A dedicated frame owns the scaled/cropped layout footprint, so flexbox
+   never centers an oversized grid into unreachable negative space.
+   ========================================================= */
+.runtime-canvas-viewport{
+  position:relative;
+  flex:0 0 auto;
+  box-sizing:border-box;
+  margin:0 auto;
+  overflow:hidden;
+  max-width:none;
+  max-height:none;
+}
+.runtime-canvas-viewport > #runtimeGrid{
+  position:absolute !important;
+  margin:0 !important;
+  transform-origin:top left !important;
+  flex:none !important;
+}
+.runtime-view.play-content-fit #runtimeContent{
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+.runtime-view.play-content-fit .runtime-canvas-viewport{
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+body.runtime-fullscreen .runtime-view.active{
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  overflow:auto !important;
+}
+body.runtime-fullscreen #runtimeContent{
+  align-items:center !important;
+  justify-content:flex-start !important;
+  box-sizing:border-box !important;
+  min-height:0 !important;
+}
+body.runtime-fullscreen .runtime-canvas-viewport > #runtimeGrid{
+  margin:0 !important;
+  transform-origin:top left !important;
+}

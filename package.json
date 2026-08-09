@@ -1,9 +1,9 @@
 {
   "name": "rxy",
-  "version": "2.10.0",
+  "version": "2.12.0",
   "private": true,
   "type": "module",
-  "description": "Micro:bit Remote Builder \u2014 Build \u2022 Pair \u2022 Play \u2014 no code required",
+  "description": "Micro:bit Remote Builder — Build • Pair • Play — no code required",
   "scripts": {
     "build:etsy": "node etsy-package/build-package.js"
   },

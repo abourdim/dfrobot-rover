@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.9';
+const APP_VERSION = 'v2.12';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -616,6 +616,64 @@ function centerBuildCanvas(){
   viewport.scrollTop = Math.max(0, ((stage?.offsetHeight || 0) - viewport.clientHeight) / 2);
 }
 
+// v2.11: explicitly crop the *logical* Build canvas to the design.
+// Fit/zoom are view-only; Trim Canvas is the deliberate geometry operation
+// that removes authoring space from exported JSON/CFG and from Play.
+function getBuildOccupiedBounds(){
+  const widgets = Array.isArray(state.widgets) ? state.widgets.filter(Boolean) : [];
+  if (!widgets.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  widgets.forEach(w => {
+    const x = Number(w.x) || 0, y = Number(w.y) || 0;
+    const ww = Math.max(1, Number(w.w) || 1), hh = Math.max(1, Number(w.h) || 1);
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + ww); maxY = Math.max(maxY, y + hh);
+  });
+  return { minX, minY, maxX, maxY, w: Math.max(1, maxX-minX), h: Math.max(1, maxY-minY) };
+}
+
+function trimBuildCanvasToContent(){
+  const bounds = getBuildOccupiedBounds();
+  if (!bounds) {
+    try { toast('Nothing to trim', 'error'); } catch (_) {}
+    return;
+  }
+
+  const PAD = 24;
+  const MIN_W = 320, MIN_H = 240;
+  // Snapshot BEFORE changing either widget coordinates or canvas dimensions.
+  saveUndoState();
+
+  const dx = PAD - bounds.minX;
+  const dy = PAD - bounds.minY;
+  state.widgets.forEach(w => {
+    w.x = Math.round((Number(w.x) || 0) + dx);
+    w.y = Math.round((Number(w.y) || 0) + dy);
+  });
+
+  const newW = Math.max(MIN_W, Math.ceil(bounds.w + PAD * 2));
+  const newH = Math.max(MIN_H, Math.ceil(bounds.h + PAD * 2));
+  state.buildCanvasSize = { w: newW, h: newH };
+  // Any Play snapshot/canvas derived from the former geometry is stale now.
+  state.config = null;
+  state.runtimeCanvasSize = null;
+
+  // Update the existing Build DOM directly. Re-rendering here would run legacy
+  // overlap resolution and could change the user's arrangement, which Trim
+  // must never do. Children of groups use absolute coordinates, so every
+  // widget is shifted exactly once.
+  state.widgets.forEach(w => {
+    const el = document.querySelector(`.widget[data-id="${CSS.escape(String(w.id))}"]`);
+    if (el) { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; }
+  });
+  applyBuildCanvasView();
+  updateMinimap();
+  saveUndoState();
+  try { scheduleAutoSave(); } catch (_) {}
+  requestAnimationFrame(() => fitBuildCanvas());
+  try { toast(`✂ Canvas trimmed to ${newW} × ${newH}`, 'success'); } catch (_) {}
+}
+
 // Legacy entry point retained because older code calls it after imports.
 function makeCanvasResizable(){
   ensureBuildCanvasViewport();
@@ -628,11 +686,13 @@ function setupBuildCanvasViewControls(){
   const zin = byId('buildZoomInBtn');
   const zout = byId('buildZoomOutBtn');
   const one = byId('buildZoom100Btn');
+  const trim = byId('trimCanvasBtn');
   const focus = byId('buildFocusBtn');
   if (fit && !fit.dataset.bound) { fit.dataset.bound='1'; fit.onclick = () => fitBuildCanvas(); }
   if (zin && !zin.dataset.bound) { zin.dataset.bound='1'; zin.onclick = () => setBuildZoom((state.buildZoom || 1) + 0.1); }
   if (zout && !zout.dataset.bound) { zout.dataset.bound='1'; zout.onclick = () => setBuildZoom((state.buildZoom || 1) - 0.1); }
   if (one && !one.dataset.bound) { one.dataset.bound='1'; one.onclick = () => setBuildZoom(1); }
+  if (trim && !trim.dataset.bound) { trim.dataset.bound='1'; trim.onclick = () => trimBuildCanvasToContent(); }
   if (focus && !focus.dataset.bound) {
     focus.dataset.bound='1';
     focus.onclick = () => {
@@ -680,7 +740,8 @@ const I18N = {
       history: "History", layout: "Layout", theme: "Theme",
       undo: "Undo", undoTitle: "Undo (Ctrl+Z)",
       redo: "Redo", redoTitle: "Redo (Ctrl+Y)",
-      tidy: "Tidy", tidyTitle: "Auto-arrange widgets"
+      tidy: "Tidy", tidyTitle: "Auto-arrange widgets",
+      trim: "Trim Canvas", trimTitle: "Crop the logical canvas to the occupied widgets while preserving their relative layout"
     },
     themeNames: { dark:"Dark", ocean:"Ocean", space:"Space", candy:"Fire", forest:"Forest" },
     themeTitles: { dark:"Dark theme", ocean:"Ocean theme", space:"Space theme", candy:"Fire theme", forest:"Forest theme" },
@@ -800,7 +861,8 @@ const I18N = {
       history: "Historique", layout: "Disposition", theme: "Thème",
       undo: "Annuler", undoTitle: "Annuler (Ctrl+Z)",
       redo: "Rétablir", redoTitle: "Rétablir (Ctrl+Y)",
-      tidy: "Ranger", tidyTitle: "Ranger automatiquement les widgets"
+      tidy: "Ranger", tidyTitle: "Ranger automatiquement les widgets",
+      trim: "Rogner le canevas", trimTitle: "Ajuster le canevas aux widgets sans modifier leur disposition relative"
     },
     themeNames: { dark:"Sombre", ocean:"Océan", space:"Espace", candy:"Feu", forest:"Forêt" },
     themeTitles: { dark:"Thème sombre", ocean:"Thème océan", space:"Thème espace", candy:"Thème feu", forest:"Thème forêt" },
@@ -920,7 +982,8 @@ const I18N = {
       history: "السجل", layout: "التخطيط", theme: "السمة",
       undo: "تراجع", undoTitle: "تراجع (Ctrl+Z)",
       redo: "إعادة", redoTitle: "إعادة (Ctrl+Y)",
-      tidy: "ترتيب", tidyTitle: "ترتيب الأدوات تلقائيًا"
+      tidy: "ترتيب", tidyTitle: "ترتيب الأدوات تلقائيًا",
+      trim: "قص اللوحة", trimTitle: "قص مساحة اللوحة حول الأدوات مع الحفاظ على مواضعها النسبية"
     },
     themeNames: { dark:"داكن", ocean:"المحيط", space:"الفضاء", candy:"النار", forest:"الغابة" },
     themeTitles: { dark:"السمة الداكنة", ocean:"سمة المحيط", space:"سمة الفضاء", candy:"سمة النار", forest:"سمة الغابة" },
@@ -1141,6 +1204,8 @@ function setLang(lang){
   if (redoBtn) { redoBtn.title = t.toolbar.redoTitle; const l = redoBtn.querySelector(".btn-label"); if (l) l.textContent = t.toolbar.redo; }
   const tidyBtn = $("#autoArrangeBtn");
   if (tidyBtn) { tidyBtn.title = t.toolbar.tidyTitle; const l = tidyBtn.querySelector(".btn-label"); if (l) l.textContent = t.toolbar.tidy; }
+  const trimBtn = $("#trimCanvasBtn");
+  if (trimBtn) { trimBtn.title = t.toolbar.trimTitle || "Trim canvas to content"; const l = trimBtn.querySelector(".btn-label"); if (l) l.textContent = t.toolbar.trim || "Trim Canvas"; }
   document.querySelectorAll(".theme-dot[data-theme]").forEach(dot => {
     const key = dot.dataset.theme;
     if (t.themeTitles[key]) dot.title = t.themeTitles[key];
@@ -2957,10 +3022,12 @@ function toggleFullscreen() {
       btn.title = t.fullscreen || 'Fullscreen';
     }
     
-    // Reset zoom
-    if (grid) {
-      grid.style.transform = '';
-    }
+    // Keep the Play viewport geometry intact. The old code cleared the grid
+    // transform here, which broke the explicit v2.12 frame until another
+    // zoom click. Re-fit after the browser leaves fullscreen instead.
+    setTimeout(() => {
+      try { window.appZoom?.zoomFit?.(); } catch (e) {}
+    }, 80);
     
     // Exit native fullscreen API
     if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
@@ -3825,11 +3892,15 @@ function enterFullscreenAndFit() {
   
   if (!grid) return;
   
-  // Enter fullscreen mode
+  // Enter fullscreen mode. Keep the toolbar control visible so it can be
+  // used to exit without covering or hiding the other Play controls.
   document.body.classList.add('runtime-fullscreen');
   if (btn) {
-    btn.classList.remove('visible');
-    btn.style.display = 'none';
+    const t = I18N[state.lang] || I18N.en;
+    btn.textContent = t.fullscreenExit || '⛶ Exit Fullscreen';
+    btn.classList.add('visible');
+    btn.style.display = '';
+    btn.setAttribute('aria-pressed', 'true');
   }
   
   // Request native fullscreen API
@@ -3906,8 +3977,33 @@ function resolveOverlaps(moved) {
 }
 
 // Undo/Redo system
+// v2.11 snapshots include the logical canvas as well as widgets, so Trim Canvas
+// is fully undoable. Older snapshots that contain only the widget array remain
+// readable for compatibility.
+function makeUndoSnapshot() {
+  return JSON.stringify({
+    v: 2,
+    widgets: state.widgets,
+    canvas: state.buildCanvasSize ? { w:Number(state.buildCanvasSize.w), h:Number(state.buildCanvasSize.h) } : null
+  });
+}
+
+function restoreUndoSnapshot(snapshot) {
+  const parsed = JSON.parse(snapshot);
+  if (Array.isArray(parsed)) {
+    state.widgets = parsed;
+  } else {
+    state.widgets = Array.isArray(parsed?.widgets) ? parsed.widgets : [];
+    state.buildCanvasSize = parsed?.canvas?.w && parsed?.canvas?.h
+      ? { w:Math.round(Number(parsed.canvas.w)), h:Math.round(Number(parsed.canvas.h)) }
+      : null;
+  }
+  state.config = null;
+  state.runtimeCanvasSize = null;
+}
+
 function saveUndoState() {
-  const snapshot = JSON.stringify(state.widgets);
+  const snapshot = makeUndoSnapshot();
   if (state.undoStack.length && state.undoStack[state.undoStack.length-1] === snapshot) return;
   state.undoStack.push(snapshot);
   if (state.undoStack.length > state.maxUndo) state.undoStack.shift();
@@ -3917,10 +4013,11 @@ function saveUndoState() {
 function undo() {
   if (state.undoStack.length < 2) { toast(tr('toast.nothingToUndo'), 'error'); return; }
   state.redoStack.push(state.undoStack.pop());
-  state.widgets = JSON.parse(state.undoStack[state.undoStack.length-1]);
+  restoreUndoSnapshot(state.undoStack[state.undoStack.length-1]);
   state.selected = null;
   state.multiSelect = [];
   renderWidgets();
+  applyBuildCanvasView();
   renderPropsPanel();
   toast(tr('toast.undoDone'), 'success');
 }
@@ -3929,10 +4026,11 @@ function redo() {
   if (!state.redoStack.length) { toast(tr('toast.nothingToRedo'), 'error'); return; }
   const snapshot = state.redoStack.pop();
   state.undoStack.push(snapshot);
-  state.widgets = JSON.parse(snapshot);
+  restoreUndoSnapshot(snapshot);
   state.selected = null;
   state.multiSelect = [];
   renderWidgets();
+  applyBuildCanvasView();
   renderPropsPanel();
   toast(tr('toast.redoDone'), 'success');
 }
@@ -6389,6 +6487,22 @@ function renderRuntime() {
   const canvasH = state.runtimeCanvasSize?.h || cfg.canvas?.h || Math.max(300, maxY + 20);
   grid.style.width = `${canvasW}px`;
   grid.style.height = `${canvasH}px`;
+  // v2.12: runtimeGrid is absolutely positioned inside an explicit viewport
+  // frame. Seed the frame before the next animation frame so renderRuntime()
+  // never collapses or flashes at 0x0 while Play zoom initializes.
+  const runtimeFrame = document.getElementById('runtimeCanvasViewport');
+  if (runtimeFrame) {
+    const z = Math.max(0.1, Number(state.playZoom) || 1);
+    runtimeFrame.style.width = `${canvasW * z}px`;
+    runtimeFrame.style.height = `${canvasH * z}px`;
+    runtimeFrame.style.overflow = 'hidden';
+    grid.style.position = 'absolute';
+    grid.style.left = '0px';
+    grid.style.top = '0px';
+    grid.style.margin = '0';
+    grid.style.transformOrigin = 'top left';
+    grid.style.transform = `scale(${z})`;
+  }
   grid.innerHTML = '';
   
   // Add canvas resize handle and size badge
@@ -8988,6 +9102,55 @@ document.addEventListener('click', (e)=>{
     return document.querySelector('.app');
   }
   
+  function getRuntimeCanvasViewport() {
+    return document.getElementById('runtimeCanvasViewport');
+  }
+
+  function getRuntimeLogicalCanvasSize() {
+    const grid = document.getElementById('runtimeGrid');
+    const cfgCanvas = state.runtimeCanvasSize || state.config?.canvas || {};
+    const w = Math.max(1, Number(cfgCanvas.w) || parseFloat(grid?.style.width) || grid?.offsetWidth || 1);
+    const h = Math.max(1, Number(cfgCanvas.h) || parseFloat(grid?.style.height) || grid?.offsetHeight || 1);
+    return { w, h };
+  }
+
+  function applyRuntimeViewport(zoom, crop = null) {
+    const grid = document.getElementById('runtimeGrid');
+    const frame = getRuntimeCanvasViewport();
+    if (!grid || !frame) return;
+    const canvas = getRuntimeLogicalCanvasSize();
+    const z = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+    // v2.12: the frame owns the scaled layout footprint. The logical grid is
+    // absolutely positioned inside it and may be cropped for Fit Content.
+    // This avoids flex-centering a huge 2068x1301 grid into negative space.
+    grid.style.zoom = '';
+    grid.style.position = 'absolute';
+    grid.style.margin = '0';
+    grid.style.transformOrigin = 'top left';
+    grid.style.transform = `scale(${z})`;
+
+    if (crop) {
+      const x = Math.max(0, Math.min(canvas.w, Number(crop.x) || 0));
+      const y = Math.max(0, Math.min(canvas.h, Number(crop.y) || 0));
+      const w = Math.max(1, Math.min(canvas.w - x, Number(crop.w) || canvas.w));
+      const h = Math.max(1, Math.min(canvas.h - y, Number(crop.h) || canvas.h));
+      grid.style.left = `${-x * z}px`;
+      grid.style.top = `${-y * z}px`;
+      frame.style.width = `${w * z}px`;
+      frame.style.height = `${h * z}px`;
+      frame.style.overflow = 'hidden';
+      frame.dataset.fitCrop = JSON.stringify({ x, y, w, h });
+    } else {
+      grid.style.left = '0px';
+      grid.style.top = '0px';
+      frame.style.width = `${canvas.w * z}px`;
+      frame.style.height = `${canvas.h * z}px`;
+      frame.style.overflow = 'hidden';
+      delete frame.dataset.fitCrop;
+    }
+  }
+
   function applyZoom(zoom) {
     const builderView = document.querySelector('.builder-view');
     if (builderView && builderView.classList.contains('active') && typeof setBuildZoom === 'function') {
@@ -9001,46 +9164,32 @@ document.addEventListener('click', (e)=>{
     const runtimeView = document.querySelector('.runtime-view');
     const inRuntime = !!(runtimeView && runtimeView.classList.contains('active'));
     if (inRuntime) state.playZoom = currentZoom;
-    
+
     const target = getZoomTarget();
     if (target) {
       if (inRuntime && target.id === 'runtimeGrid') {
-        // v2.9: Play zoom must participate in layout. transform:scale() only
-        // changes painted pixels; the parent still lays out the unscaled box,
-        // which made Fit appear cropped/offset and made >100% zoom hard to
-        // scroll correctly. CSS zoom changes the element's visual AND layout
-        // footprint, which is exactly what a canvas viewer needs here.
-        target.style.transform = 'none';
-        target.style.transformOrigin = '';
-        target.style.zoom = String(currentZoom);
+        // Manual Play zoom/1:1 always exposes the full logical canvas. Fit
+        // uses applyRuntimeViewport() with an explicit occupied-content crop.
+        setPlayContentFitMode(false);
+        applyRuntimeViewport(currentZoom, null);
       } else {
-        // Builder/legacy app zoom keeps the existing transform behavior.
         target.style.zoom = '';
         target.style.transform = `scale(${currentZoom})`;
         target.style.transformOrigin = 'top left';
       }
-      
-      // For the app container, adjust body scroll if needed
       if (target.classList.contains('app') || target.classList.contains('app-scaler')) {
         document.body.classList.toggle('scaled', currentZoom !== 1);
       }
     }
-    
-    // Update display
-    if (zoomLevel) {
-      zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
-    }
+
+    if (zoomLevel) zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
     const playLevel = document.getElementById('playZoomLevel');
-    if (playLevel && inRuntime) {
-      playLevel.textContent = Math.round(currentZoom * 100) + '%';
-    }
-    
-    // Save preference (only if valid)
+    if (playLevel && inRuntime) playLevel.textContent = Math.round(currentZoom * 100) + '%';
     if (currentZoom >= 0.5 && currentZoom <= 3) {
       try { localStorage.setItem('app_zoom', currentZoom); } catch(e) {}
     }
   }
-  
+
   function zoomIn() {
     applyZoom(currentZoom + zoomStep);
   }
@@ -9086,58 +9235,55 @@ document.addEventListener('click', (e)=>{
     }
 
     const runtimeView = document.querySelector('.runtime-view.active');
+    const runtimeContent = document.getElementById('runtimeContent');
     const grid = document.getElementById('runtimeGrid');
-    if (!runtimeView || !grid) return;
+    const frame = getRuntimeCanvasViewport();
+    if (!runtimeView || !runtimeContent || !grid || !frame) return;
 
-    // v2.10: Play Fit is a presentation operation. The CFG canvas may contain
-    // deliberate empty authoring space, so fitting that rectangle can make all
-    // useful controls tiny. Instead fit the occupied widget bounds and scroll
-    // to them. The actual canvas size and every widget coordinate stay intact.
     const bounds = getRuntimeOccupiedBounds();
     if (!bounds) return;
+    const canvas = getRuntimeLogicalCanvasSize();
     const CONTENT_PAD = 28;
-    const contentW = bounds.w + CONTENT_PAD * 2;
-    const contentH = bounds.h + CONTENT_PAD * 2;
+    const cropX = Math.max(0, bounds.minX - CONTENT_PAD);
+    const cropY = Math.max(0, bounds.minY - CONTENT_PAD);
+    const cropMaxX = Math.min(canvas.w, bounds.maxX + CONTENT_PAD);
+    const cropMaxY = Math.min(canvas.h, bounds.maxY + CONTENT_PAD);
+    const cropW = Math.max(1, cropMaxX - cropX);
+    const cropH = Math.max(1, cropMaxY - cropY);
 
+    // Measure the actual space below the fixed application header and Play
+    // toolbar. Do not use the huge logical grid's current bounding box.
     const isFs = document.body.classList.contains('runtime-fullscreen');
     const rvStyle = getComputedStyle(runtimeView);
     const padX = (parseFloat(rvStyle.paddingLeft) || 0) + (parseFloat(rvStyle.paddingRight) || 0);
-    const padBottom = parseFloat(rvStyle.paddingBottom) || 0;
-    const availW = Math.max(160, runtimeView.clientWidth - padX - 20);
-
+    const contentRect = runtimeContent.getBoundingClientRect();
+    const availW = Math.max(160, runtimeView.clientWidth - padX - 16);
     let availH;
     if (isFs) {
-      availH = Math.max(160, window.innerHeight - 100);
+      // The fullscreen toolbar occupies the top strip; runtime-view already
+      // reserves padding, so keep a small safety margin only.
+      availH = Math.max(160, runtimeView.clientHeight - 72);
     } else {
-      const gridTop = grid.getBoundingClientRect().top;
-      availH = Math.max(160, window.innerHeight - Math.max(0, gridTop) - padBottom - 18);
+      availH = Math.max(160, window.innerHeight - Math.max(contentRect.top, 0) - 18);
     }
 
-    // Unlike v2.9, Fit may enlarge useful content above 100%. 1:1 remains a
-    // dedicated button for users who want literal pixel scale.
-    const fitZoom = Math.max(minZoom, Math.min(maxZoom, availW / contentW, availH / contentH));
+    const fitZoom = Math.max(minZoom, Math.min(maxZoom, availW / cropW, availH / cropH));
+    currentZoom = fitZoom;
+    state.playZoom = fitZoom;
     setPlayContentFitMode(true);
-    applyZoom(fitZoom);
+    applyRuntimeViewport(fitZoom, { x: cropX, y: cropY, w: cropW, h: cropH });
 
-    // CSS zoom participates in layout, so scroll coordinates are scaled too.
-    // Position the occupied rectangle in the center of the visible Play area.
-    requestAnimationFrame(() => {
-      const rvRect = runtimeView.getBoundingClientRect();
-      const gridRect = grid.getBoundingClientRect();
-      const gridLeft = runtimeView.scrollLeft + (gridRect.left - rvRect.left);
-      const gridTop = runtimeView.scrollTop + (gridRect.top - rvRect.top);
-      const usedW = contentW * fitZoom;
-      const usedH = contentH * fitZoom;
-      const centerPadX = Math.max(0, (availW - usedW) / 2);
-      const centerPadY = Math.max(0, (availH - usedH) / 2);
-      const targetLeft = Math.max(0, gridLeft + (bounds.minX - CONTENT_PAD) * fitZoom - centerPadX);
-      const targetTop = Math.max(0, gridTop + (bounds.minY - CONTENT_PAD) * fitZoom - centerPadY);
-      try { runtimeView.scrollTo({ left: targetLeft, top: targetTop, behavior: 'auto' }); } catch (e) {
-        runtimeView.scrollLeft = targetLeft; runtimeView.scrollTop = targetTop;
-      }
-    });
+    const playLevel = document.getElementById('playZoomLevel');
+    if (playLevel) playLevel.textContent = Math.round(fitZoom * 100) + '%';
+    if (zoomLevel) zoomLevel.textContent = Math.round(fitZoom * 100) + '%';
+
+    // The Fit frame itself is now exactly the occupied controller bounds, so
+    // there is no need to scroll the giant authoring canvas to find content.
+    try { runtimeView.scrollTo({ left: 0, top: 0, behavior: 'auto' }); } catch (e) {
+      runtimeView.scrollLeft = 0; runtimeView.scrollTop = 0;
+    }
   }
-  
+
   function zoomReset() {
     setPlayContentFitMode(false);
     applyZoom(1);
