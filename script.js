@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.7';
+const APP_VERSION = 'v2.8';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -8981,6 +8981,13 @@ document.addEventListener('click', (e)=>{
   const zoomOutBtn = document.getElementById('zoomOutBtn');
   const zoomFitBtn = document.getElementById('zoomFitBtn');
   const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+  // Play toolbar has its own visible controls. v2.6/v2.7 rendered these
+  // buttons but never bound them to the zoom functions, so clicks were no-ops.
+  const playZoomInBtn = document.getElementById('playZoomInBtn');
+  const playZoomOutBtn = document.getElementById('playZoomOutBtn');
+  const playZoomFitBtn = document.getElementById('playZoomFitBtn');
+  const playZoom100Btn = document.getElementById('playZoom100Btn');
   
   function getZoomTarget() {
     // In fullscreen mode, zoom the runtime grid only
@@ -9054,20 +9061,39 @@ document.addEventListener('click', (e)=>{
       if (zoomLevel) zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
       return;
     }
-    // Fit the runtime grid to screen
+
+    // Fit the complete Play canvas, not the currently transformed visual box.
+    // scrollWidth/scrollHeight preserve the logical CFG canvas dimensions even
+    // after zooming, so Fit is stable across Fit -> 1:1 -> Fit cycles.
+    const runtimeView = document.querySelector('.runtime-view.active');
     const grid = document.getElementById('runtimeGrid');
-    if (!grid) return;
-    
-    // Reset zoom first to get actual size
-    grid.style.transform = '';
-    
-    const gridW = grid.offsetWidth;
-    const gridH = grid.offsetHeight;
-    const availW = window.innerWidth - 80;
-    const availH = window.innerHeight - 120;
-    
+    if (!runtimeView || !grid) return;
+
+    const previousTransform = grid.style.transform;
+    const previousOrigin = grid.style.transformOrigin;
+    grid.style.transform = 'none';
+    grid.style.transformOrigin = 'top left';
+
+    const gridW = Math.max(1, grid.scrollWidth, parseFloat(grid.style.width) || 0);
+    const gridH = Math.max(1, grid.scrollHeight, parseFloat(grid.style.height) || 0);
+
+    // In normal Play leave room for the app header + Play toolbar. In native
+    // fullscreen only the compact Play toolbar needs headroom.
+    const isFs = document.body.classList.contains('runtime-fullscreen');
+    const sidePad = isFs ? 28 : 48;
+    const topReserve = isFs ? 70 : 150;
+    const availW = Math.max(120, window.innerWidth - sidePad);
+    const availH = Math.max(120, window.innerHeight - topReserve);
     const fitZoom = Math.min(availW / gridW, availH / gridH, 2);
+
+    // restore is intentionally not used: applyZoom owns the final transform.
+    void previousTransform; void previousOrigin;
     applyZoom(fitZoom);
+
+    // Make the result immediately visible if the view was previously scrolled.
+    try { runtimeView.scrollTo({ left: 0, top: 0, behavior: 'auto' }); } catch (e) {
+      runtimeView.scrollLeft = 0; runtimeView.scrollTop = 0;
+    }
   }
   
   function zoomReset() {
@@ -9079,6 +9105,27 @@ document.addEventListener('click', (e)=>{
   if (zoomOutBtn) zoomOutBtn.onclick = zoomOut;
   if (zoomFitBtn) zoomFitBtn.onclick = zoomFit;
   if (zoomResetBtn) zoomResetBtn.onclick = zoomReset;
+
+  // Play-mode navigation controls. Keep these explicit instead of depending on
+  // the legacy floating zoom palette, which is hidden in normal Play mode.
+  if (playZoomInBtn) playZoomInBtn.onclick = () => {
+    currentZoom = state.playZoom || currentZoom || 1;
+    zoomIn();
+  };
+  if (playZoomOutBtn) playZoomOutBtn.onclick = () => {
+    currentZoom = state.playZoom || currentZoom || 1;
+    zoomOut();
+  };
+  if (playZoomFitBtn) playZoomFitBtn.onclick = () => {
+    currentZoom = state.playZoom || currentZoom || 1;
+    zoomFit();
+  };
+  if (playZoom100Btn) playZoom100Btn.onclick = () => {
+    currentZoom = state.playZoom || currentZoom || 1;
+    zoomReset();
+    const runtimeView = document.querySelector('.runtime-view.active');
+    try { runtimeView?.scrollTo({ left: 0, top: 0, behavior: 'auto' }); } catch (e) {}
+  };
   
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
