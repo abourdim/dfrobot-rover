@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.8';
+const APP_VERSION = 'v2.9';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -3850,31 +3850,16 @@ function enterFullscreenAndFit() {
 
 // Calculate zoom to make runtime grid fill the screen
 function zoomToFitScreen() {
+  // v2.9: use the same layout-aware Fit path as the Play toolbar so native
+  // fullscreen and normal Play cannot disagree about scale or centering.
+  if (window.appZoom && typeof window.appZoom.zoomFit === 'function') {
+    window.appZoom.zoomFit();
+    return;
+  }
   const grid = $('#runtimeGrid');
   if (!grid) return;
-
-  // scrollWidth/scrollHeight (not offsetWidth/offsetHeight) — the grid has
-  // overflow:hidden plus a viewport-relative max-height/max-width in
-  // fullscreen, so offsetWidth/offsetHeight report the CLAMPED box, not the
-  // true widget extent. Scaling against the clamped size under-shrinks the
-  // grid, and whatever content fell outside the clamp (the last-packed,
-  // smallest widgets from auto-arrange) stays clipped forever regardless of
-  // the scale applied afterward, since transform can't undo layout clipping.
-  const gridW = grid.scrollWidth;
-  const gridH = grid.scrollHeight;
-  
-  // Available screen space
-  const availW = window.innerWidth * 0.88;
-  const availH = window.innerHeight * 0.82;
-  
-  // Calculate scale to fit
-  const scaleX = availW / gridW;
-  const scaleY = availH / gridH;
-  const scale = Math.min(scaleX, scaleY, 1.8); // Cap at 1.8x max
-  
-  // Apply zoom transform
-  grid.style.transform = `scale(${scale})`;
-  grid.style.transformOrigin = 'center center';
+  grid.style.transform = 'none';
+  grid.style.zoom = '1';
 }
 
 // Collision detection helpers
@@ -9019,10 +9004,21 @@ document.addEventListener('click', (e)=>{
     
     const target = getZoomTarget();
     if (target) {
-      // Use top left origin for consistent cross-browser behavior
-      // Center origin can cause layout shifts in some browsers
-      target.style.transform = `scale(${currentZoom})`;
-      target.style.transformOrigin = 'top left';
+      if (inRuntime && target.id === 'runtimeGrid') {
+        // v2.9: Play zoom must participate in layout. transform:scale() only
+        // changes painted pixels; the parent still lays out the unscaled box,
+        // which made Fit appear cropped/offset and made >100% zoom hard to
+        // scroll correctly. CSS zoom changes the element's visual AND layout
+        // footprint, which is exactly what a canvas viewer needs here.
+        target.style.transform = 'none';
+        target.style.transformOrigin = '';
+        target.style.zoom = String(currentZoom);
+      } else {
+        // Builder/legacy app zoom keeps the existing transform behavior.
+        target.style.zoom = '';
+        target.style.transform = `scale(${currentZoom})`;
+        target.style.transformOrigin = 'top left';
+      }
       
       // For the app container, adjust body scroll if needed
       if (target.classList.contains('app') || target.classList.contains('app-scaler')) {
@@ -9062,35 +9058,46 @@ document.addEventListener('click', (e)=>{
       return;
     }
 
-    // Fit the complete Play canvas, not the currently transformed visual box.
-    // scrollWidth/scrollHeight preserve the logical CFG canvas dimensions even
-    // after zooming, so Fit is stable across Fit -> 1:1 -> Fit cycles.
     const runtimeView = document.querySelector('.runtime-view.active');
     const grid = document.getElementById('runtimeGrid');
     if (!runtimeView || !grid) return;
 
-    const previousTransform = grid.style.transform;
-    const previousOrigin = grid.style.transformOrigin;
-    grid.style.transform = 'none';
-    grid.style.transformOrigin = 'top left';
+    // v2.9: Fit from the logical CFG canvas, never from an already-zoomed
+    // DOM rectangle. This makes Fit deterministic across Fit -> 1:1 -> Fit.
+    const cfgCanvas = state.runtimeCanvasSize || state.config?.canvas || {};
+    const gridW = Math.max(1,
+      Number(cfgCanvas.w) || parseFloat(grid.style.width) || grid.scrollWidth || 1);
+    const gridH = Math.max(1,
+      Number(cfgCanvas.h) || parseFloat(grid.style.height) || grid.scrollHeight || 1);
 
-    const gridW = Math.max(1, grid.scrollWidth, parseFloat(grid.style.width) || 0);
-    const gridH = Math.max(1, grid.scrollHeight, parseFloat(grid.style.height) || 0);
-
-    // In normal Play leave room for the app header + Play toolbar. In native
-    // fullscreen only the compact Play toolbar needs headroom.
     const isFs = document.body.classList.contains('runtime-fullscreen');
-    const sidePad = isFs ? 28 : 48;
-    const topReserve = isFs ? 70 : 150;
-    const availW = Math.max(120, window.innerWidth - sidePad);
-    const availH = Math.max(120, window.innerHeight - topReserve);
-    const fitZoom = Math.min(availW / gridW, availH / gridH, 2);
+    const rvStyle = getComputedStyle(runtimeView);
+    const padX = (parseFloat(rvStyle.paddingLeft) || 0) + (parseFloat(rvStyle.paddingRight) || 0);
+    const padBottom = parseFloat(rvStyle.paddingBottom) || 0;
 
-    // restore is intentionally not used: applyZoom owns the final transform.
-    void previousTransform; void previousOrigin;
+    // Width is the actual Play viewport, not window.innerWidth. This matters
+    // when browser UI, scrollbars or future side panels reduce usable space.
+    const availW = Math.max(120, runtimeView.clientWidth - padX - 24);
+
+    // Height is what is visibly left below the title/canvas start. In
+    // fullscreen reserve a compact toolbar/title band; in normal Play use the
+    // grid's current top edge so header/toolbars are naturally accounted for.
+    let availH;
+    if (isFs) {
+      availH = Math.max(120, window.innerHeight - 110);
+    } else {
+      const gridTop = grid.getBoundingClientRect().top;
+      availH = Math.max(120, window.innerHeight - Math.max(0, gridTop) - padBottom - 24);
+    }
+
+    // "Fit" means show the complete design. Do not enlarge a design that
+    // already fits; 1:1 is the maximum Fit scale and is visually predictable.
+    const fitZoom = Math.max(minZoom, Math.min(1, availW / gridW, availH / gridH));
     applyZoom(fitZoom);
 
-    // Make the result immediately visible if the view was previously scrolled.
+    // Start at the top-left of the fitted viewport. CSS zoom participates in
+    // layout, so the centered grid remains centered and no hidden transformed
+    // overflow is left behind.
     try { runtimeView.scrollTo({ left: 0, top: 0, behavior: 'auto' }); } catch (e) {
       runtimeView.scrollLeft = 0; runtimeView.scrollTop = 0;
     }
