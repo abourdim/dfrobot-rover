@@ -9049,6 +9049,33 @@ document.addEventListener('click', (e)=>{
     applyZoom(currentZoom - zoomStep);
   }
   
+  function setPlayContentFitMode(on) {
+    const runtimeView = document.querySelector('.runtime-view.active');
+    if (!runtimeView) return;
+    runtimeView.classList.toggle('play-content-fit', !!on);
+  }
+
+  function getRuntimeOccupiedBounds() {
+    const widgets = Array.isArray(state.config?.widgets) ? state.config.widgets : [];
+    // Structural helpers should not force Play to waste screen space. A group
+    // may intentionally be much larger than its useful controls, and a long
+    // separator may span the authoring canvas. Fit the functional widgets.
+    const primary = widgets.filter(w => w && w.t !== 'group' && w.t !== 'separator'
+      && Number.isFinite(Number(w.x)) && Number.isFinite(Number(w.y))
+      && Number(w.w) > 0 && Number(w.h) > 0);
+    const list = primary.length ? primary : widgets.filter(w => w && Number(w.w) > 0 && Number(w.h) > 0);
+    if (!list.length) return null;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    list.forEach(w => {
+      const x = Number(w.x) || 0, y = Number(w.y) || 0;
+      const width = Math.max(1, Number(w.w) || 1), height = Math.max(1, Number(w.h) || 1);
+      minX = Math.min(minX, x); minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + width); maxY = Math.max(maxY, y + height);
+    });
+    return { minX, minY, maxX, maxY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY) };
+  }
+
   function zoomFit() {
     const builderView = document.querySelector('.builder-view');
     if (builderView && builderView.classList.contains('active') && typeof fitBuildCanvas === 'function') {
@@ -9062,48 +9089,57 @@ document.addEventListener('click', (e)=>{
     const grid = document.getElementById('runtimeGrid');
     if (!runtimeView || !grid) return;
 
-    // v2.9: Fit from the logical CFG canvas, never from an already-zoomed
-    // DOM rectangle. This makes Fit deterministic across Fit -> 1:1 -> Fit.
-    const cfgCanvas = state.runtimeCanvasSize || state.config?.canvas || {};
-    const gridW = Math.max(1,
-      Number(cfgCanvas.w) || parseFloat(grid.style.width) || grid.scrollWidth || 1);
-    const gridH = Math.max(1,
-      Number(cfgCanvas.h) || parseFloat(grid.style.height) || grid.scrollHeight || 1);
+    // v2.10: Play Fit is a presentation operation. The CFG canvas may contain
+    // deliberate empty authoring space, so fitting that rectangle can make all
+    // useful controls tiny. Instead fit the occupied widget bounds and scroll
+    // to them. The actual canvas size and every widget coordinate stay intact.
+    const bounds = getRuntimeOccupiedBounds();
+    if (!bounds) return;
+    const CONTENT_PAD = 28;
+    const contentW = bounds.w + CONTENT_PAD * 2;
+    const contentH = bounds.h + CONTENT_PAD * 2;
 
     const isFs = document.body.classList.contains('runtime-fullscreen');
     const rvStyle = getComputedStyle(runtimeView);
     const padX = (parseFloat(rvStyle.paddingLeft) || 0) + (parseFloat(rvStyle.paddingRight) || 0);
     const padBottom = parseFloat(rvStyle.paddingBottom) || 0;
+    const availW = Math.max(160, runtimeView.clientWidth - padX - 20);
 
-    // Width is the actual Play viewport, not window.innerWidth. This matters
-    // when browser UI, scrollbars or future side panels reduce usable space.
-    const availW = Math.max(120, runtimeView.clientWidth - padX - 24);
-
-    // Height is what is visibly left below the title/canvas start. In
-    // fullscreen reserve a compact toolbar/title band; in normal Play use the
-    // grid's current top edge so header/toolbars are naturally accounted for.
     let availH;
     if (isFs) {
-      availH = Math.max(120, window.innerHeight - 110);
+      availH = Math.max(160, window.innerHeight - 100);
     } else {
       const gridTop = grid.getBoundingClientRect().top;
-      availH = Math.max(120, window.innerHeight - Math.max(0, gridTop) - padBottom - 24);
+      availH = Math.max(160, window.innerHeight - Math.max(0, gridTop) - padBottom - 18);
     }
 
-    // "Fit" means show the complete design. Do not enlarge a design that
-    // already fits; 1:1 is the maximum Fit scale and is visually predictable.
-    const fitZoom = Math.max(minZoom, Math.min(1, availW / gridW, availH / gridH));
+    // Unlike v2.9, Fit may enlarge useful content above 100%. 1:1 remains a
+    // dedicated button for users who want literal pixel scale.
+    const fitZoom = Math.max(minZoom, Math.min(maxZoom, availW / contentW, availH / contentH));
+    setPlayContentFitMode(true);
     applyZoom(fitZoom);
 
-    // Start at the top-left of the fitted viewport. CSS zoom participates in
-    // layout, so the centered grid remains centered and no hidden transformed
-    // overflow is left behind.
-    try { runtimeView.scrollTo({ left: 0, top: 0, behavior: 'auto' }); } catch (e) {
-      runtimeView.scrollLeft = 0; runtimeView.scrollTop = 0;
-    }
+    // CSS zoom participates in layout, so scroll coordinates are scaled too.
+    // Position the occupied rectangle in the center of the visible Play area.
+    requestAnimationFrame(() => {
+      const rvRect = runtimeView.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const gridLeft = runtimeView.scrollLeft + (gridRect.left - rvRect.left);
+      const gridTop = runtimeView.scrollTop + (gridRect.top - rvRect.top);
+      const usedW = contentW * fitZoom;
+      const usedH = contentH * fitZoom;
+      const centerPadX = Math.max(0, (availW - usedW) / 2);
+      const centerPadY = Math.max(0, (availH - usedH) / 2);
+      const targetLeft = Math.max(0, gridLeft + (bounds.minX - CONTENT_PAD) * fitZoom - centerPadX);
+      const targetTop = Math.max(0, gridTop + (bounds.minY - CONTENT_PAD) * fitZoom - centerPadY);
+      try { runtimeView.scrollTo({ left: targetLeft, top: targetTop, behavior: 'auto' }); } catch (e) {
+        runtimeView.scrollLeft = targetLeft; runtimeView.scrollTop = targetTop;
+      }
+    });
   }
   
   function zoomReset() {
+    setPlayContentFitMode(false);
     applyZoom(1);
   }
   
