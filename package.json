@@ -1,6 +1,6 @@
 {
   "name": "rxy",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
   "description": "Micro:bit Remote Builder \u2014 Build \u2022 Pair \u2022 Play \u2014 no code required",

@@ -314,6 +314,59 @@ main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .runtime-top-btns > * {
   pointer-events: auto;
 }
+
+/* Play canvas view controls (v2.6)
+   View-only: these controls never rewrite widget x/y/w/h. */
+.play-view-controls {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--surface);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  backdrop-filter: blur(8px);
+}
+.play-view-controls.visible { display: flex; }
+.play-view-btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--surface);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.play-view-btn:hover { border-color: var(--accent); color: var(--accent); }
+.play-view-btn:active { transform: translateY(1px); }
+.play-view-btn.compact {
+  min-width: 34px;
+  width: 34px;
+  padding-inline: 0;
+  justify-content: center;
+}
+.play-view-btn.compact.wide { width: auto; min-width: 44px; padding-inline: 7px; }
+.play-zoom-level {
+  min-width: 42px;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.play-view-label { margin-left: 4px; }
+
+@media (max-width: 760px) {
+  .runtime-top-btns { gap: 5px; }
+  .play-view-label { display: none; }
+  .play-view-btn { padding-inline: 7px; }
+  .play-zoom-level { min-width: 36px; font-size: .66rem; }
+}
 .arrange-mode-btn {
   position: static;
   padding: 8px 14px;
@@ -6333,3 +6386,15 @@ body.build-canvas-focus .builder-view.active .builder-side{ display:none !import
 body.build-canvas-focus .builder-view.active .canvas-wrap{ width:100% !important; max-width:none !important; }
 body.build-canvas-focus .builder-view.active .builder-main{ display:block !important; }
 body.build-canvas-focus .builder-view.active .build-canvas-viewport{ height:calc(100vh - 285px); max-height:none; }
+
+
+/* v2.6: Play zoom/pan viewport. 1:1 and zoomed-in designs remain reachable. */
+.runtime-view.active:not(.runtime-fullscreen) {
+  overflow: auto !important;
+}
+body:not(.runtime-fullscreen) .runtime-view.active {
+  overflow: auto !important;
+}
+body.runtime-fullscreen .play-view-controls {
+  display: flex !important;
+}

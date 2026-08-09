@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -1502,7 +1502,8 @@ const state = {
   history: [], // visual history
   arrangeMode: false, // runtime arrange mode
   buildCanvasSize: null, // logical Build canvas size used for portable layout export
-  buildZoom: 1 // editor-only zoom; never changes exported geometry
+  buildZoom: 1, // editor-only zoom; never changes exported geometry
+  playZoom: 1 // runtime-only zoom; never changes widget geometry
 };
 state._allowLoadingOverlay = false;
 
@@ -3701,6 +3702,7 @@ function switchTab(tab, opts = {}) {
   
   if (tab === 'builder') {
     builderView.classList.add('active');
+    document.getElementById('playViewControls')?.classList.remove('visible');
     runtimeView.classList.remove('active');
     stopDemoSim();
     
@@ -3762,8 +3764,17 @@ function switchTab(tab, opts = {}) {
       renderRuntime();
     }
     
+    // Play zoom is view state only and is independent from Build zoom.
+    requestAnimationFrame(() => {
+      try {
+        if (window.appZoom && typeof window.appZoom.setZoom === 'function') {
+          window.appZoom.setZoom(state.playZoom || 1);
+        }
+      } catch (e) {}
+    });
+
     startDemoSim();
-    
+
     // If connected via BLE, auto-enter fullscreen (unless explicitly
     // suppressed, e.g. the auto-switch right after a config finishes
     // loading — that should land on the normal Play view, not fullscreen)
@@ -3777,6 +3788,7 @@ function switchTab(tab, opts = {}) {
       const arrangeBtn = $('#arrangeModeBtn');
       if (arrangeBtn) arrangeBtn.classList.add('visible');
       if (fullscreenBtn) fullscreenBtn.classList.add('visible');
+      document.getElementById('playViewControls')?.classList.add('visible');
       
       // Auto-enter fullscreen and zoom to fit
       setTimeout(() => {
@@ -3790,6 +3802,7 @@ function switchTab(tab, opts = {}) {
       const arrangeBtn = $('#arrangeModeBtn');
       if (arrangeBtn) arrangeBtn.classList.remove('visible');
       if (fullscreenBtn) fullscreenBtn.classList.remove('visible');
+      document.getElementById('playViewControls')?.classList.remove('visible');
     }
   }
 }
@@ -6361,6 +6374,7 @@ function processLine(line) {
 
 function renderRuntime() {
   if (!state.config) return;
+  document.getElementById('playViewControls')?.classList.add('visible');
   // The widget DOM is about to be replaced. D-pad keepalive timers are
   // not tied to their button elements, so without this they'd outlive
   // the rebuild and keep sending for buttons that no longer exist.
@@ -8981,6 +8995,10 @@ document.addEventListener('click', (e)=>{
       return;
     }
     currentZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+    const runtimeView = document.querySelector('.runtime-view');
+    const inRuntime = !!(runtimeView && runtimeView.classList.contains('active'));
+    if (inRuntime) state.playZoom = currentZoom;
     
     const target = getZoomTarget();
     if (target) {
@@ -8998,6 +9016,10 @@ document.addEventListener('click', (e)=>{
     // Update display
     if (zoomLevel) {
       zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+    }
+    const playLevel = document.getElementById('playZoomLevel');
+    if (playLevel && inRuntime) {
+      playLevel.textContent = Math.round(currentZoom * 100) + '%';
     }
     
     // Save preference (only if valid)
@@ -9050,6 +9072,14 @@ document.addEventListener('click', (e)=>{
   
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    const runtimeActive = !!document.querySelector('.runtime-view.active');
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable;
+    if (runtimeActive && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      zoomFit();
+      return;
+    }
     // Ctrl/Cmd + Plus/Minus for zoom
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
       if (e.key === '=' || e.key === '+') {
