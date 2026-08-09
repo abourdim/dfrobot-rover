@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap">
-<link rel="stylesheet" href="styles.css?v=2.1.0">
+<link rel="stylesheet" href="styles.css?v=2.5.0">
 </head>
 <body>
 <div class="bismillah-top" lang="ar" dir="rtl" aria-label="Bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
@@ -126,6 +126,20 @@
                 <span class="btn-label">Magic</span>
               </button>
             </div>
+            <div class="build-toolbar-group build-view-controls" aria-label="Canvas view">
+              <button class="build-toolbar-btn compact" id="buildZoomOutBtn" type="button" title="Zoom out">−</button>
+              <span class="build-zoom-level" id="buildZoomLevel">100%</span>
+              <button class="build-toolbar-btn compact" id="buildZoomInBtn" type="button" title="Zoom in">+</button>
+              <button class="build-toolbar-btn" id="buildZoomFitBtn" type="button" title="Fit the complete imported design in the editor">
+                <span class="btn-icon" aria-hidden="true">⊡</span>
+                <span class="btn-label">Fit Design</span>
+              </button>
+              <button class="build-toolbar-btn" id="buildFocusBtn" type="button" title="Hide the side panels and give the design the full editor width">
+                <span class="btn-icon" aria-hidden="true">⛶</span>
+                <span class="btn-label">Focus</span>
+              </button>
+              <button class="build-toolbar-btn compact" id="buildZoom100Btn" type="button" title="Show the canvas at 100%">1:1</button>
+            </div>
             <div class="build-toolbar-group theme-group" aria-label="Theme">
               <span class="build-toolbar-group-label">Theme</span>
               <div class="theme-selector">
@@ -176,6 +190,8 @@
                 <div class="palette-item" data-type="editfield"><div class="palette-icon">⌨️</div><div class="palette-name">Edit Field</div></div>
                 <div class="palette-item" data-type="led"><div class="palette-icon">💡</div><div class="palette-name">Light</div></div>
                 <div class="palette-item" data-type="label"><div class="palette-icon">🏷️</div><div class="palette-name">Label</div></div>
+                <div class="palette-item" data-type="group"><div class="palette-icon">▣</div><div class="palette-name">Group</div></div>
+                <div class="palette-item" data-type="separator"><div class="palette-icon">━</div><div class="palette-name">Line</div></div>
                 <div class="palette-item" data-type="gauge"><div class="palette-icon">🧭</div><div class="palette-name">Gauge</div></div>
                 <div class="palette-item" data-type="graph"><div class="palette-icon">📈</div><div class="palette-name">Graph</div></div>
                 <div class="palette-item" data-type="battery"><div class="palette-icon">🔋</div><div class="palette-name">Battery</div></div>
@@ -214,7 +230,7 @@
         <button id="fullscreenBtn" class="fullscreen-btn">⛶ Fullscreen</button>
       </div>
       <button id="fullscreenExitBtn" class="fullscreen-exit-btn">✕</button>
-      <span class="fullscreen-version">v2.1</span>
+      <span class="fullscreen-version">v2.5</span>
       <div id="quickActionsMenu" class="quick-actions-menu">
         <button class="quick-action-btn" data-action="duplicate">📋 Duplicate</button>
         <button class="quick-action-btn" data-action="color">🎨 Random Color</button>
@@ -316,6 +332,6 @@
   <button class="zoom-btn" id="zoomResetBtn" title="Reset to 100%">1:1</button>
 </div>
 
-<script src="script.js?v=2.1.0"></script>
+<script src="script.js?v=2.5.0"></script>
 </body>
 </html>

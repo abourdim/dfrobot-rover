@@ -1,3 +1,11 @@
+# v52 firmware + web app v2.5 — automatic CFG revision
+
+- Firmware computes `CFG_REV` from the actual embedded Base64 `CFG` at boot.
+- If CFG changes, `CFGVER` changes automatically; an old cached layout cannot be accepted as current.
+- Web app v2.5 uses the same fingerprint for exported MakeCode CFG and self-validates v52 cache records before reuse.
+- Remote-config cache namespace is bumped once, forcing one clean fetch after upgrading; unchanged reconnects remain fast.
+- With v52+, MakeCode layout export only needs the `CFG` constant; there is no revision constant to remember.
+
 # v51 — Reference layout stored in MakeCode CFG
 
 - The MakeCode-delivered layout now matches the approved **1372 × 776** reference arrangement.
@@ -217,3 +225,24 @@ Build and Arrange mode can now export the exact design in two forms:
 - **MakeCode CFG** — a small `.ts` snippet containing `CFG` and `CFG_REV`; paste those two constants into the existing v51+ firmware without replacing robot behavior.
 
 While **Arrange** is active in Play mode, compact **JSON** and **CFG** export buttons appear next to Arrange, so the live arranged layout can be exported directly.
+
+
+## v2.2 — Group and Separator widgets
+
+- `group`: config-native functional section with label, style, size and `children` IDs. Moving a group in Build or Play/Arrange moves its captured members together. Use **Capture widgets inside group** to populate membership. Ctrl+G creates a real group around the current multi-selection.
+- `separator`: config-native horizontal/vertical divider with subtle, solid or dashed styles, configurable thickness, color and optional label. It is visual-only and never sends BLE traffic.
+- Both widget types survive Layout JSON import/export and MakeCode CFG export because all properties are stored directly in the CFG.
+
+
+## v2.3 — Large-design navigation
+
+Build mode now separates the logical design canvas from the visible editor viewport. Imported layouts automatically **Fit Design**, while `+`, `−`, `1:1`, and `Fit Design` controls zoom only the editor. Large canvases can be scrolled normally or panned with **Alt/Option + drag** (middle-mouse drag also works). Widget drag, resize, click-to-place, and selection coordinates remain in logical canvas units, so JSON and MakeCode CFG exports preserve the exact original geometry. Press **F** in Build mode to fit the complete design. **Focus** hides the right-side editor panels to give the canvas the full width; press **Esc** to leave Focus mode.
+
+## v2.4 — Layout positions survive Build / Play
+
+- Fixed `Build → Import → Play → Build` changing widget positions.
+- Removed the obsolete automatic Tidy-on-resize / Tidy-on-Build behavior.
+- Build is now the authoritative layout model; Play receives a deep-cloned snapshot.
+- Fit, zoom, pan, browser resize, mode switching and import are view-only operations.
+- Only the explicit **Tidy** command may rearrange widget geometry.
+- Explicit Play **Arrange** edits still sync back to Build when Arrange is finished.

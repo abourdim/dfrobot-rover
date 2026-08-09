@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.5';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -481,136 +481,186 @@ const esc = s => { const d = document.createElement('div'); d.textContent = s; r
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
-// ---- Resizable canvas helper (builder) ----
+// ---- Build canvas viewport / zoom / pan ----
+// v2.3 separates the *logical design size* from the editor viewport.
+// A 1372x776 imported CFG stays 1372x776 for layout/export, while Build may
+// display it at 55%, 80%, etc. This avoids clipping large designs and avoids
+// corrupting their x/y/w/h coordinates just to make them fit the browser.
 function findCanvasDropzone(){
-  return document.querySelector('.canvas-dropzone, .dropzone, .board-drop, .canvas-wrap, .canvas-container, .canvas-frame, .builder-canvas, .board, .canvas');
+  return document.getElementById('canvas');
 }
 
-function makeCanvasResizable(){
-  const dz = findCanvasDropzone();
-  if (!dz) return;
-
-  // Avoid double wrapping
-  if (dz.closest('.resizable-wrap')) return;
-
-  const wrap = document.createElement('div');
-  wrap.className = 'resizable-wrap';
-
-  // Restore saved size
-  try{
-    const saved = JSON.parse(localStorage.getItem('kid_canvas_size') || 'null');
-    if (saved && saved.w && saved.h){
-      wrap.style.width = Math.min(saved.w, window.innerWidth - 80) + 'px';
-      wrap.style.height = Math.min(saved.h, window.innerHeight - 220) + 'px';
-    }
-  }catch(e){}
-
-  // Insert wrapper in DOM
-  const parent = dz.parentElement;
-  parent.insertBefore(wrap, dz);
-  wrap.appendChild(dz);
-
-  // Ensure the dropzone stretches inside wrapper
-  dz.style.width = '100%';
-  dz.style.height = '100%';
-  dz.style.maxWidth = 'none';
-  dz.style.overflow = 'hidden';
-
-  // Add resizer handles + size badge
-  const handleXY = document.createElement('div');
-  handleXY.className = 'canvas-resizer canvas-resizer-xy';
-  const handleE = document.createElement('div');
-  handleE.className = 'canvas-resizer canvas-resizer-e';
-  const handleS = document.createElement('div');
-  handleS.className = 'canvas-resizer canvas-resizer-s';
-  const badge = document.createElement('div');
-  badge.className = 'canvas-size-badge';
-  badge.textContent = '';
-  wrap.appendChild(badge);
-  wrap.appendChild(handleE);
-  wrap.appendChild(handleS);
-  wrap.appendChild(handleXY);
-
-  function updateBadge(){
-    const r = wrap.getBoundingClientRect();
-    badge.textContent = Math.round(r.width) + '×' + Math.round(r.height);
+function getBuildLogicalSize(){
+  if (state.buildCanvasSize && Number(state.buildCanvasSize.w) > 0 && Number(state.buildCanvasSize.h) > 0) {
+    return { w: Math.round(Number(state.buildCanvasSize.w)), h: Math.round(Number(state.buildCanvasSize.h)) };
   }
-  updateBadge();
-
-  let dragging = false;
-  let dragMode = 'xy';
-  let startX=0, startY=0, startW=0, startH=0;
-
-  const onMove = (e) => {
-    if (!dragging) return;
-    const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-    const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-
-    const minW = 320, minH = 320;
-    const maxW = Math.max(360, window.innerWidth - 60);
-    const maxH = Math.max(360, window.innerHeight - 180);
-
-    let targetW = startW;
-    let targetH = startH;
-    if (dragMode === 'x') targetW = startW + dx;
-    else if (dragMode === 'y') targetH = startH + dy;
-    else { targetW = startW + dx; targetH = startH + dy; }
-
-    const newW = Math.max(minW, Math.min(maxW, targetW));
-    const newH = Math.max(minH, Math.min(maxH, targetH));
-wrap.style.width = newW + 'px';
-    wrap.style.height = newH + 'px';
-    updateBadge();
-  };
-
-  const onUp = () => {
-    if (!dragging) return;
-    dragging = false;
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
-    try{
-      const r = wrap.getBoundingClientRect();
-      state.buildCanvasSize = {w: Math.round(r.width), h: Math.round(r.height)};
-      localStorage.setItem('kid_canvas_size', JSON.stringify(state.buildCanvasSize));
-    }catch(e){}
-    window.removeEventListener('mousemove', onMove);
-    window.removeEventListener('mouseup', onUp);
-    window.removeEventListener('touchmove', onMove);
-    window.removeEventListener('touchend', onUp);
-  };
-
-  const onDown = (mode, e) => {
-    e.preventDefault();
-    dragging = true;
-    dragMode = mode || 'xy';
-    const r = wrap.getBoundingClientRect();
-    startW = r.width; startH = r.height;
-    startX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-    startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = (mode==='x' ? 'ew-resize' : mode==='y' ? 'ns-resize' : 'nwse-resize');
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchmove', onMove, {passive:false});
-    window.addEventListener('touchend', onUp);
-  };
-
-  const bindHandle = (el, mode) => {
-    el.addEventListener('pointerdown', (e)=>onDown(mode,e), {passive:false});
-    el.addEventListener('mousedown', (e)=>onDown(mode,e), {passive:false});
-    el.addEventListener('touchstart', (e)=>onDown(mode,e), {passive:false});
-  };
-
-  bindHandle(handleXY, 'xy');
-  bindHandle(handleE, 'x');
-  bindHandle(handleS, 'y');
-
-  // Update badge if window resized
-  window.addEventListener('resize', ()=>updateBadge());
+  let maxX = 400, maxY = 300;
+  (state.widgets || []).forEach(w => {
+    maxX = Math.max(maxX, Number(w.x || 0) + Number(w.w || 0) + 20);
+    maxY = Math.max(maxY, Number(w.y || 0) + Number(w.h || 0) + 20);
+  });
+  return { w: maxX, h: maxY };
 }
 
+function ensureBuildCanvasViewport(){
+  const canvas = document.getElementById('canvas');
+  if (!canvas) return null;
+  let viewport = canvas.closest('.build-canvas-viewport');
+  if (!viewport) {
+    viewport = document.createElement('div');
+    viewport.className = 'build-canvas-viewport';
+    const stage = document.createElement('div');
+    stage.className = 'build-canvas-stage';
+    const parent = canvas.parentElement;
+    parent.insertBefore(viewport, canvas);
+    viewport.appendChild(stage);
+    stage.appendChild(canvas);
+
+    const badge = document.createElement('div');
+    badge.className = 'canvas-size-badge build-canvas-badge';
+    badge.id = 'buildCanvasBadge';
+    viewport.appendChild(badge);
+
+    // Alt/Option + drag (or middle mouse) pans without touching widgets.
+    let panning = false, sx = 0, sy = 0, sl = 0, st = 0;
+    viewport.addEventListener('pointerdown', e => {
+      if (!(e.button === 1 || e.altKey)) return;
+      e.preventDefault();
+      panning = true; sx = e.clientX; sy = e.clientY; sl = viewport.scrollLeft; st = viewport.scrollTop;
+      viewport.classList.add('is-panning');
+      try { viewport.setPointerCapture(e.pointerId); } catch(_) {}
+    });
+    viewport.addEventListener('pointermove', e => {
+      if (!panning) return;
+      viewport.scrollLeft = sl - (e.clientX - sx);
+      viewport.scrollTop = st - (e.clientY - sy);
+    });
+    const endPan = () => { panning = false; viewport.classList.remove('is-panning'); };
+    viewport.addEventListener('pointerup', endPan);
+    viewport.addEventListener('pointercancel', endPan);
+  }
+  return viewport;
+}
+
+function updateBuildCanvasBadge(){
+  const badge = document.getElementById('buildCanvasBadge');
+  if (!badge) return;
+  const s = getBuildLogicalSize();
+  badge.textContent = `${s.w} × ${s.h}  •  ${Math.round((state.buildZoom || 1) * 100)}%`;
+}
+
+function applyBuildCanvasView(){
+  const canvas = document.getElementById('canvas');
+  const viewport = ensureBuildCanvasViewport();
+  if (!canvas || !viewport) return;
+  const stage = canvas.parentElement;
+  const s = getBuildLogicalSize();
+  const z = Math.max(0.15, Math.min(2.5, Number(state.buildZoom || 1)));
+  state.buildZoom = z;
+
+  // Strong inline sizing wins over the legacy flexible-canvas CSS rules.
+  canvas.style.setProperty('width', s.w + 'px', 'important');
+  canvas.style.setProperty('height', s.h + 'px', 'important');
+  canvas.style.setProperty('min-width', s.w + 'px', 'important');
+  canvas.style.setProperty('min-height', s.h + 'px', 'important');
+  canvas.style.setProperty('max-width', 'none', 'important');
+  canvas.style.transform = `scale(${z})`;
+  canvas.style.transformOrigin = 'top left';
+
+  stage.style.width = Math.max(1, Math.ceil(s.w * z)) + 'px';
+  stage.style.height = Math.max(1, Math.ceil(s.h * z)) + 'px';
+
+  const level = document.getElementById('buildZoomLevel');
+  if (level) level.textContent = Math.round(z * 100) + '%';
+  updateBuildCanvasBadge();
+}
+
+function setBuildZoom(z, keepCenter = true){
+  const viewport = ensureBuildCanvasViewport();
+  if (!viewport) return;
+  const old = Math.max(0.15, Number(state.buildZoom || 1));
+  const next = Math.max(0.15, Math.min(2.5, Number(z || 1)));
+  let logicalCx = 0, logicalCy = 0;
+  if (keepCenter) {
+    logicalCx = (viewport.scrollLeft + viewport.clientWidth / 2) / old;
+    logicalCy = (viewport.scrollTop + viewport.clientHeight / 2) / old;
+  }
+  state.buildZoom = next;
+  applyBuildCanvasView();
+  if (keepCenter) {
+    viewport.scrollLeft = Math.max(0, logicalCx * next - viewport.clientWidth / 2);
+    viewport.scrollTop = Math.max(0, logicalCy * next - viewport.clientHeight / 2);
+  }
+}
+
+function fitBuildCanvas(){
+  const viewport = ensureBuildCanvasViewport();
+  if (!viewport) return;
+  const s = getBuildLogicalSize();
+  // clientWidth/Height are the real editor viewport, independent of canvas size.
+  const pad = 30;
+  const availW = Math.max(120, viewport.clientWidth - pad);
+  const availH = Math.max(120, viewport.clientHeight - pad);
+  const fit = Math.min(availW / s.w, availH / s.h, 1.25);
+  state.buildZoom = Math.max(0.15, fit);
+  applyBuildCanvasView();
+  viewport.scrollLeft = 0;
+  viewport.scrollTop = 0;
+}
+
+function centerBuildCanvas(){
+  const viewport = ensureBuildCanvasViewport();
+  if (!viewport) return;
+  const stage = viewport.querySelector('.build-canvas-stage');
+  viewport.scrollLeft = Math.max(0, ((stage?.offsetWidth || 0) - viewport.clientWidth) / 2);
+  viewport.scrollTop = Math.max(0, ((stage?.offsetHeight || 0) - viewport.clientHeight) / 2);
+}
+
+// Legacy entry point retained because older code calls it after imports.
+function makeCanvasResizable(){
+  ensureBuildCanvasViewport();
+  applyBuildCanvasView();
+}
+
+function setupBuildCanvasViewControls(){
+  const byId = id => document.getElementById(id);
+  const fit = byId('buildZoomFitBtn');
+  const zin = byId('buildZoomInBtn');
+  const zout = byId('buildZoomOutBtn');
+  const one = byId('buildZoom100Btn');
+  const focus = byId('buildFocusBtn');
+  if (fit && !fit.dataset.bound) { fit.dataset.bound='1'; fit.onclick = () => fitBuildCanvas(); }
+  if (zin && !zin.dataset.bound) { zin.dataset.bound='1'; zin.onclick = () => setBuildZoom((state.buildZoom || 1) + 0.1); }
+  if (zout && !zout.dataset.bound) { zout.dataset.bound='1'; zout.onclick = () => setBuildZoom((state.buildZoom || 1) - 0.1); }
+  if (one && !one.dataset.bound) { one.dataset.bound='1'; one.onclick = () => setBuildZoom(1); }
+  if (focus && !focus.dataset.bound) {
+    focus.dataset.bound='1';
+    focus.onclick = () => {
+      document.body.classList.toggle('build-canvas-focus');
+      focus.classList.toggle('active', document.body.classList.contains('build-canvas-focus'));
+      requestAnimationFrame(() => fitBuildCanvas());
+    };
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (document.querySelector('.builder-view.active')) applyBuildCanvasView();
+});
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
+  if (e.key === 'Escape' && document.body.classList.contains('build-canvas-focus')) {
+    document.body.classList.remove('build-canvas-focus');
+    document.getElementById('buildFocusBtn')?.classList.remove('active');
+    requestAnimationFrame(() => fitBuildCanvas());
+    return;
+  }
+  if (document.querySelector('.builder-view.active') && (e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    fitBuildCanvas();
+  }
+});
 
 // ===============================
 // Kid-friendly i18n + JSON templates
@@ -634,7 +684,7 @@ const I18N = {
     },
     themeNames: { dark:"Dark", ocean:"Ocean", space:"Space", candy:"Fire", forest:"Forest" },
     themeTitles: { dark:"Dark theme", ocean:"Ocean theme", space:"Space theme", candy:"Fire theme", forest:"Forest theme" },
-    widgets: { button:"Button", slider:"Slider", toggle:"Switch", joystick:"Joystick", dpad:"D-Pad", xypad:"XY Pad", led:"Light", label:"Label", gauge:"Gauge", graph:"Graph", battery:"Battery", timer:"Timer" },
+    widgets: { button:"Button", slider:"Slider", toggle:"Switch", joystick:"Joystick", dpad:"D-Pad", xypad:"XY Pad", led:"Light", label:"Label", group:"Group", separator:"Line", gauge:"Gauge", graph:"Graph", battery:"Battery", timer:"Timer" },
     propsTitle: "🛠️ Widget Properties",
     propsCollapseTitle: "Collapse",
     propsEmptyTitle: "Nothing selected",
@@ -676,7 +726,7 @@ const I18N = {
     toastImportFail: "❌ Import failed",
     toast: {
       addWidgetsFirst: "👆 Add some widgets first!",
-      demoLoaded: "Demo loaded with ALL 12 widgets!",
+      demoLoaded: "Demo loaded with all widget examples!",
       widgetSelected: "✅ {icon} selected! Tap canvas to place",
       widgetAdded: "✨ {icon} added!",
       deletedWidgets: "🗑️ Deleted widgets",
@@ -753,7 +803,7 @@ const I18N = {
     },
     themeNames: { dark:"Sombre", ocean:"Océan", space:"Espace", candy:"Feu", forest:"Forêt" },
     themeTitles: { dark:"Thème sombre", ocean:"Thème océan", space:"Thème espace", candy:"Thème feu", forest:"Thème forêt" },
-    widgets: { button:"Bouton", slider:"Curseur", toggle:"Interrupteur", joystick:"Joystick", dpad:"Croix directionnelle", xypad:"Pavé XY", led:"Lumière", label:"Texte", gauge:"Jauge", graph:"Graphique", battery:"Batterie", timer:"Minuteur" },
+    widgets: { button:"Bouton", slider:"Curseur", toggle:"Interrupteur", joystick:"Joystick", dpad:"Croix directionnelle", xypad:"Pavé XY", led:"Lumière", label:"Texte", group:"Groupe", separator:"Ligne", gauge:"Jauge", graph:"Graphique", battery:"Batterie", timer:"Minuteur" },
     propsTitle: "🛠️ Propriétés",
     propsCollapseTitle: "Réduire",
     propsEmptyTitle: "Rien de sélectionné",
@@ -872,7 +922,7 @@ const I18N = {
     },
     themeNames: { dark:"داكن", ocean:"المحيط", space:"الفضاء", candy:"النار", forest:"الغابة" },
     themeTitles: { dark:"السمة الداكنة", ocean:"سمة المحيط", space:"سمة الفضاء", candy:"سمة النار", forest:"سمة الغابة" },
-    widgets: { button:"زر", slider:"منزلق", toggle:"مفتاح", joystick:"عصا التحكم", dpad:"لوحة اتجاه", xypad:"لوحة XY", led:"ضوء", label:"تسمية", gauge:"مقياس", graph:"رسم بياني", battery:"بطارية", timer:"مؤقت" },
+    widgets: { button:"زر", slider:"منزلق", toggle:"مفتاح", joystick:"عصا التحكم", dpad:"لوحة اتجاه", xypad:"لوحة XY", led:"ضوء", label:"تسمية", group:"مجموعة", separator:"خط فاصل", gauge:"مقياس", graph:"رسم بياني", battery:"بطارية", timer:"مؤقت" },
     propsTitle: "🛠️ خصائص الأداة",
     propsCollapseTitle: "طي",
     propsEmptyTitle: "لم يتم اختيار شيء",
@@ -1142,34 +1192,22 @@ function cloneSerializable(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function fnv1a32Hex(text) {
-  let hash = 0x811c9dc5;
-  const bytes = encoder.encode(String(text));
-  for (let i = 0; i < bytes.length; i++) {
-    hash ^= bytes[i];
-    hash = Math.imul(hash, 0x01000193) >>> 0;
+// v2.5: same lightweight revision algorithm as firmware v52.
+// It fingerprints the exact Base64 CFG string, so the revision is derived
+// from what is really flashed rather than from a hand-maintained constant.
+function cfgRevisionFromBase64(text) {
+  let hash = 5381 >>> 0;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) {
+    hash = ((((hash << 5) + hash) ^ s.charCodeAt(i)) >>> 0);
   }
-  return hash.toString(16).padStart(8, '0');
+  return 'd' + String(hash >>> 0);
 }
 
 function getBuildCanvasSizeForExport() {
-  // Prefer the logical size remembered from an imported CFG. A Build canvas may
-  // be visually clamped to the browser viewport, but that must not silently turn
-  // a 1372×776 reference design into a smaller firmware layout on export.
-  if (state.buildCanvasSize && state.buildCanvasSize.w && state.buildCanvasSize.h) {
-    return { w: Math.round(state.buildCanvasSize.w), h: Math.round(state.buildCanvasSize.h) };
-  }
-  const wrap = document.querySelector('.resizable-wrap') || findCanvasDropzone();
-  if (wrap) {
-    const r = wrap.getBoundingClientRect();
-    return { w: Math.max(300, Math.round(r.width)), h: Math.max(200, Math.round(r.height)) };
-  }
-  let maxX = 0, maxY = 0;
-  (state.widgets || []).forEach(w => {
-    maxX = Math.max(maxX, Number(w.x || 0) + Number(w.w || 0));
-    maxY = Math.max(maxY, Number(w.y || 0) + Number(w.h || 0));
-  });
-  return { w: Math.max(300, maxX + 20), h: Math.max(200, maxY + 20) };
+  // v2.3: export the logical design size, never the zoomed viewport rectangle.
+  const s = getBuildLogicalSize();
+  return { w: Math.max(300, Math.round(s.w)), h: Math.max(200, Math.round(s.h)) };
 }
 
 function makeExportConfig(source = 'build') {
@@ -1203,7 +1241,7 @@ function makeExportConfig(source = 'build') {
     canvas: canvas || { w: 400, h: 320 }
   };
   // Hash exactly what firmware will embed; do not include the hash inside itself.
-  const configRevision = fnv1a32Hex(JSON.stringify(core));
+  const configRevision = cfgRevisionFromBase64(unicodeBase64(JSON.stringify(core)));
   return {
     schemaVersion: 2,
     ...core,
@@ -1258,7 +1296,22 @@ function makeMakeCodeCfgSnippet(cfg) {
   const json = JSON.stringify(payload);
   const b64 = unicodeBase64(json);
   const readable = JSON.stringify(payload, null, 2).split('\n').map(line => '// ' + line).join('\n');
-  return `/**\n * Layout exported by Micro:bit Remote Builder ${APP_VERSION}\n * Revision: ${cfg.configRevision}\n * Canvas: ${cfg.canvas.w} x ${cfg.canvas.h}\n *\n * HOW TO USE WITH THE EXISTING ROBOT FIRMWARE:\n * Replace only the existing CFG and CFG_REV constants with the two constants\n * below. Keep the rest of your v51+ Maqueen firmware unchanged.\n */\n\n// Human-readable reference:\n${readable}\n\nconst CFG = "${b64}"\nconst CFG_REV = "${cfg.configRevision}"\n`;
+  return `/**
+ * Layout exported by Micro:bit Remote Builder ${APP_VERSION}
+ * Expected runtime revision: ${cfg.configRevision}
+ * Canvas: ${cfg.canvas.w} x ${cfg.canvas.h}
+ *
+ * HOW TO USE WITH FIRMWARE v52+:
+ * Replace only the existing CFG constant with the one below.
+ * Firmware computes CFG_REV directly from CFG at boot, so changing CFG can
+ * never leave an old revision behind and accidentally reopen stale cache.
+ */
+
+// Human-readable reference:
+${readable}
+
+const CFG = "${b64}"
+`;
 }
 
 function exportMakeCodeCfg(source = 'build') {
@@ -1277,6 +1330,11 @@ function exportMakeCodeCfg(source = 'build') {
 // device's layout" offer) — both feed a {title, widgets} object into the
 // Build tab's state the same way.
 function applyCfgToBuildState(cfg){
+  // v2.4: Build is the authoritative editable layout. Importing a design
+  // must invalidate any stale Play snapshot so a later mode switch can never
+  // resurrect older geometry.
+  state.config = null;
+  state.runtimeCanvasSize = null;
   state.widgets = cfg.widgets.map(w => ({...w}));
   // Recompute nextId safely
   let maxNum = 0;
@@ -1290,15 +1348,21 @@ function applyCfgToBuildState(cfg){
     state.buildCanvasSize = { w: Math.round(Number(cfg.canvas.w)), h: Math.round(Number(cfg.canvas.h)) };
   }
   if (typeof applyWidgetDefaults === "function") state.widgets.forEach(applyWidgetDefaults);
+  normalizeGroupMembership(state.widgets);
   state.selected = null;
   if (typeof renderWidgets === "function") renderWidgets();
+  try{ makeCanvasResizable(); setupBuildCanvasViewControls(); }catch(e){}
+  // Imports should always start with the complete design visible. The user can
+  // switch to 1:1 or zoom in afterwards without changing layout coordinates.
+  requestAnimationFrame(() => { try { fitBuildCanvas(); } catch(e){} });
   try{ ensureCanvasToolbar(); }catch(e){}
   try{ placeToolbarWhereHintWas(); }catch(e){}
   try{ updateToolbarForMode('builder'); }catch(e){}
   try{ placeToolbarWhereHintWas(); }catch(e){}
   try{ moveBuildPlayNameTopRight(); }catch(e){}
-  makeCanvasResizable();
   if (typeof renderPropsPanel === "function") renderPropsPanel();
+  // Persist imported geometry immediately; mode switches are not a save point.
+  try { scheduleAutoSave(); } catch(e) {}
 }
 
 // Small floating banner shown after a device's CFG finishes loading in
@@ -1371,8 +1435,8 @@ function importLayoutJsonFile(file){
 }
 
 
-const ICONS = { button:'👆', slider:'🎚️', toggle:'🔘', joystick:'🕹️', led:'💡', label:'🏷️', graph:'📈', gauge:'🧭', dpad:'✛', xypad:'📍', battery:'🔋', timer:'⏱️', image:'🖼️', select:'🔽', editfield:'⌨️', sound:'🔊', notification:'🔔' };
-const SIZES = { button:[100,100], slider:[90,180], toggle:[100,100], joystick:[140,140], led:[80,80], label:[200,50], graph:[300,150], gauge:[140,160], dpad:[140,140], xypad:[150,150], battery:[80,100], timer:[120,80], image:[100,100], select:[160,70], editfield:[200,70], sound:[90,90], notification:[90,90] };
+const ICONS = { button:'👆', slider:'🎚️', toggle:'🔘', joystick:'🕹️', led:'💡', label:'🏷️', group:'▣', separator:'━', graph:'📈', gauge:'🧭', dpad:'✛', xypad:'📍', battery:'🔋', timer:'⏱️', image:'🖼️', select:'🔽', editfield:'⌨️', sound:'🔊', notification:'🔔' };
+const SIZES = { button:[100,100], slider:[90,180], toggle:[100,100], joystick:[140,140], led:[80,80], label:[200,50], group:[320,220], separator:[240,40], graph:[300,150], gauge:[140,160], dpad:[140,140], xypad:[150,150], battery:[80,100], timer:[120,80], image:[100,100], select:[160,70], editfield:[200,70], sound:[90,90], notification:[90,90] };
 
 // Themes
 const THEMES = {
@@ -1437,7 +1501,8 @@ const state = {
   canvasBg: null, // background image
   history: [], // visual history
   arrangeMode: false, // runtime arrange mode
-  buildCanvasSize: null // logical Build canvas size used for portable layout export
+  buildCanvasSize: null, // logical Build canvas size used for portable layout export
+  buildZoom: 1 // editor-only zoom; never changes exported geometry
 };
 state._allowLoadingOverlay = false;
 
@@ -1453,6 +1518,7 @@ function saveProject() {
       title: titleEl ? titleEl.value : '',
       canvasBg: state.canvasBg,
       theme: state.theme,
+      buildCanvasSize: state.buildCanvasSize,
       savedAt: Date.now()
     };
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectData));
@@ -1477,6 +1543,7 @@ function loadSavedProject() {
     state.nextId = projectData.nextId || (state.widgets.length + 1);
     state.canvasBg = projectData.canvasBg || null;
     if (projectData.theme) state.theme = projectData.theme;
+    if (projectData.buildCanvasSize?.w && projectData.buildCanvasSize?.h) state.buildCanvasSize = {...projectData.buildCanvasSize};
     
     // Restore title after DOM is ready
     setTimeout(() => {
@@ -1646,6 +1713,24 @@ function applyWidgetDefaults(w){
     if (w.placeholder == null) w.placeholder = 'Type here...';
   }
 
+  // v2.2 structural widgets. Groups are visual/organizational containers;
+  // their children remain ordinary top-level CFG widgets so older clients can
+  // safely ignore the grouping metadata. Separators are also visual-only.
+  if (w.t === 'group'){
+    if (!w.model) w.model = 'panel';
+    if (!Array.isArray(w.children)) {
+      w.children = String(w.children || '').split(',').map(x => x.trim()).filter(Boolean);
+    }
+    if (w.padding == null) w.padding = 18;
+    if (w.label == null) w.label = 'Group';
+  }
+  if (w.t === 'separator'){
+    if (!w.model) w.model = 'subtle';
+    if (!w.orientation) w.orientation = (Number(w.h || 0) > Number(w.w || 0)) ? 'vertical' : 'horizontal';
+    if (w.thickness == null) w.thickness = 1;
+    w.thickness = Math.max(1, Math.min(6, Number(w.thickness) || 1));
+  }
+
   return w;
 }
 
@@ -1690,6 +1775,16 @@ function modelOptionsForType(t){
       { v:'grid',    name:'Grid' },
       { v:'dark',    name:'Dark' },
       { v:'min',     name:'Minimal' }
+    ];
+    case 'group': return [
+      { v:'panel',       name:'Panel' },
+      { v:'minimal',     name:'Minimal' },
+      { v:'transparent', name:'Transparent' }
+    ];
+    case 'separator': return [
+      { v:'subtle', name:'Subtle' },
+      { v:'solid',  name:'Solid' },
+      { v:'dashed', name:'Dashed' }
     ];
     default: return null;
   }
@@ -1989,7 +2084,7 @@ function stopLinkPing() {
 
 // One-click Demo - creates full showcase with ALL widgets
 function showDemo() {
-  // Create a demo with ALL 16 widget types - complete showcase!
+  // Create a demo showcasing control, display, and structural widget types.
   state.widgets = [
     // Row 1: Buttons + Sliders
     { id: 'btn_jump', t: 'button', x: 20, y: 20, w: 100, h: 100, label: 'Jump!', model:'neo' },
@@ -2522,9 +2617,12 @@ try{ placeToolbarWhereHintWas(); }catch(e){}
     if (state.selectedType) {
       saveUndoState();
       const rect = canvas.getBoundingClientRect();
+      const z = Math.max(0.15, Number(state.buildZoom || 1));
+      const logicalW = canvas.offsetWidth || (rect.width / z);
+      const logicalH = canvas.offsetHeight || (rect.height / z);
       const [w, h] = SIZES[state.selectedType];
-      let x = Math.max(0, Math.min(e.clientX - rect.left - w/2, rect.width - w));
-      let y = Math.max(0, Math.min(e.clientY - rect.top - h/2, rect.height - h));
+      let x = Math.max(0, Math.min((e.clientX - rect.left) / z - w/2, logicalW - w));
+      let y = Math.max(0, Math.min((e.clientY - rect.top) / z - h/2, logicalH - h));
       if (state.gridSnap) { x = snapToGrid(x); y = snapToGrid(y); }
       const base = applyWidgetDefaults({ id: `${state.selectedType}${state.nextId++}`, t: state.selectedType, x, y, w, h, label: '' });
       state.widgets.push(base);
@@ -2578,7 +2676,9 @@ try{ placeToolbarWhereHintWas(); }catch(e){}
       e.preventDefault(); 
       if (state.multiSelect.length) {
         saveUndoState();
-        state.widgets = state.widgets.filter(w => !state.multiSelect.includes(w.id));
+        const deletingIds = new Set(state.multiSelect);
+        state.widgets.filter(w => deletingIds.has(w.id) && w.t === 'group').forEach(g => detachGroup(g, state.widgets));
+        state.widgets = state.widgets.filter(w => !deletingIds.has(w.id));
         state.multiSelect = [];
         state.selected = null;
         renderWidgets();
@@ -2930,8 +3030,9 @@ function autoArrangeWidgets() {
   const canvas = $('#canvas');
   const canvasW = canvas?.offsetWidth || 500;
   
-  // Sort by size (larger first)
-  const sorted = [...state.widgets].sort((a, b) => (b.w * b.h) - (a.w * a.h));
+  // Arrange only top-level items. Group members keep their positions relative
+  // to the group frame and move with it as one functional section.
+  const sorted = [...layoutRootWidgets(state.widgets)].sort((a, b) => (b.w * b.h) - (a.w * a.h));
   
   let currentX = padding;
   let currentY = padding;
@@ -2946,8 +3047,7 @@ function autoArrangeWidgets() {
       rowHeight = 0;
     }
     
-    w.x = currentX;
-    w.y = currentY;
+    moveWidgetKeepingGroup(w, currentX, currentY, state.widgets, '.widget');
     currentX += w.w + padding;
     rowHeight = Math.max(rowHeight, w.h);
   });
@@ -3220,6 +3320,8 @@ function duplicateWidget(w) {
   if (!w) return;
   saveUndoState();
   const newW = { ...w, id: `${w.t}${state.nextId++}`, x: w.x + 20, y: w.y + 20 };
+  if (newW.t === 'group') newW.children = [];
+  delete newW.groupId;
   state.widgets.push(newW);
   state.selected = newW.id;
   renderWidgets();
@@ -3362,6 +3464,8 @@ function handleQuickAction(action) {
     case 'duplicate':
       saveUndoState();
       const newW = { ...w, id: `${w.t}${state.nextId++}`, x: w.x + 20, y: w.y + 20 };
+      if (newW.t === 'group') newW.children = [];
+      delete newW.groupId;
       state.widgets.push(newW);
       state.selected = newW.id;
       renderWidgets();
@@ -3394,6 +3498,7 @@ function handleQuickAction(action) {
       break;
     case 'delete':
       saveUndoState();
+      if (w.t === 'group') detachGroup(w, state.widgets);
       state.widgets = state.widgets.filter(x => x.id !== w.id);
       state.selected = null;
       renderWidgets();
@@ -3623,9 +3728,18 @@ function switchTab(tab, opts = {}) {
       const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
       const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
       
-      // Sync any changes made
+      // Sync only explicit Play/Arrange edits back to Build. Merely visiting
+      // Play never changes Build geometry.
       syncRuntimeToBuild();
     }
+
+    // v2.4: returning to Build is a pure view transition. Re-render from the
+    // authoritative Build model, then re-apply the editor zoom. No Tidy, no
+    // overlap resolution, no coordinate normalization.
+    try { renderWidgets(); } catch(e) {}
+    requestAnimationFrame(() => {
+      try { applyBuildCanvasView(); updateBuildCanvasBadge(); } catch(e) {}
+    });
   } else {
     // Runtime tab
     builderView.classList.remove('active');
@@ -3636,7 +3750,15 @@ function switchTab(tab, opts = {}) {
     // CFGEND handler in processLine()) — otherwise this clobbers the device's config
     // with whatever's sitting in the Build tab's canvas.
     if (!opts.skipConfigRebuild && state.widgets && state.widgets.length > 0) {
-      state.config = { title: $('#titleInput')?.value || 'My Remote', widgets: state.widgets };
+      // v2.4: Play receives a snapshot, NOT references to Build objects.
+      // Runtime rendering/defaults/Arrange can therefore never mutate imported
+      // Build coordinates unless the user explicitly finishes Arrange mode.
+      state.config = {
+        title: $('#titleInput')?.value || 'My Remote',
+        widgets: cloneSerializable(state.widgets),
+        canvas: getBuildCanvasSizeForExport()
+      };
+      state.runtimeCanvasSize = null;
       renderRuntime();
     }
     
@@ -3745,6 +3867,9 @@ function resolveOverlaps(moved) {
     for (let i = 0; i < state.widgets.length; i++) {
       for (let j = i + 1; j < state.widgets.length; j++) {
         const a = state.widgets[i], b = state.widgets[j];
+        // Structural widgets are intentionally allowed to overlap controls:
+        // groups surround their children and separators may cross layout space.
+        if (a.t === 'group' || b.t === 'group' || a.t === 'separator' || b.t === 'separator') continue;
         if (a.locked && b.locked) continue;
         if (!rectsOverlap(a, b, GAP)) continue;
         anyOverlap = true;
@@ -3818,6 +3943,8 @@ function pasteWidgets() {
   const offset = 20;
   state.clipboard.forEach(w => {
     const newW = {...w, id: `${w.t}${state.nextId++}`, x: w.x + offset, y: w.y + offset};
+    if (newW.t === 'group') newW.children = [];
+    delete newW.groupId;
     state.widgets.push(newW);
   });
   resolveOverlaps(null);
@@ -3833,6 +3960,8 @@ function duplicateSelected() {
   const toDupe = state.widgets.filter(w => ids.includes(w.id));
   toDupe.forEach(w => {
     const newW = {...w, id: `${w.t}${state.nextId++}`, x: w.x + 20, y: w.y + 20};
+    if (newW.t === 'group') newW.children = [];
+    delete newW.groupId;
     state.widgets.push(newW);
   });
   resolveOverlaps(null);
@@ -3847,13 +3976,13 @@ function duplicateSelected() {
 function autoArrangeGrid() {
   if (!state.widgets.length) return;
   saveUndoState();
-  const cols = Math.ceil(Math.sqrt(state.widgets.length));
+  const roots = layoutRootWidgets(state.widgets);
+  const cols = Math.ceil(Math.sqrt(roots.length));
   const gap = 10;
   let maxW = 0, maxH = 0;
-  state.widgets.forEach(w => { maxW = Math.max(maxW, w.w); maxH = Math.max(maxH, w.h); });
-  state.widgets.forEach((w, i) => {
-    w.x = (i % cols) * (maxW + gap) + gap;
-    w.y = Math.floor(i / cols) * (maxH + gap) + gap;
+  roots.forEach(w => { maxW = Math.max(maxW, w.w); maxH = Math.max(maxH, w.h); });
+  roots.forEach((w, i) => {
+    moveWidgetKeepingGroup(w, (i % cols) * (maxW + gap) + gap, Math.floor(i / cols) * (maxH + gap) + gap, state.widgets, '.widget');
   });
   renderWidgets();
   toast('⊞ Arranged in grid', 'success');
@@ -3866,9 +3995,8 @@ function autoArrangeRows() {
   saveUndoState();
   const gap = 10;
   let y = gap;
-  state.widgets.forEach(w => {
-    w.x = gap;
-    w.y = y;
+  layoutRootWidgets(state.widgets).forEach(w => {
+    moveWidgetKeepingGroup(w, gap, y, state.widgets, '.widget');
     y += w.h + gap;
   });
   renderWidgets();
@@ -3882,9 +4010,8 @@ function autoArrangeCols() {
   saveUndoState();
   const gap = 10;
   let x = gap;
-  state.widgets.forEach(w => {
-    w.x = x;
-    w.y = gap;
+  layoutRootWidgets(state.widgets).forEach(w => {
+    moveWidgetKeepingGroup(w, x, gap, state.widgets, '.widget');
     x += w.w + gap;
   });
   renderWidgets();
@@ -3998,21 +4125,39 @@ function cycleTheme() {
 }
 
 // === GROUPING ===
+// v2.2: Ctrl+G now creates a real CFG `group` widget around the selected
+// controls instead of an editor-only invisible grouping record.
 function groupSelected() {
   if (state.multiSelect.length < 2) { toast('Select 2+ widgets', 'error'); return; }
-  const groupId = 'g' + Date.now();
-  state.groups[groupId] = [...state.multiSelect];
-  state.widgets.filter(w => state.multiSelect.includes(w.id)).forEach(w => w.groupId = groupId);
+  const members = state.widgets.filter(w => state.multiSelect.includes(w.id) && w.t !== 'group');
+  if (members.length < 2) { toast('Select 2+ non-group widgets', 'error'); return; }
+  saveUndoState();
+  const pad = 24;
+  const minX = Math.max(0, Math.min(...members.map(w => w.x)) - pad);
+  const minY = Math.max(0, Math.min(...members.map(w => w.y)) - pad - 16);
+  const maxX = Math.max(...members.map(w => w.x + w.w)) + pad;
+  const maxY = Math.max(...members.map(w => w.y + w.h)) + pad;
+  const group = applyWidgetDefaults({
+    id: `group${state.nextId++}`, t: 'group', label: 'Group',
+    x: minX, y: minY, w: Math.max(160, maxX - minX), h: Math.max(120, maxY - minY),
+    color: '#00d4ff', model: 'panel', children: members.map(w => w.id)
+  });
+  members.forEach(w => w.groupId = group.id);
+  state.widgets.unshift(group); // structural frame behind controls
+  state.selected = group.id;
+  state.multiSelect = [];
   renderWidgets();
-  toast(`⚭ Grouped ${state.multiSelect.length} widgets`, 'success');
+  toast(`▣ Grouped ${members.length} widgets`, 'success');
 }
 
 function ungroupSelected() {
   const w = getSelectedWidget();
-  if (!w || !w.groupId) { toast('Select a grouped widget', 'error'); return; }
-  const gid = w.groupId;
-  state.widgets.filter(x => x.groupId === gid).forEach(x => delete x.groupId);
-  delete state.groups[gid];
+  const group = w?.t === 'group' ? w : state.widgets.find(g => g.t === 'group' && g.id === w?.groupId);
+  if (!group) { toast('Select a group or grouped widget', 'error'); return; }
+  saveUndoState();
+  detachGroup(group, state.widgets);
+  state.widgets = state.widgets.filter(x => x.id !== group.id);
+  state.selected = null;
   renderWidgets();
   toast('⚯ Ungrouped', 'success');
 }
@@ -4416,15 +4561,7 @@ function removeAlignGuides() {
 
 // Canvas auto-expand
 function updateCanvasSize() {
-  const canvas = $('#canvas');
-  if (!canvas) return;
-  let maxX = 400, maxY = 300;
-  state.widgets.forEach(w => {
-    maxX = Math.max(maxX, w.x + w.w + 40);
-    maxY = Math.max(maxY, w.y + w.h + 40);
-  });
-  canvas.style.minWidth = maxX + 'px';
-  canvas.style.minHeight = maxY + 'px';
+  autoResizeCanvas();
 }
 
 // Minimap
@@ -4447,11 +4584,7 @@ function updateMinimap() {
 
 // Zoom
 function setZoom(z) {
-  state.zoom = Math.max(0.5, Math.min(2, z));
-  const layer = $('#widgetsLayer');
-  if (layer) layer.style.transform = `scale(${state.zoom})`;
-  const zoomEl = $('#zoomLevel');
-  if (zoomEl) zoomEl.textContent = Math.round(state.zoom * 100) + '%';
+  setBuildZoom(z);
 }
 
 // Nudge with arrow keys
@@ -4459,9 +4592,15 @@ function nudgeSelected(dx, dy) {
   const ids = state.multiSelect.length ? state.multiSelect : (state.selected ? [state.selected] : []);
   if (!ids.length) return;
   saveUndoState();
-  state.widgets.filter(w => ids.includes(w.id) && !w.locked).forEach(w => {
+  const idSet = new Set(ids);
+  state.widgets.filter(w => idSet.has(w.id) && !w.locked).forEach(w => {
+    // If both a group and one of its children are selected, the child will be
+    // moved by the group. Skip the direct move to avoid applying the nudge twice.
+    if (w.groupId && idSet.has(w.groupId)) return;
+    const oldX = w.x, oldY = w.y;
     w.x = Math.max(0, w.x + dx);
     w.y = Math.max(0, w.y + dy);
+    if (w.t === 'group') moveGroupChildren(w, w.x - oldX, w.y - oldY, state.widgets, '.widget');
   });
   resolveOverlaps(null);
   renderWidgets();
@@ -4479,7 +4618,8 @@ function setupCanvasTools() {
 function startSelectionBox(e) {
   const canvas = $('#canvas');
   const rect = canvas.getBoundingClientRect();
-  selBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const z = Math.max(0.15, Number(state.buildZoom || 1));
+  selBoxStart = { x: (e.clientX - rect.left) / z, y: (e.clientY - rect.top) / z };
   selectionBox = document.createElement('div');
   selectionBox.className = 'selection-box';
   canvas.appendChild(selectionBox);
@@ -4489,8 +4629,9 @@ function updateSelectionBox(e) {
   if (!selectionBox || !selBoxStart) return;
   const canvas = $('#canvas');
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const z = Math.max(0.15, Number(state.buildZoom || 1));
+  const x = (e.clientX - rect.left) / z;
+  const y = (e.clientY - rect.top) / z;
   const left = Math.min(x, selBoxStart.x);
   const top = Math.min(y, selBoxStart.y);
   const width = Math.abs(x - selBoxStart.x);
@@ -4500,14 +4641,10 @@ function updateSelectionBox(e) {
 
 function endSelectionBox() {
   if (!selectionBox || !selBoxStart) return;
-  const box = selectionBox.getBoundingClientRect();
-  const canvas = $('#canvas');
-  const cRect = canvas.getBoundingClientRect();
-  
-  const boxLeft = box.left - cRect.left;
-  const boxTop = box.top - cRect.top;
-  const boxRight = boxLeft + box.width;
-  const boxBottom = boxTop + box.height;
+  const boxLeft = parseFloat(selectionBox.style.left) || 0;
+  const boxTop = parseFloat(selectionBox.style.top) || 0;
+  const boxRight = boxLeft + (parseFloat(selectionBox.style.width) || 0);
+  const boxBottom = boxTop + (parseFloat(selectionBox.style.height) || 0);
   
   state.multiSelect = state.widgets.filter(w => {
     return w.x < boxRight && w.x + w.w > boxLeft && w.y < boxBottom && w.y + w.h > boxTop;
@@ -4524,35 +4661,133 @@ function endSelectionBox() {
 function autoResizeCanvas() {
   const canvas = $('#canvas');
   if (!canvas || !state.widgets.length) return;
-  
-  // Calculate needed size based on widget positions
-  let maxX = 0, maxY = 0;
+  let maxX = 400, maxY = 300;
   state.widgets.forEach(w => {
-    maxX = Math.max(maxX, w.x + w.w + 20);
-    maxY = Math.max(maxY, w.y + w.h + 20);
+    maxX = Math.max(maxX, Number(w.x || 0) + Number(w.w || 0) + 20);
+    maxY = Math.max(maxY, Number(w.y || 0) + Number(w.h || 0) + 20);
   });
-  
-  // Minimum size, no maximum - let it grow as needed
-  const minW = 400;
-  const minH = 300;
-  
-  const newW = Math.max(minW, maxX);
-  const newH = Math.max(minH, maxY);
-  canvas.style.minWidth = newW + 'px';
-  canvas.style.minHeight = newH + 'px';
+  const cur = getBuildLogicalSize();
+  const nextW = Math.max(cur.w, maxX);
+  const nextH = Math.max(cur.h, maxY);
+  if (!state.buildCanvasSize || nextW !== cur.w || nextH !== cur.h) {
+    state.buildCanvasSize = { w: Math.round(nextW), h: Math.round(nextH) };
+  }
+  applyBuildCanvasView();
+}
+
+// === v2.2 GROUP + SEPARATOR HELPERS ===
+function widgetChildren(group, widgets = state.widgets) {
+  if (!group || group.t !== 'group') return [];
+  const ids = Array.isArray(group.children) ? group.children : [];
+  return ids.map(id => widgets.find(w => w.id === id)).filter(Boolean);
+}
+
+function normalizeGroupMembership(widgets = state.widgets) {
+  const groups = widgets.filter(w => w.t === 'group');
+  const byId = new Map(widgets.map(w => [w.id, w]));
+  groups.forEach(g => {
+    applyWidgetDefaults(g);
+    g.children = [...new Set((g.children || []).filter(id => id !== g.id && byId.has(id) && byId.get(id)?.t !== 'group'))];
+    g.children.forEach(id => { const child = byId.get(id); if (child) child.groupId = g.id; });
+  });
+  widgets.forEach(w => {
+    if (!w.groupId) return;
+    const g = byId.get(w.groupId);
+    if (!g || g.t !== 'group') delete w.groupId;
+    else if (!g.children.includes(w.id)) g.children.push(w.id);
+  });
+}
+
+function setGroupChildren(group, ids, widgets = state.widgets) {
+  if (!group || group.t !== 'group') return;
+  const byId = new Map(widgets.map(w => [w.id, w]));
+  const old = new Set(Array.isArray(group.children) ? group.children : []);
+  const next = [...new Set((ids || []).filter(id => id !== group.id && byId.has(id) && byId.get(id)?.t !== 'group'))];
+  old.forEach(id => {
+    if (next.includes(id)) return;
+    const child = byId.get(id);
+    if (child?.groupId === group.id) delete child.groupId;
+  });
+  group.children = next;
+  next.forEach(id => { const child = byId.get(id); if (child) child.groupId = group.id; });
+}
+
+function captureWidgetsInGroup(group, widgets = state.widgets) {
+  if (!group || group.t !== 'group') return [];
+  const ids = widgets.filter(w => {
+    if (w.id === group.id || w.t === 'group') return false;
+    const cx = Number(w.x || 0) + Number(w.w || 0) / 2;
+    const cy = Number(w.y || 0) + Number(w.h || 0) / 2;
+    return cx >= group.x && cx <= group.x + group.w && cy >= group.y && cy <= group.y + group.h;
+  }).map(w => w.id);
+  setGroupChildren(group, ids, widgets);
+  return ids;
+}
+
+function moveGroupChildren(group, dx, dy, widgets = state.widgets, rootSelector = '.widget') {
+  if (!group || group.t !== 'group' || (!dx && !dy)) return;
+  widgetChildren(group, widgets).forEach(child => {
+    child.x = Math.max(0, Number(child.x || 0) + dx);
+    child.y = Math.max(0, Number(child.y || 0) + dy);
+    const el = document.querySelector(`${rootSelector}[data-id="${CSS.escape(child.id)}"]`);
+    if (el) {
+      el.style.left = child.x + 'px';
+      el.style.top = child.y + 'px';
+    }
+  });
+}
+
+function detachGroup(group, widgets = state.widgets) {
+  if (!group || group.t !== 'group') return;
+  widgetChildren(group, widgets).forEach(child => {
+    if (child.groupId === group.id) delete child.groupId;
+  });
+  group.children = [];
+}
+
+function layoutRootWidgets(widgets = state.widgets) {
+  normalizeGroupMembership(widgets);
+  return widgets.filter(w => !w.groupId);
+}
+
+function moveWidgetKeepingGroup(w, x, y, widgets = state.widgets, rootSelector = '.widget') {
+  const oldX = Number(w.x || 0), oldY = Number(w.y || 0);
+  w.x = Math.max(0, Number(x || 0));
+  w.y = Math.max(0, Number(y || 0));
+  if (w.t === 'group') moveGroupChildren(w, w.x - oldX, w.y - oldY, widgets, rootSelector);
+}
+
+function groupPreviewMarkup(w) {
+  const count = Array.isArray(w.children) ? w.children.length : 0;
+  return `<div class="build-group-preview model-${esc(w.model || 'panel')}" style="--group-accent:${esc(w.color || '#00d4ff')}">
+    <span class="build-group-title">${esc(w.label || 'Group')}</span>
+    <span class="build-group-count">${count} item${count === 1 ? '' : 's'}</span>
+  </div>`;
+}
+
+function separatorPreviewMarkup(w) {
+  const orientation = w.orientation || ((w.h || 0) > (w.w || 0) ? 'vertical' : 'horizontal');
+  const thickness = Math.max(1, Math.min(6, Number(w.thickness) || 1));
+  const label = esc(w.label || '');
+  return `<div class="build-separator-preview ${orientation} model-${esc(w.model || 'subtle')}" style="--sep-color:${esc(w.color || '#94a3b8')};--sep-thickness:${thickness}px">
+    <span class="build-separator-line"></span>${label ? `<span class="build-separator-label">${label}</span>` : ''}
+  </div>`;
 }
 
 function renderWidgets() {
+  try { makeCanvasResizable(); setupBuildCanvasViewControls(); } catch(e) {}
   const layer = $('#widgetsLayer');
   layer.innerHTML = '';
   
   setupCanvasTools();
+  normalizeGroupMembership(state.widgets);
   
   state.widgets.forEach(w => {
     const el = document.createElement('div');
     const isMulti = state.multiSelect.includes(w.id);
-    el.className = 'widget' + (state.selected === w.id ? ' selected' : '') + (isMulti ? ' multi-selected' : '') + (w.locked ? ' locked' : '') + (w.hidden ? ' hidden' : '') + (w.groupId ? ' grouped' : '');
+    el.className = 'widget' + (state.selected === w.id ? ' selected' : '') + (isMulti ? ' multi-selected' : '') + (w.locked ? ' locked' : '') + (w.hidden ? ' hidden' : '') + (w.groupId ? ' grouped' : '') + (w.t === 'group' ? ' widget-group' : '') + (w.t === 'separator' ? ' widget-separator' : '');
     el.dataset.id = w.id;
+    el.dataset.type = w.t;
     
     // Build style with all properties
     let styles = `left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px`;
@@ -4562,6 +4797,8 @@ function renderWidgets() {
     else if (w.shadow === 'glow') styles += `;box-shadow:0 0 30px ${w.color || 'var(--accent)'}`;
     else if (w.shadow === 'neon') styles += `;box-shadow:0 0 20px ${w.color || '#ff00ff'}, 0 0 40px ${w.color || '#ff00ff'}`;
     if (w.hidden) styles += `;display:none`;
+    if (w.t === 'group') styles += `;z-index:0`;
+    else styles += `;z-index:1`;
     el.style.cssText = styles;
     
     let colorDot = w.color ? `<div class="widget-color-dot" style="background:${w.color}"></div>` : '';
@@ -4581,7 +4818,13 @@ function renderWidgets() {
       <div class="resize-handle handle-se"></div>
       <div class="resize-handle handle-sw"></div>
     `;
-    el.innerHTML = `${colorDot}<div class="widget-icon">${ICONS[w.t]}</div><div class="widget-label">${esc(w.label) || w.t}</div>${orientIndicator}${resizeHandles}`;
+    if (w.t === 'group') {
+      el.innerHTML = `${groupPreviewMarkup(w)}${resizeHandles}`;
+    } else if (w.t === 'separator') {
+      el.innerHTML = `${separatorPreviewMarkup(w)}${resizeHandles}`;
+    } else {
+      el.innerHTML = `${colorDot}<div class="widget-icon">${ICONS[w.t]}</div><div class="widget-label">${esc(w.label) || w.t}</div>${orientIndicator}${resizeHandles}`;
+    }
     layer.appendChild(el);
     
     if (!w.locked) {
@@ -4598,8 +4841,9 @@ function renderWidgets() {
             clearTimeout(state._dragT);
             state._dragT = setTimeout(() => state.justDragged = false, 50);
             
-            let newX = w.x + e.dx;
-            let newY = w.y + e.dy;
+            const buildScale = Math.max(0.15, Number(state.buildZoom || 1));
+            let newX = w.x + e.dx / buildScale;
+            let newY = w.y + e.dy / buildScale;
             
             if (state.gridSnap) {
               newX = snapToGrid(newX);
@@ -4611,13 +4855,18 @@ function renderWidgets() {
             const maxX = (canvas?.offsetWidth || 500) - w.w - 10;
             const maxY = (canvas?.offsetHeight || 400) - w.h - 10;
             
+            const oldX = w.x;
+            const oldY = w.y;
             w.x = Math.max(0, Math.min(maxX, newX));
             w.y = Math.max(0, Math.min(maxY, newY));
+            const movedDx = w.x - oldX;
+            const movedDy = w.y - oldY;
             e.target.style.left = w.x + 'px';
             e.target.style.top = w.y + 'px';
+            if (w.t === 'group') moveGroupChildren(w, movedDx, movedDy, state.widgets, '.widget');
             
             showAlignGuides(w);
-            resolveOverlaps(w);
+            if (w.t !== 'group' && w.t !== 'separator') resolveOverlaps(w);
             autoResizeCanvas();
           },
           end() {
@@ -4638,10 +4887,13 @@ function renderWidgets() {
           start() { saveUndoState(); },
           move(e) {
             // Handle position changes from top/left edges
-            let newX = w.x + (e.deltaRect.left || 0);
-            let newY = w.y + (e.deltaRect.top || 0);
-            let newW = state.gridSnap ? snapToGrid(e.rect.width) : e.rect.width;
-            let newH = state.gridSnap ? snapToGrid(e.rect.height) : e.rect.height;
+            const buildScale = Math.max(0.15, Number(state.buildZoom || 1));
+            let newX = w.x + (e.deltaRect.left || 0) / buildScale;
+            let newY = w.y + (e.deltaRect.top || 0) / buildScale;
+            const logicalRectW = e.rect.width / buildScale;
+            const logicalRectH = e.rect.height / buildScale;
+            let newW = state.gridSnap ? snapToGrid(logicalRectW) : logicalRectW;
+            let newH = state.gridSnap ? snapToGrid(logicalRectH) : logicalRectH;
             
             // Clamp to canvas
             const canvas = $('#canvas');
@@ -4833,7 +5085,29 @@ function renderPropsPanel(){
     `;
   }
 
-  
+
+  if (w.t === 'group'){
+    html += `
+      <label>Group members</label>
+      <input id="prop_groupChildren" value="${esc((w.children || []).join(','))}" placeholder="widget1,widget2,..." />
+      <button class="props-apply" id="prop_captureGroup">▣ Capture widgets inside group</button>
+      <p class="props-hint">Moving this group moves its captured members. Children stay normal CFG widgets for compatibility.</p>
+    `;
+  }
+
+  if (w.t === 'separator'){
+    html += `
+      <label>Orientation</label>
+      <select id="prop_sepOrientation">
+        <option value="horizontal" ${(w.orientation || 'horizontal') === 'horizontal' ? 'selected' : ''}>↔ Horizontal</option>
+        <option value="vertical" ${w.orientation === 'vertical' ? 'selected' : ''}>↕ Vertical</option>
+      </select>
+      <label>Thickness</label>
+      <input id="prop_sepThickness" type="range" min="1" max="6" value="${w.thickness ?? 1}" />
+      <p class="props-hint">The widget keeps a comfortable hit area; only the visible line uses this thickness.</p>
+    `;
+  }
+
   if (w.t === 'gauge'){
     html += `
       <label>Min</label>
@@ -4954,6 +5228,7 @@ form.innerHTML = html;
     w.label = e.target.value;
     const el = $(`.widget[data-id="${w.id}"] .widget-label`);
     if (el) el.textContent = w.label || w.t;
+    else if (w.t === 'group' || w.t === 'separator') renderWidgets();
   };
 
   $('#prop_color').oninput = e => {
@@ -5113,7 +5388,12 @@ form.innerHTML = html;
   // Model wiring (and quick apply to all widgets of same type)
   const modelSel = $('#prop_model');
   if (modelSel){
-    modelSel.onchange = e => { w.model = e.target.value; toast(tr('toast.modelUpdated'), 'success'); };
+    modelSel.onchange = e => {
+      w.model = e.target.value;
+      renderWidgets();
+      if (state.config?.widgets?.some(x => x.id === w.id)) renderRuntime();
+      toast(tr('toast.modelUpdated'), 'success');
+    };
   }
   const applyBtn = $('#prop_applyAll');
   if (applyBtn){
@@ -5162,6 +5442,42 @@ form.innerHTML = html;
     $('#prop_min').oninput = e => { w.min = parseFloat(e.target.value); };
     $('#prop_max').oninput = e => { w.max = parseFloat(e.target.value); };
     $('#prop_step').oninput = e => { w.step = parseFloat(e.target.value); };
+  }
+
+  if (w.t === 'group'){
+    const members = $('#prop_groupChildren');
+    if (members) members.onchange = e => {
+      const ids = String(e.target.value || '').split(',').map(x => x.trim()).filter(Boolean);
+      setGroupChildren(w, ids, state.widgets);
+      renderWidgets();
+      renderPropsPanel();
+    };
+    const capture = $('#prop_captureGroup');
+    if (capture) capture.onclick = () => {
+      saveUndoState();
+      const ids = captureWidgetsInGroup(w, state.widgets);
+      renderWidgets();
+      renderPropsPanel();
+      toast(`▣ Captured ${ids.length} widget${ids.length === 1 ? '' : 's'}`, 'success');
+    };
+  }
+
+  if (w.t === 'separator'){
+    const orient = $('#prop_sepOrientation');
+    if (orient) orient.onchange = e => {
+      saveUndoState();
+      w.orientation = e.target.value;
+      const shouldVertical = w.orientation === 'vertical';
+      const isVertical = Number(w.h || 0) > Number(w.w || 0);
+      if (shouldVertical !== isVertical) [w.w, w.h] = [w.h, w.w];
+      renderWidgets();
+      renderPropsPanel();
+    };
+    const thick = $('#prop_sepThickness');
+    if (thick) thick.oninput = e => {
+      w.thickness = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
+      renderWidgets();
+    };
   }
 
   if (w.t === 'gauge'){
@@ -5249,6 +5565,8 @@ form.innerHTML = html;
 function deleteSelected() {
   if (!state.selected) { toast(tr('toast.selectWidgetFirst'), 'error'); return; }
   saveUndoState();
+  const deleting = state.widgets.find(w => w.id === state.selected);
+  if (deleting?.t === 'group') detachGroup(deleting, state.widgets);
   state.widgets = state.widgets.filter(w => w.id !== state.selected);
   state.selected = null;
   renderWidgets();
@@ -5715,7 +6033,7 @@ var configChunks = 0;
 // remains the source of truth: a different revision automatically invalidates
 // the cache. If localStorage is unavailable/corrupt, we simply fall back to
 // GETCFG — correctness first, speed second.
-const REMOTE_CFG_CACHE_PREFIX = 'maqueen_remote_cfg_v47:';
+const REMOTE_CFG_CACHE_PREFIX = 'maqueen_remote_cfg_v52:';
 let pendingCfgVersion = '';
 
 function remoteCfgCacheKey() {
@@ -5734,6 +6052,16 @@ function loadCachedRemoteConfig(version) {
     const rec = JSON.parse(raw);
     if (!rec || rec.version !== version || !rec.config || !Array.isArray(rec.config.widgets)) {
       return null;
+    }
+    // v52 auto-derived revisions start with "d". Recompute the cached payload
+    // fingerprint before trusting it, so corrupt/stale localStorage is rejected.
+    if (String(version).startsWith('d')) {
+      const expected = cfgRevisionFromBase64(unicodeBase64(JSON.stringify(rec.config)));
+      if (expected !== version) {
+        console.warn('[BLE] Cached config fingerprint mismatch; discarding stale cache');
+        localStorage.removeItem(key);
+        return null;
+      }
     }
     return rec.config;
   } catch (e) {
@@ -6038,6 +6366,7 @@ function renderRuntime() {
   // the rebuild and keep sending for buttons that no longer exist.
   clearAllDpadKeepalives();
   const cfg = state.config;
+  normalizeGroupMembership(cfg.widgets);
   // Add "Powered by Workshop-Diy" branding
   const title = cfg.title || 'My Remote';
   const titleEl = $('#runtimeTitle');
@@ -6065,8 +6394,9 @@ function renderRuntime() {
   
   cfg.widgets.forEach(w => {
     const el = document.createElement('div');
-    el.className = 'rt-widget'; el.dataset.id = w.id;
-    el.style.cssText = `left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px`;
+    el.className = 'rt-widget rt-type-' + w.t; el.dataset.id = w.id;
+    el.dataset.type = w.t;
+    el.style.cssText = `left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px;z-index:${w.t === 'group' ? 0 : 1}`;
     el.innerHTML = createRuntimeWidget(w) + '<div class="rt-resize-handle" style="display:none;"></div>';
     grid.appendChild(el);
     bindRuntimeWidget(el, w);
@@ -6205,6 +6535,7 @@ function setupArrangeMode() {
     
     const wid = el.dataset.id;
     let startX, startY, startLeft, startTop;
+    let groupChildStarts = [];
     let isDragging = false;
     
     // Touch/Mouse drag
@@ -6222,6 +6553,11 @@ function setupArrangeMode() {
       startY = touch.clientY;
       startLeft = parseInt(el.style.left) || 0;
       startTop = parseInt(el.style.top) || 0;
+      const def = state.config?.widgets?.find(w => w.id === wid);
+      groupChildStarts = def?.t === 'group' ? widgetChildren(def, state.config.widgets).map(child => {
+        const childEl = grid.querySelector(`.rt-widget[data-id="${CSS.escape(child.id)}"]`);
+        return { child, el: childEl, left: Number(child.x || 0), top: Number(child.y || 0) };
+      }) : [];
     };
     
     const onMove = (e) => {
@@ -6237,6 +6573,11 @@ function setupArrangeMode() {
       
       el.style.left = newLeft + 'px';
       el.style.top = newTop + 'px';
+      groupChildStarts.forEach(rec => {
+        const left = Math.max(0, rec.left + dx);
+        const top = Math.max(0, rec.top + dy);
+        if (rec.el) { rec.el.style.left = left + 'px'; rec.el.style.top = top + 'px'; }
+      });
     };
     
     const onEnd = (e) => {
@@ -6250,6 +6591,13 @@ function setupArrangeMode() {
         if (w) {
           w.x = parseInt(el.style.left) || 0;
           w.y = parseInt(el.style.top) || 0;
+          if (w.t === 'group') {
+            groupChildStarts.forEach(rec => {
+              if (!rec.el) return;
+              rec.child.x = parseInt(rec.el.style.left) || 0;
+              rec.child.y = parseInt(rec.el.style.top) || 0;
+            });
+          }
         }
       }
       
@@ -6301,8 +6649,10 @@ function setupArrangeMode() {
         const dx = touch.clientX - resizeStartX;
         const dy = touch.clientY - resizeStartY;
         
-        const newW = Math.max(50, resizeStartW + dx);
-        const newH = Math.max(50, resizeStartH + dy);
+        const def = state.config?.widgets?.find(w => w.id === wid);
+        const minDim = def?.t === 'separator' ? 24 : 50;
+        const newW = Math.max(minDim, resizeStartW + dx);
+        const newH = Math.max(minDim, resizeStartH + dy);
         
         el.style.width = newW + 'px';
         el.style.height = newH + 'px';
@@ -6441,6 +6791,24 @@ function createRuntimeWidget(w) {
   const model = (w.model || '').trim();
 
   switch (w.t) {
+    case 'group': {
+      const m = model || 'panel';
+      const count = Array.isArray(w.children) ? w.children.length : 0;
+      return `<div class="rt-group model-${esc(m)}" style="--group-accent:${esc(w.color || '#00d4ff')}">
+        <div class="rt-group-title">${label}</div>
+        <div class="rt-group-count">${count ? `${count} item${count === 1 ? '' : 's'}` : ''}</div>
+      </div>`;
+    }
+
+    case 'separator': {
+      const orientation = w.orientation || ((w.h || 0) > (w.w || 0) ? 'vertical' : 'horizontal');
+      const thickness = Math.max(1, Math.min(6, Number(w.thickness) || 1));
+      const m = model || 'subtle';
+      return `<div class="rt-separator ${esc(orientation)} model-${esc(m)}" style="--sep-color:${esc(w.color || '#94a3b8')};--sep-thickness:${thickness}px">
+        <span class="rt-separator-line"></span>${w.label ? `<span class="rt-separator-label">${label}</span>` : ''}
+      </div>`;
+    }
+
     case 'button': {
       const m = model || 'neo';
       const icons = ['🎯', '⚡', '🚀', '💥', '✨', '🎮', '🔥', '💫'];
@@ -7561,44 +7929,26 @@ document.addEventListener('click', (e)=>{
   window.addEventListener('resize', updateHeaderH);
   window.addEventListener('load', updateHeaderH);
 
-  // --- auto-tidy widgets when canvas shrinks below their bounds ---
-  let autoTidyT = null;
-  function maybeAutoTidy(){
-    try{
-      if (!window.state || !Array.isArray(state.widgets) || !state.widgets.length) return;
-      const wrap = document.querySelector('.canvas-wrap');
-      const canvas = document.getElementById('canvas');
-      if (!canvas) return;
-      // Use the parent wrap's width as the real budget — the canvas itself
-      // can over-grow if a widget is positioned past its max-width.
-      const budget = Math.min(canvas.clientWidth, wrap ? wrap.clientWidth - 24 : canvas.clientWidth);
-      if (budget < 80) return;
-      const overflow = state.widgets.some(w => (w.x + w.w) > budget - 8);
-      if (overflow && typeof autoArrangeWidgets === 'function'){
-        autoArrangeWidgets();
-      }
-    }catch(e){}
+  // --- v2.4: viewport changes must NEVER rewrite layout geometry ---
+  // v2.2 used Auto-Tidy when the visible Build area became narrower than the
+  // design. With v2.3 Fit/Zoom/Pan that behavior is both unnecessary and
+  // destructive: Build → Import → Play → Build could repack every widget.
+  // Only the explicit Tidy button is allowed to call autoArrangeWidgets().
+  let buildViewRefreshT = null;
+  function refreshBuildViewportOnly(){
+    clearTimeout(buildViewRefreshT);
+    buildViewRefreshT = setTimeout(() => {
+      try {
+        if (!document.querySelector('.builder-view.active')) return;
+        applyBuildCanvasView();
+        updateBuildCanvasBadge();
+      } catch(e) {}
+    }, 80);
   }
-  window.addEventListener('resize', () => {
-    clearTimeout(autoTidyT);
-    autoTidyT = setTimeout(maybeAutoTidy, 180);
-  });
-  // Run several times after load — fonts, panels, and the resizable wrap
-  // settle on different ticks.
-  window.addEventListener('load', () => {
-    setTimeout(maybeAutoTidy, 250);
-    setTimeout(maybeAutoTidy, 800);
-  });
-  // Run when the user switches to builder tab (templates loaded into the
-  // wrong canvas size before render).
+  window.addEventListener('resize', refreshBuildViewportOnly);
   document.addEventListener('click', (e) => {
     const t = e.target && e.target.closest && e.target.closest('[data-tab="builder"]');
-    if (t) setTimeout(maybeAutoTidy, 80);
-  });
-  // Run after a template card is chosen.
-  document.addEventListener('click', (e) => {
-    const t = e.target && e.target.closest && e.target.closest('.template-card');
-    if (t) setTimeout(maybeAutoTidy, 120);
+    if (t) refreshBuildViewportOnly();
   });
 
   // --- helper UI creation ---
@@ -8186,6 +8536,7 @@ document.addEventListener('click', (e)=>{
     tools.innerHTML = `
       <button class="canvas-tool-btn" id="duplicateBtn" title="Duplicate (Ctrl+D)">⧉</button>
       <button class="canvas-tool-btn" id="groupBtn" title="Group (Ctrl+G)">⚭</button>
+      <button class="canvas-tool-btn" id="ungroupBtn" title="Ungroup selected group">⚯</button>
       <button class="canvas-tool-btn" id="layersBtn" title="Layers (L)">☰</button>
       <button class="canvas-tool-btn" id="themeBtn" title="Theme (T)">🎨</button>
       <button class="canvas-tool-btn" id="bgBtn" title="Canvas Background">🖼️</button>
@@ -8254,6 +8605,7 @@ document.addEventListener('click', (e)=>{
 
     bind('duplicateBtn','duplicateSelected');
     bind('groupBtn','groupSelected');
+    bind('ungroupBtn','ungroupSelected');
     bind('layersBtn','toggleLayers');
     bind('themeBtn','cycleTheme');
     bind('bgBtn','setCanvasBackground');
@@ -8621,6 +8973,13 @@ document.addEventListener('click', (e)=>{
   }
   
   function applyZoom(zoom) {
+    const builderView = document.querySelector('.builder-view');
+    if (builderView && builderView.classList.contains('active') && typeof setBuildZoom === 'function') {
+      setBuildZoom(zoom);
+      currentZoom = state.buildZoom || zoom;
+      if (zoomLevel) zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+      return;
+    }
     currentZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
     
     const target = getZoomTarget();
@@ -8656,6 +9015,13 @@ document.addEventListener('click', (e)=>{
   }
   
   function zoomFit() {
+    const builderView = document.querySelector('.builder-view');
+    if (builderView && builderView.classList.contains('active') && typeof fitBuildCanvas === 'function') {
+      fitBuildCanvas();
+      currentZoom = state.buildZoom || 1;
+      if (zoomLevel) zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+      return;
+    }
     // Fit the runtime grid to screen
     const grid = document.getElementById('runtimeGrid');
     if (!grid) return;
@@ -8951,4 +9317,10 @@ document.addEventListener('DOMContentLoaded', () => {
     void logo.offsetWidth;
     logo.classList.add(effect);
   });
+});
+
+
+// v2.3 Build viewport boot
+document.addEventListener('DOMContentLoaded', () => {
+  try { makeCanvasResizable(); setupBuildCanvasViewControls(); applyBuildCanvasView(); } catch(e) { console.warn('[BuildViewport]', e); }
 });
