@@ -1,14 +1,7 @@
-# Web app v2.6 — Play canvas navigation
+# Web app v2.7 — Fullscreen toolbar fix
 
-Play mode now has the same practical view controls as Build:
-
-- **Fit** fits the complete runtime canvas in the Play viewport.
-- **1:1** restores the design to 100% logical size.
-- **+ / −** zoom the Play canvas without changing widget geometry.
-- The current Play zoom percentage is shown in the toolbar.
-- Press **F** in Play to Fit.
-- Large designs remain reachable by scrolling at 1:1 or when zoomed in.
-- Play zoom is independent of Build zoom.
-- Fit/zoom are view-only and never modify exported `x/y/w/h`.
-
-Firmware stays at v52; no micro:bit reflash is needed.
+- Fullscreen is a normal Play-toolbar button; it no longer overlaps Fit, 1:1, or Arrange.
+- The same button stays visible in fullscreen and changes to Exit Fullscreen.
+- Play zoom controls and Arrange remain available in fullscreen.
+- The old floating fullscreen exit control is disabled.
+- View-only change: widget geometry, CFG, cache protocol, and BLE behavior are unchanged.

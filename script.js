@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -694,6 +694,7 @@ const I18N = {
     reloadConfig: "↻ Reload Config",
     reloadConfigTitle: "Clear this device's cached config and fetch it again from the micro:bit",
     fullscreen: "⛶ Fullscreen",
+    fullscreenExit: "⛶ Exit Fullscreen",
     arrangeHint: '👆 Drag widgets to rearrange • Tap "Done" when finished',
     connect: "Tap to Connect!", connected: "Connected! 🎉",
     runtimeConnectText: "Connect your micro:bit!",
@@ -813,6 +814,7 @@ const I18N = {
     reloadConfig: "↻ Recharger config",
     reloadConfigTitle: "Effacer la configuration en cache de cet appareil et la relire depuis le micro:bit",
     fullscreen: "⛶ Plein écran",
+    fullscreenExit: "⛶ Quitter le plein écran",
     arrangeHint: '👆 Glisse les widgets pour les réorganiser • Appuie sur « Terminé » à la fin',
     connect: "Connecter!", connected: "Connecté! 🎉",
     runtimeConnectText: "Connecte ton micro:bit !",
@@ -932,6 +934,7 @@ const I18N = {
     reloadConfig: "↻ إعادة تحميل الإعداد",
     reloadConfigTitle: "مسح إعداد هذا الجهاز من الذاكرة المؤقتة وقراءته من micro:bit من جديد",
     fullscreen: "⛶ ملء الشاشة",
+    fullscreenExit: "⛶ الخروج من ملء الشاشة",
     arrangeHint: '👆 اسحب الأدوات لإعادة ترتيبها • اضغط "تم" عند الانتهاء',
     connect: "اضغط للاتصال!", connected: "متصل! 🎉",
     runtimeConnectText: "اتصل بالـ micro:bit!",
@@ -1151,7 +1154,7 @@ function setLang(lang){
   // Runtime view
   const backBtn = $("#backToBuildBtn"); if (backBtn) backBtn.textContent = t.backToBuild;
   const arrangeBtn = $("#arrangeModeBtn"); if (arrangeBtn) arrangeBtn.textContent = state.arrangeMode ? t.arrangeDone : t.arrange;
-  const fsBtn = $("#fullscreenBtn"); if (fsBtn) fsBtn.textContent = t.fullscreen;
+  const fsBtn = $("#fullscreenBtn"); if (fsBtn) fsBtn.textContent = document.body.classList.contains("runtime-fullscreen") ? (t.fullscreenExit || "⛶ Exit Fullscreen") : t.fullscreen;
   const arrangeHint = $("#arrangeHint"); if (arrangeHint) arrangeHint.textContent = t.arrangeHint;
   const rtJsonBtn = $("#runtimeExportJsonBtn"); if (rtJsonBtn) rtJsonBtn.title = t.buttons.export;
   const rtCfgBtn = $("#runtimeExportMakeCodeBtn"); if (rtCfgBtn) rtCfgBtn.title = t.buttons.exportMakeCode || "MakeCode CFG";
@@ -2946,9 +2949,12 @@ function toggleFullscreen() {
     // Exit fullscreen
     document.body.classList.remove('runtime-fullscreen');
     if (btn) {
-      btn.textContent = '⛶ Fullscreen';
+      const t = I18N[state.lang] || I18N.en;
+      btn.textContent = t.fullscreen || '⛶ Fullscreen';
       btn.classList.add('visible');
       btn.style.display = '';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.title = t.fullscreen || 'Fullscreen';
     }
     
     // Reset zoom
@@ -2970,8 +2976,12 @@ function toggleFullscreen() {
     // Enter fullscreen
     document.body.classList.add('runtime-fullscreen');
     if (btn) {
-      btn.classList.remove('visible');
-      btn.style.display = 'none';
+      const t = I18N[state.lang] || I18N.en;
+      btn.textContent = t.fullscreenExit || '⛶ Exit Fullscreen';
+      btn.classList.add('visible');
+      btn.style.display = '';
+      btn.setAttribute('aria-pressed', 'true');
+      btn.title = t.fullscreenExit || 'Exit Fullscreen';
     }
     
     // Request native fullscreen API

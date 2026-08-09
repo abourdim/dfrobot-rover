@@ -6398,3 +6398,81 @@ body:not(.runtime-fullscreen) .runtime-view.active {
 body.runtime-fullscreen .play-view-controls {
   display: flex !important;
 }
+
+
+/* === v2.7: Fullscreen is a normal Play-toolbar control ====================
+   A legacy .fullscreen-btn rule later in this stylesheet made the button
+   position:absolute, which placed it on top of Fit / 1:1 / Arrange.
+   These final rules are authoritative: view controls share one flex row. */
+.runtime-top-btns {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.fullscreen-btn {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 34px;
+  padding: 6px 12px !important;
+  border: 1px solid var(--surface) !important;
+  border-radius: 12px !important;
+  background: var(--card) !important;
+  color: var(--text) !important;
+  font-size: .78rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2;
+  transform: none !important;
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  z-index: auto !important;
+}
+.fullscreen-btn.visible {
+  display: flex !important;
+}
+.fullscreen-btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  transform: none !important;
+}
+
+/* In fullscreen keep the whole Play view toolbar usable. The fullscreen
+   button changes to Exit Fullscreen; no floating control covers its siblings. */
+body.runtime-fullscreen .runtime-top-btns {
+  position: fixed !important;
+  top: 12px !important;
+  right: 12px !important;
+  left: auto !important;
+  z-index: 10020 !important;
+  display: flex !important;
+}
+body.runtime-fullscreen .play-view-controls,
+body.runtime-fullscreen .arrange-mode-btn,
+body.runtime-fullscreen .fullscreen-btn {
+  display: flex !important;
+}
+body.runtime-fullscreen .fullscreen-btn {
+  border-color: var(--accent) !important;
+}
+
+/* v2.7 uses the toolbar's Fullscreen/Exit button as the sole fullscreen
+   control. Retire the legacy floating red X to avoid a second overlap. */
+.fullscreen-exit-btn,
+body.runtime-fullscreen .fullscreen-exit-btn {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .fullscreen-btn {
+    padding-inline: 8px !important;
+    font-size: .72rem !important;
+  }
+  body.runtime-fullscreen .runtime-top-btns {
+    top: 6px !important;
+    right: 6px !important;
+    max-width: calc(100vw - 12px);
+  }
+}
