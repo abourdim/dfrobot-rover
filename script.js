@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.12';
+const APP_VERSION = 'v2.13';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -12,6 +12,8 @@ window.__ovl = window.__ovl || { t:null };
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('reset_zoom') === '1' || urlParams.get('reset') === '1') {
       localStorage.removeItem('app_zoom');
+      localStorage.removeItem('build_zoom');
+      localStorage.removeItem('play_zoom');
     }
     
     // Validate saved zoom immediately
@@ -576,6 +578,7 @@ function applyBuildCanvasView(){
 }
 
 function setBuildZoom(z, keepCenter = true){
+  state.buildFitActive = false;
   const viewport = ensureBuildCanvasViewport();
   if (!viewport) return;
   const old = Math.max(0.15, Number(state.buildZoom || 1));
@@ -586,6 +589,7 @@ function setBuildZoom(z, keepCenter = true){
     logicalCy = (viewport.scrollTop + viewport.clientHeight / 2) / old;
   }
   state.buildZoom = next;
+  try { localStorage.setItem('build_zoom', String(next)); } catch (_) {}
   applyBuildCanvasView();
   if (keepCenter) {
     viewport.scrollLeft = Math.max(0, logicalCx * next - viewport.clientWidth / 2);
@@ -594,6 +598,7 @@ function setBuildZoom(z, keepCenter = true){
 }
 
 function fitBuildCanvas(){
+  state.buildFitActive = true;
   const viewport = ensureBuildCanvasViewport();
   if (!viewport) return;
   const s = getBuildLogicalSize();
@@ -1403,7 +1408,7 @@ function applyCfgToBuildState(cfg){
   // resurrect older geometry.
   state.config = null;
   state.runtimeCanvasSize = null;
-  state.widgets = cfg.widgets.map(w => ({...w}));
+  state.widgets = cloneSerializable(cfg.widgets).map(w => ({...w}));
   // Recompute nextId safely
   let maxNum = 0;
   state.widgets.forEach(w=>{
@@ -1414,6 +1419,10 @@ function applyCfgToBuildState(cfg){
   if ($("#titleInput")) $("#titleInput").value = cfg.title || "My Remote";
   if (cfg.canvas && Number.isFinite(Number(cfg.canvas.w)) && Number.isFinite(Number(cfg.canvas.h))) {
     state.buildCanvasSize = { w: Math.round(Number(cfg.canvas.w)), h: Math.round(Number(cfg.canvas.h)) };
+  } else {
+    // Legacy JSON without canvas metadata derives its size from its own widgets;
+    // never inherit the dimensions of the project that happened to be open.
+    state.buildCanvasSize = null;
   }
   if (typeof applyWidgetDefaults === "function") state.widgets.forEach(applyWidgetDefaults);
   normalizeGroupMembership(state.widgets);
@@ -1554,7 +1563,7 @@ const templates = {
 const state = {
   widgets: [], selected: null, nextId: 1, selectedType: null,
   ble: { device:null, server:null, service:null, notifyChar:null, writeChar:null, connected:false },
-  config: null, values: {}, rxBuffer: '',
+  config: null, deviceConfig: null, values: {}, rxBuffer: '',
   justDragged: false, _dragT: null,
   // New features
   multiSelect: [], clipboard: [], undoStack: [], maxUndo: 50, redoStack: [],
@@ -1571,7 +1580,12 @@ const state = {
   arrangeMode: false, // runtime arrange mode
   buildCanvasSize: null, // logical Build canvas size used for portable layout export
   buildZoom: 1, // editor-only zoom; never changes exported geometry
-  playZoom: 1 // runtime-only zoom; never changes widget geometry
+  buildFitActive: false, // recompute Fit on viewport resize until user chooses manual zoom
+  playZoom: 1, // runtime-only zoom; never changes widget geometry
+  playFitActive: false, // occupied-content Fit follows viewport/fullscreen changes
+  playViewRequestToken: 0, // cancels a queued auto-Fit if the user chooses a manual view first
+  runtimeSource: null, // 'build' | 'device' | 'demo'; controls Arrange→Build sync
+  runtimeBindingCleanups: [] // document listeners/timers owned by current Play DOM
 };
 state._allowLoadingOverlay = false;
 
@@ -1727,6 +1741,14 @@ function updateSoundUI(){
 // Ensure older configs/templates still look good when new properties are added
 function applyWidgetDefaults(w){
   if (!w || !w.t) return w;
+
+  // Normalize geometry at the config boundary. This prevents NaN/string values
+  // from destabilizing Build/Play calculations while preserving exact coordinates.
+  const num = (v, fallback) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+  w.x = Math.max(0, num(w.x, 0));
+  w.y = Math.max(0, num(w.y, 0));
+  w.w = Math.max(1, num(w.w, (SIZES[w.t]?.[0] || 100)));
+  w.h = Math.max(1, num(w.h, (SIZES[w.t]?.[1] || 100)));
 
   // Default models (3 per widget type)
   if (!w.model){
@@ -2118,12 +2140,16 @@ function setDpadMotion(dir, pressed) {
 // latest-wins slot, which is how a stale keepalive could clobber the
 // GETCFG handshake and leave the loader stuck at 0%.
 const dpadKeepalives = new Set();
-function clearAllDpadKeepalives() {
+function clearAllDpadKeepalives(sendStop = false) {
   dpadKeepalives.forEach(id => clearInterval(id));
   dpadKeepalives.clear();
+  const shouldStop = !!sendStop && state.ble.connected && (dpadMotionMask !== 0 || motorPendingMask !== null);
   dpadMotionMask = 0;
-  motorPendingMask = null;
+  // For a live view transition, latest-state-wins must finish with mask 0.
+  // On a real disconnect there is no writable link, so just discard pending work.
+  motorPendingMask = shouldStop ? 0 : null;
   bleSend.queue = bleSend.queue.filter(m => !String(m).startsWith('M '));
+  if (shouldStop) flushMotorWrite();
 }
 
 // Link-liveness ping. The micro:bit's bluetooth.onBluetoothDisconnected
@@ -2205,7 +2231,8 @@ function showDemo() {
   // Show the code modal with demo code
   const cfg = { title: 'Super Demo Remote', widgets: state.widgets };
   // Load demo into runtime immediately (no micro:bit required)
-  state.config = cfg;
+  state.config = cloneSerializable(cfg);
+  state.runtimeSource = 'build';
   state.values = state.values || {};
   renderRuntime();
   startDemoSim();
@@ -2708,7 +2735,10 @@ try{ placeToolbarWhereHintWas(); }catch(e){}
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
     const target = e.target;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
+    // Build/editor shortcuts must never mutate the hidden project while the
+    // user is driving in Play. Play owns its own view/control shortcuts.
+    if (!document.querySelector('.builder-view.active')) return;
     
     const ctrl = e.ctrlKey || e.metaKey;
     const shift = e.shiftKey;
@@ -3079,6 +3109,8 @@ document.addEventListener('keydown', e => {
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && document.body.classList.contains('runtime-fullscreen')) {
     toggleFullscreen();
+  } else if (document.fullscreenElement && document.body.classList.contains('runtime-fullscreen')) {
+    requestAnimationFrame(() => { try { window.appZoom?.zoomFit?.(); } catch (_) {} });
   }
 });
 document.addEventListener('webkitfullscreenchange', () => {
@@ -3493,8 +3525,15 @@ function selectTemplate(name) {
 
   // Small delay so the overlay is visible and feels animated
   setTimeout(() => {
+    try { saveUndoState(); } catch (_) {}
     state.widgets = t.map((w, i) => ({ id: `${w.t}${state.nextId + i}`, ...w }));
     state.nextId += t.length || 1;
+    // A template is a new design. Do not inherit an oversized logical canvas
+    // or a stale Play snapshot from the previous project.
+    state.buildCanvasSize = null;
+    state.config = null;
+    state.runtimeCanvasSize = null;
+    state.runtimeSource = null;
 
     // Apply defaults for new widget types / models
     if (typeof applyWidgetDefaults === 'function') {
@@ -3730,6 +3769,9 @@ function setupShakeDetection() {
 }
 
 function onShake() {
+  // Shake is an editor toy, not a runtime command. Never restyle/mutate the
+  // hidden Build project while Play is active.
+  if (!document.querySelector('.builder-view.active')) return;
   if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
   magicStyleWidgets();
 }
@@ -3738,13 +3780,18 @@ function onShake() {
 function setupSwipeGestures() {
   let touchStartY = 0;
   let touchStartX = 0;
+  let touchStartedOnControl = false;
   
   document.addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    // A vertical slider/joystick gesture must never be mistaken for the old
+    // swipe-to-fullscreen shortcut. Only empty Play background can swipe.
+    touchStartedOnControl = !!e.target.closest?.('.rt-widget, button, input, select, textarea, .play-view-controls, .runtime-top-btns');
   }, { passive: true });
   
   document.addEventListener('touchend', e => {
+    if (touchStartedOnControl || state.arrangeMode) { touchStartedOnControl = false; return; }
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     
@@ -3766,6 +3813,7 @@ function setupSwipeGestures() {
         }
       }
     }
+    touchStartedOnControl = false;
   }, { passive: true });
 }
 
@@ -3782,6 +3830,10 @@ function switchTab(tab, opts = {}) {
     document.getElementById('playViewControls')?.classList.remove('visible');
     runtimeView.classList.remove('active');
     stopDemoSim();
+    // Leaving Play is also a safety boundary: stop any held manual D-pad
+    // state and remove document-level joystick/XY/timer bindings.
+    clearAllDpadKeepalives(true);
+    cleanupRuntimeBindings();
     
     // Hide fullscreen button
     if (fullscreenBtn) fullscreenBtn.classList.remove('visible');
@@ -3794,22 +3846,12 @@ function switchTab(tab, opts = {}) {
     
     // Exit arrange mode when switching to build
     if (state.arrangeMode) {
-      state.arrangeMode = false;
-      const arrangeBtn = $('#arrangeModeBtn');
-      if (arrangeBtn) {
-        arrangeBtn.classList.remove('active');
-        arrangeBtn.textContent = '📐 Arrange';
+      // Finish Arrange through the same path as the Done button so document-
+      // level drag/resize listeners are always removed and geometry is synced once.
+      try { toggleArrangeMode(); } catch (e) {
+        state.arrangeMode = false;
+        try { teardownArrangeMode(); } catch (_) {}
       }
-      const grid = $('#runtimeGrid');
-      if (grid) grid.classList.remove('arrange-mode');
-      const hint = $('#arrangeHint');
-      if (hint) hint.style.display = 'none';
-      const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
-      const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
-      
-      // Sync only explicit Play/Arrange edits back to Build. Merely visiting
-      // Play never changes Build geometry.
-      syncRuntimeToBuild();
     }
 
     // v2.4: returning to Build is a pure view transition. Re-render from the
@@ -3828,49 +3870,58 @@ function switchTab(tab, opts = {}) {
     // Skipped when we just loaded a live config from a connected device (see the
     // CFGEND handler in processLine()) — otherwise this clobbers the device's config
     // with whatever's sitting in the Build tab's canvas.
-    if (!opts.skipConfigRebuild && state.widgets && state.widgets.length > 0) {
-      // v2.4: Play receives a snapshot, NOT references to Build objects.
-      // Runtime rendering/defaults/Arrange can therefore never mutate imported
-      // Build coordinates unless the user explicitly finishes Arrange mode.
-      state.config = {
-        title: $('#titleInput')?.value || 'My Remote',
-        widgets: cloneSerializable(state.widgets),
-        canvas: getBuildCanvasSizeForExport()
-      };
-      state.runtimeCanvasSize = null;
-      renderRuntime();
+    if (!opts.skipConfigRebuild) {
+      if (state.ble.connected) {
+        if (state.deviceConfig?.widgets?.length) {
+          // While BLE is live, Play must represent the firmware we are actually
+          // controlling. A local Build draft may have different IDs/properties and
+          // must not silently replace the device CFG merely because the tab changed.
+          state.config = cloneSerializable(state.deviceConfig);
+          state.runtimeSource = 'device';
+          state.runtimeCanvasSize = state.config.canvas?.w && state.config.canvas?.h
+            ? { w:Number(state.config.canvas.w), h:Number(state.config.canvas.h) }
+            : null;
+          renderRuntime();
+        } else {
+          // Connected but CFG is not verified yet. Showing the Build preview here
+          // would create live controls with potentially wrong firmware IDs.
+          cleanupRuntimeBindings();
+          state.config = null;
+          state.runtimeCanvasSize = null;
+          state.runtimeSource = null;
+        }
+      } else if (state.widgets && state.widgets.length > 0) {
+        // Disconnected Play is a preview snapshot of Build, never shared references.
+        state.config = {
+          title: $('#titleInput')?.value || 'My Remote',
+          widgets: cloneSerializable(state.widgets),
+          canvas: getBuildCanvasSizeForExport()
+        };
+        state.runtimeCanvasSize = null;
+        state.runtimeSource = 'build';
+        renderRuntime();
+      }
     }
     
-    // Play zoom is view state only and is independent from Build zoom.
-    requestAnimationFrame(() => {
-      try {
-        if (window.appZoom && typeof window.appZoom.setZoom === 'function') {
-          window.appZoom.setZoom(state.playZoom || 1);
-        }
-      } catch (e) {}
-    });
-
+    // renderRuntime() seeds the frame from the stored Play zoom. If a controller
+    // is available below, the queued Fit becomes the first authoritative view
+    // operation; avoid a competing setZoom() RAF that could overwrite/cancel it.
     startDemoSim();
 
-    // If connected via BLE, auto-enter fullscreen (unless explicitly
-    // suppressed, e.g. the auto-switch right after a config finishes
-    // loading — that should land on the normal Play view, not fullscreen)
-    if (state.ble.connected && !opts.skipFullscreen) {
-      setTimeout(() => enterFullscreenAndFit(), 150);
-    }
-    // If we have a config (from demo), show it
-    else if (state.config && state.config.widgets && state.config.widgets.length > 0) {
+    // Play is a normal view transition. Fullscreen is always an explicit user
+    // action; entering Play must never unexpectedly hide browser/app chrome.
+    if (state.config && state.config.widgets && state.config.widgets.length > 0) {
       $('#connectPrompt').style.display = 'none';
       $('#runtimeContent').style.display = 'flex';
       const arrangeBtn = $('#arrangeModeBtn');
       if (arrangeBtn) arrangeBtn.classList.add('visible');
       if (fullscreenBtn) fullscreenBtn.classList.add('visible');
       document.getElementById('playViewControls')?.classList.add('visible');
-      
-      // Auto-enter fullscreen and zoom to fit
-      setTimeout(() => {
-        enterFullscreenAndFit();
-      }, 100);
+      const fitToken = ++state.playViewRequestToken;
+      requestAnimationFrame(() => {
+        if (state.playViewRequestToken !== fitToken) return;
+        try { window.appZoom?.zoomFit?.(); } catch (e) {}
+      });
     }
     // Otherwise show connect prompt for kids
     else {
@@ -3933,48 +3984,8 @@ function zoomToFitScreen() {
   grid.style.zoom = '1';
 }
 
-// Collision detection helpers
-function rectsOverlap(a, b, gap = 4) {
-  return !(a.x + a.w + gap <= b.x || b.x + b.w + gap <= a.x || 
-           a.y + a.h + gap <= b.y || b.y + b.h + gap <= a.y);
-}
-
-function resolveOverlaps(moved) {
-  const GAP = 6;
-  for (let iter = 0; iter < 20; iter++) {
-    let anyOverlap = false;
-    for (let i = 0; i < state.widgets.length; i++) {
-      for (let j = i + 1; j < state.widgets.length; j++) {
-        const a = state.widgets[i], b = state.widgets[j];
-        // Structural widgets are intentionally allowed to overlap controls:
-        // groups surround their children and separators may cross layout space.
-        if (a.t === 'group' || b.t === 'group' || a.t === 'separator' || b.t === 'separator') continue;
-        if (a.locked && b.locked) continue;
-        if (!rectsOverlap(a, b, GAP)) continue;
-        anyOverlap = true;
-        const pushed = (moved && a.id === moved.id) ? b : (moved && b.id === moved.id) ? a : (a.locked ? b : a);
-        const fixed = pushed === b ? a : b;
-        if (pushed.locked) continue;
-        const overlapX = (fixed.w/2 + pushed.w/2 + GAP) - Math.abs((fixed.x + fixed.w/2) - (pushed.x + pushed.w/2));
-        const overlapY = (fixed.h/2 + pushed.h/2 + GAP) - Math.abs((fixed.y + fixed.h/2) - (pushed.y + pushed.h/2));
-        if (overlapX < overlapY) {
-          pushed.x = (pushed.x > fixed.x) ? fixed.x + fixed.w + GAP : fixed.x - pushed.w - GAP;
-        } else {
-          pushed.y = (pushed.y > fixed.y) ? fixed.y + fixed.h + GAP : fixed.y - pushed.h - GAP;
-        }
-        pushed.x = Math.max(0, pushed.x);
-        pushed.y = Math.max(0, pushed.y);
-      }
-    }
-    if (!anyOverlap) break;
-  }
-  state.widgets.forEach(w => {
-    const el = $(`.widget[data-id="${w.id}"]`);
-    if (el) { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; }
-  });
-  updateCanvasSize();
-  updateMinimap();
-}
+// Exact-layout policy: Build never performs implicit collision resolution.
+// Overlap handling is intentionally left to the explicit Tidy command.
 
 // Undo/Redo system
 // v2.11 snapshots include the logical canvas as well as widgets, so Trim Canvas
@@ -4053,7 +4064,6 @@ function pasteWidgets() {
     delete newW.groupId;
     state.widgets.push(newW);
   });
-  resolveOverlaps(null);
   renderWidgets();
   toast(`📋 Pasted ${state.clipboard.length} widget(s)`, 'success');
   saveUndoState();
@@ -4070,7 +4080,6 @@ function duplicateSelected() {
     delete newW.groupId;
     state.widgets.push(newW);
   });
-  resolveOverlaps(null);
   renderWidgets();
   toast(`✨ Duplicated ${toDupe.length} widget(s)`, 'success');
   saveUndoState();
@@ -4495,9 +4504,10 @@ function loadURLLayout() {
     try {
       const data = JSON.parse(decodeURIComponent(escape(atob(layout))));
       if (data.widgets) {
-        state.widgets = data.widgets.map(w => ({ ...w, id: w.id || `${w.t}${state.nextId++}` }));
-        if (data.title && $('#titleInput')) $('#titleInput').value = data.title;
-        renderWidgets();
+        // URL imports obey the exact same state/canvas rules as file imports.
+        // This avoids inheriting a previous canvas or leaving a stale Play snapshot.
+        data.widgets = data.widgets.map(w => ({ ...w, id: w.id || `${w.t}${state.nextId++}` }));
+        applyCfgToBuildState(data);
         toast('📂 Layout loaded from URL', 'success');
       }
     } catch(e) { console.error('Failed to load URL layout', e); }
@@ -4708,7 +4718,6 @@ function nudgeSelected(dx, dy) {
     w.y = Math.max(0, w.y + dy);
     if (w.t === 'group') moveGroupChildren(w, w.x - oldX, w.y - oldY, state.widgets, '.widget');
   });
-  resolveOverlaps(null);
   renderWidgets();
 }
 
@@ -4794,61 +4803,28 @@ function normalizeGroupMembership(widgets = state.widgets) {
   groups.forEach(g => {
     applyWidgetDefaults(g);
     g.children = [...new Set((g.children || []).filter(id => id !== g.id && byId.has(id) && byId.get(id)?.t !== 'group'))];
-    g.children.forEach(id => { const child = byId.get(id); if (child) child.groupId = g.id; });
+  });
+
+  // A widget can belong to exactly one group. Prefer its explicit groupId when
+  // valid; otherwise the first group's children list that claims it wins.
+  const owner = new Map();
+  widgets.forEach(w => {
+    if (!w.groupId || w.t === 'group') return;
+    const g = byId.get(w.groupId);
+    if (g?.t === 'group') owner.set(w.id, g.id);
+  });
+  groups.forEach(g => g.children.forEach(id => {
+    if (!owner.has(id)) owner.set(id, g.id);
+  }));
+  groups.forEach(g => {
+    g.children = g.children.filter(id => owner.get(id) === g.id);
   });
   widgets.forEach(w => {
-    if (!w.groupId) return;
-    const g = byId.get(w.groupId);
-    if (!g || g.t !== 'group') delete w.groupId;
-    else if (!g.children.includes(w.id)) g.children.push(w.id);
+    if (w.t === 'group') return;
+    const gid = owner.get(w.id);
+    if (gid) w.groupId = gid;
+    else delete w.groupId;
   });
-}
-
-function setGroupChildren(group, ids, widgets = state.widgets) {
-  if (!group || group.t !== 'group') return;
-  const byId = new Map(widgets.map(w => [w.id, w]));
-  const old = new Set(Array.isArray(group.children) ? group.children : []);
-  const next = [...new Set((ids || []).filter(id => id !== group.id && byId.has(id) && byId.get(id)?.t !== 'group'))];
-  old.forEach(id => {
-    if (next.includes(id)) return;
-    const child = byId.get(id);
-    if (child?.groupId === group.id) delete child.groupId;
-  });
-  group.children = next;
-  next.forEach(id => { const child = byId.get(id); if (child) child.groupId = group.id; });
-}
-
-function captureWidgetsInGroup(group, widgets = state.widgets) {
-  if (!group || group.t !== 'group') return [];
-  const ids = widgets.filter(w => {
-    if (w.id === group.id || w.t === 'group') return false;
-    const cx = Number(w.x || 0) + Number(w.w || 0) / 2;
-    const cy = Number(w.y || 0) + Number(w.h || 0) / 2;
-    return cx >= group.x && cx <= group.x + group.w && cy >= group.y && cy <= group.y + group.h;
-  }).map(w => w.id);
-  setGroupChildren(group, ids, widgets);
-  return ids;
-}
-
-function moveGroupChildren(group, dx, dy, widgets = state.widgets, rootSelector = '.widget') {
-  if (!group || group.t !== 'group' || (!dx && !dy)) return;
-  widgetChildren(group, widgets).forEach(child => {
-    child.x = Math.max(0, Number(child.x || 0) + dx);
-    child.y = Math.max(0, Number(child.y || 0) + dy);
-    const el = document.querySelector(`${rootSelector}[data-id="${CSS.escape(child.id)}"]`);
-    if (el) {
-      el.style.left = child.x + 'px';
-      el.style.top = child.y + 'px';
-    }
-  });
-}
-
-function detachGroup(group, widgets = state.widgets) {
-  if (!group || group.t !== 'group') return;
-  widgetChildren(group, widgets).forEach(child => {
-    if (child.groupId === group.id) delete child.groupId;
-  });
-  group.children = [];
 }
 
 function layoutRootWidgets(widgets = state.widgets) {
@@ -4972,12 +4948,12 @@ function renderWidgets() {
             if (w.t === 'group') moveGroupChildren(w, movedDx, movedDy, state.widgets, '.widget');
             
             showAlignGuides(w);
-            if (w.t !== 'group' && w.t !== 'separator') resolveOverlaps(w);
             autoResizeCanvas();
           },
           end() {
             removeAlignGuides();
             autoResizeCanvas();
+            saveUndoState();
             scheduleAutoSave();
           }
         }
@@ -4988,7 +4964,7 @@ function renderWidgets() {
           left: '.handle-w, .handle-nw, .handle-sw',
           right: '.handle-e, .handle-ne, .handle-se'
         },
-        modifiers: [interact.modifiers.restrictSize({ min: { width: 60, height: 60 } })],
+        modifiers: [interact.modifiers.restrictSize({ min: { width: w.t === 'separator' ? 8 : 60, height: w.t === 'separator' ? 8 : 60 } })],
         listeners: {
           start() { saveUndoState(); },
           move(e) {
@@ -5006,11 +4982,12 @@ function renderWidgets() {
             const canvasW = canvas?.offsetWidth || 500;
             const canvasH = canvas?.offsetHeight || 400;
             
-            // Ensure widget stays in bounds
-            newX = Math.max(0, Math.min(canvasW - 60, newX));
-            newY = Math.max(0, Math.min(canvasH - 60, newY));
-            newW = Math.max(60, Math.min(canvasW - newX - 5, newW));
-            newH = Math.max(60, Math.min(canvasH - newY - 5, newH));
+            // Ensure widget stays in bounds. Separators are allowed to be thin.
+            const minDim = w.t === 'separator' ? 8 : 60;
+            newX = Math.max(0, Math.min(canvasW - minDim, newX));
+            newY = Math.max(0, Math.min(canvasH - minDim, newY));
+            newW = Math.max(minDim, Math.min(canvasW - newX - 5, newW));
+            newH = Math.max(minDim, Math.min(canvasH - newY - 5, newH));
             
             w.x = newX;
             w.y = newY;
@@ -5021,9 +4998,8 @@ function renderWidgets() {
             e.target.style.top = w.y + 'px';
             e.target.style.width = w.w + 'px';
             e.target.style.height = w.h + 'px';
-            resolveOverlaps(w);
           },
-          end() { autoResizeCanvas(); scheduleAutoSave(); }
+          end() { autoResizeCanvas(); saveUndoState(); scheduleAutoSave(); }
         }
       });
     }
@@ -5045,7 +5021,8 @@ function renderWidgets() {
     };
   });
   
-  resolveOverlaps(null);
+  // Rendering is view-only. Exact imported/arranged geometry must never be
+  // repacked merely because Build is redrawn or a mode is switched.
   updateMinimap();
   saveUndoState();
   
@@ -5380,22 +5357,24 @@ form.innerHTML = html;
   
   if (widthInput) {
     widthInput.oninput = e => {
-      const newW = Math.max(40, Math.min(600, parseInt(e.target.value) || 100));
+      const minW = w.t === 'separator' ? 8 : 40;
+      const newW = Math.max(minW, Math.min(600, parseInt(e.target.value) || 100));
       w.w = newW;
       const el = $(`.widget[data-id="${w.id}"]`);
       if (el) el.style.width = w.w + 'px';
-      resolveOverlaps(w);
+      autoResizeCanvas();
       updateMinimap();
     };
   }
   
   if (heightInput) {
     heightInput.oninput = e => {
-      const newH = Math.max(40, Math.min(600, parseInt(e.target.value) || 100));
+      const minH = w.t === 'separator' ? 8 : 40;
+      const newH = Math.max(minH, Math.min(600, parseInt(e.target.value) || 100));
       w.h = newH;
       const el = $(`.widget[data-id="${w.id}"]`);
       if (el) el.style.height = w.h + 'px';
-      resolveOverlaps(w);
+      autoResizeCanvas();
       updateMinimap();
     };
   }
@@ -5417,7 +5396,7 @@ form.innerHTML = html;
         el.style.width = w.w + 'px';
         el.style.height = w.h + 'px';
       }
-      resolveOverlaps(w);
+      autoResizeCanvas();
       updateMinimap();
       toast(tr('toast.orientationSwapped'), 'success');
     };
@@ -5439,7 +5418,7 @@ form.innerHTML = html;
         el.style.width = w.w + 'px';
         el.style.height = w.h + 'px';
       }
-      resolveOverlaps(w);
+      autoResizeCanvas();
       updateMinimap();
       toast(tr('toast.sizeReset'), 'success');
     };
@@ -5462,7 +5441,7 @@ form.innerHTML = html;
         el.style.width = w.w + 'px';
         el.style.height = w.h + 'px';
       }
-      resolveOverlaps(w);
+      autoResizeCanvas();
       updateMinimap();
       toast(tr('toast.sizeSet', {w: presetW, h: presetH}), 'success');
     };
@@ -5665,6 +5644,14 @@ form.innerHTML = html;
     if (testBtn) testBtn.onclick = () => showRuntimeNotification(w, 'Test notification!');
   }
 
+  // Property edits are part of the same Build history model as drag/resize.
+  // Live input can update visuals continuously; commit once on change.
+  form.oninput = () => { try { scheduleAutoSave(); } catch (_) {} };
+  form.onchange = () => {
+    try { saveUndoState(); } catch (_) {}
+    try { autoResizeCanvas(); } catch (_) {}
+    try { scheduleAutoSave(); } catch (_) {}
+  };
 }
 
 
@@ -5916,6 +5903,14 @@ async function connectBle() {
     
     state.ble = { device, server, service, notifyChar, writeChar, connected: true };
     state.rxBuffer = '';
+    // A new live link is not allowed to inherit controls from the previous device
+    // or from a disconnected Build preview. Wait for CFGVER/cache validation first.
+    clearAllDpadKeepalives(false);
+    cleanupRuntimeBindings();
+    state.deviceConfig = null;
+    state.config = null;
+    state.runtimeCanvasSize = null;
+    state.runtimeSource = null;
     updateBleUI();
     toast(tr('toast.connected'), 'success');
     
@@ -6076,10 +6071,12 @@ function updateBleUI() {
   if (state.ble.connected) {
     btn.classList.add('connected');
     btn.querySelector('span:last-child').textContent = (I18N[state.lang]||I18N.en).connected;
-    $('#connectPrompt').style.display = 'none';
-    $('#runtimeContent').style.display = 'flex';
-    if (arrangeBtn) arrangeBtn.classList.add('visible');
-    if (fullscreenBtn) fullscreenBtn.classList.add('visible');
+    const runtimeActive = !!document.querySelector('.runtime-view.active');
+    const hasVerifiedRuntime = !!(state.config?.widgets?.length && state.runtimeSource === 'device');
+    $('#connectPrompt').style.display = runtimeActive && !hasVerifiedRuntime ? 'block' : 'none';
+    $('#runtimeContent').style.display = hasVerifiedRuntime ? 'flex' : 'none';
+    if (arrangeBtn) arrangeBtn.classList.toggle('visible', runtimeActive && hasVerifiedRuntime);
+    if (fullscreenBtn) fullscreenBtn.classList.toggle('visible', runtimeActive && hasVerifiedRuntime);
     
     // Celebrate connection!
     if (!state._celebrated) {
@@ -6087,31 +6084,35 @@ function updateBleUI() {
       celebrate('🎉 Connected!');
     }
     
-    // Auto-enter fullscreen if in play tab
-    const activeTab = document.querySelector('.tab.active');
-    if (activeTab && activeTab.dataset.tab === 'runtime') {
-      setTimeout(() => enterFullscreenAndFit(), 150);
-    }
+    // Fullscreen is always user-controlled; connecting must not change view mode.
   } else {
     btn.classList.remove('connected');
     btn.querySelector('span:last-child').textContent = (I18N[state.lang]||I18N.en).connect;
-    $('#connectPrompt').style.display = 'block';
-    $('#runtimeContent').style.display = 'none';
-    state._celebrated = false;
-    if (arrangeBtn) {
-      arrangeBtn.classList.remove('visible');
-      // Also exit arrange mode if disconnected
-      if (state.arrangeMode) {
-        state.arrangeMode = false;
-        arrangeBtn.classList.remove('active');
-        arrangeBtn.textContent = '📐 Arrange';
-        const grid = $('#runtimeGrid');
-        if (grid) grid.classList.remove('arrange-mode');
-        const hint = $('#arrangeHint');
-        if (hint) hint.style.display = 'none';
-      }
+    const runtimeActive = !!document.querySelector('.runtime-view.active');
+    const hasPreview = !!(state.config?.widgets?.length);
+    if (runtimeActive && hasPreview) {
+      $('#connectPrompt').style.display = 'none';
+      $('#runtimeContent').style.display = 'flex';
+    } else {
+      $('#connectPrompt').style.display = 'block';
+      $('#runtimeContent').style.display = 'none';
     }
-    if (fullscreenBtn) fullscreenBtn.classList.remove('visible');
+    state._celebrated = false;
+    if (state.arrangeMode) {
+      if (state.runtimeSource === 'build') { try { syncRuntimeToBuild(); } catch (_) {} }
+      state.arrangeMode = false;
+      try { teardownArrangeMode(); } catch (_) {}
+      const grid = $('#runtimeGrid');
+      if (grid) grid.classList.remove('arrange-mode');
+      const hint = $('#arrangeHint');
+      if (hint) hint.style.display = 'none';
+    }
+    if (arrangeBtn) {
+      arrangeBtn.classList.toggle('visible', runtimeActive && hasPreview);
+      arrangeBtn.classList.remove('active');
+      arrangeBtn.textContent = tr('arrange');
+    }
+    if (fullscreenBtn) fullscreenBtn.classList.toggle('visible', runtimeActive && hasPreview);
     const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
     const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
   }
@@ -6249,6 +6250,19 @@ function forceReloadRemoteConfig() {
   clearCurrentRemoteConfigCache();
   cancelConfigVersionRetry();
   cancelConfigRetry();
+
+  // A hard refresh explicitly says the current device CFG may be stale. Do not
+  // leave those old controls live while the replacement is downloading: a moved
+  // or renamed widget could otherwise send the wrong command. Treat reload like
+  // the connect verification boundary and reveal Play again only after CFGEND.
+  clearAllDpadKeepalives(true);
+  cleanupRuntimeBindings();
+  state.deviceConfig = null;
+  state.config = null;
+  state.runtimeCanvasSize = null;
+  state.runtimeSource = null;
+  updateBleUI();
+
   state.rxBuffer = '';
   configBuffer = '';
   configChunks = 0;
@@ -6275,7 +6289,9 @@ function forceReloadRemoteConfig() {
 // Cache hits deliberately skip the "Edit in Build" banner: reconnecting should
 // feel instant and quiet, not repeat UI meant for a newly discovered layout.
 function activateRemoteConfig(config, fromCache = false) {
-  state.config = config;
+  state.deviceConfig = cloneSerializable(config);
+  state.config = cloneSerializable(config);
+  state.runtimeSource = 'device';
 
   // v51: the MakeCode CFG may define the reference canvas geometry too.
   // This keeps widget positions/sizes reproducible across compatible apps
@@ -6292,6 +6308,7 @@ function activateRemoteConfig(config, fromCache = false) {
   }
 
   if (state.config?.widgets) state.config.widgets.forEach(applyWidgetDefaults);
+  state.deviceConfig = cloneSerializable(state.config);
   console.log(fromCache ? '[BLE] Config restored from cache:' : '[BLE] Config decoded:', state.config);
   renderRuntime();
   setLoadingProgress(100, tr('loadingReady'));
@@ -6465,19 +6482,35 @@ function processLine(line) {
   }
 }
 
+function registerRuntimeBindingCleanup(fn) {
+  if (typeof fn === 'function') state.runtimeBindingCleanups.push(fn);
+}
+
+function cleanupRuntimeBindings() {
+  const list = Array.isArray(state.runtimeBindingCleanups) ? state.runtimeBindingCleanups.splice(0) : [];
+  list.forEach(fn => { try { fn(); } catch (e) { console.warn('[Play] binding cleanup failed:', e); } });
+}
+
+function runtimeInteractionBlocked(e) {
+  if (!state.arrangeMode) return false;
+  if (e) { try { e.preventDefault(); e.stopPropagation(); } catch (_) {} }
+  return true;
+}
+
 function renderRuntime() {
   if (!state.config) return;
   document.getElementById('playViewControls')?.classList.add('visible');
   // The widget DOM is about to be replaced. D-pad keepalive timers are
   // not tied to their button elements, so without this they'd outlive
   // the rebuild and keep sending for buttons that no longer exist.
-  clearAllDpadKeepalives();
+  clearAllDpadKeepalives(true);
+  cleanupRuntimeBindings();
   const cfg = state.config;
   normalizeGroupMembership(cfg.widgets);
   // Add "Powered by Workshop-Diy" branding
   const title = cfg.title || 'My Remote';
   const titleEl = $('#runtimeTitle');
-  titleEl.innerHTML = `${title} <span class="powered-by"><img src="assets/workshop-diy-logo.svg" alt="Workshop-DIY" class="branding-logo">Powered by Workshop-Diy</span>`;
+  titleEl.innerHTML = `${esc(title)} <span class="powered-by"><img src="assets/workshop-diy-logo.svg" alt="Workshop-DIY" class="branding-logo">Powered by Workshop-Diy</span>`;
   const grid = $('#runtimeGrid');
   let maxX = 0, maxY = 0;
   cfg.widgets.forEach(w => { maxX = Math.max(maxX, w.x + w.w); maxY = Math.max(maxY, w.y + w.h); });
@@ -6515,7 +6548,7 @@ function renderRuntime() {
   sizeBadge.textContent = `${canvasW} × ${canvasH}`;
   grid.appendChild(sizeBadge);
   
-  cfg.widgets.forEach(w => {
+  cfg.widgets.filter(w => !w.hidden).forEach(w => {
     const el = document.createElement('div');
     el.className = 'rt-widget rt-type-' + w.t; el.dataset.id = w.id;
     el.dataset.type = w.t;
@@ -6526,7 +6559,7 @@ function renderRuntime() {
   });
 
   // Initial draw for graphs & gauges
-  cfg.widgets.forEach(w => {
+  cfg.widgets.filter(w => !w.hidden).forEach(w => {
     applyWidgetDefaults(w);
     if (w.t === 'graph') drawGraphWidget(w);
     if (w.t === 'gauge') updateGaugeWidget(w, getRuntimeWidgetValue(w));
@@ -6546,6 +6579,12 @@ function toggleArrangeMode() {
   const hint = $('#arrangeHint');
   
   if (state.arrangeMode) {
+    // Arrange is an editor, never a robot-control surface. Stop any held D-pad
+    // state before exposing drag handles, then block runtime controls below.
+    clearAllDpadKeepalives(true);
+    // Arrange edits logical coordinates. Disable Fit's crop first so dragging cannot
+    // make a widget disappear outside the cropped presentation frame.
+    try { window.appZoom?.setZoom?.(state.playZoom || 1); } catch (_) {}
     btn.classList.add('active');
     btn.textContent = tr('arrangeDone');
     grid.classList.add('arrange-mode');
@@ -6571,8 +6610,17 @@ function toggleArrangeMode() {
     const rtJson = $('#runtimeExportJsonBtn'); if (rtJson) rtJson.classList.remove('visible');
     const rtCfg = $('#runtimeExportMakeCodeBtn'); if (rtCfg) rtCfg.classList.remove('visible');
 
-    // Sync changes back to build mode widgets
+    // Sync explicit Arrange edits back to Build when this Play session came
+    // from Build. Device-loaded layouts stay independent unless explicitly loaded
+    // into Build via the existing Edit-in-Build action.
     syncRuntimeToBuild();
+    // Re-fit only when Arrange was closed inside Play. If the user clicked the
+    // Build tab, switchTab() has already activated Build and its own zoom/view
+    // must be preserved rather than being unexpectedly replaced by Fit Design.
+    requestAnimationFrame(() => {
+      if (!document.querySelector('.runtime-view.active')) return;
+      try { window.appZoom?.zoomFit?.(); } catch (_) {}
+    });
 
     toast(tr('toast.layoutSaved'), 'success');
   }
@@ -6607,8 +6655,9 @@ function setupArrangeMode() {
       e.preventDefault();
       
       const touch = e.touches ? e.touches[0] : e;
-      const dx = touch.clientX - canvasStartX;
-      const dy = touch.clientY - canvasStartY;
+      const scale = Math.max(0.1, Number(state.playZoom) || 1);
+      const dx = (touch.clientX - canvasStartX) / scale;
+      const dy = (touch.clientY - canvasStartY) / scale;
       
       const newW = Math.max(300, canvasStartW + dx);
       const newH = Math.max(200, canvasStartH + dy);
@@ -6688,8 +6737,9 @@ function setupArrangeMode() {
       e.preventDefault();
       
       const touch = e.touches ? e.touches[0] : e;
-      const dx = touch.clientX - startX;
-      const dy = touch.clientY - startY;
+      const scale = Math.max(0.1, Number(state.playZoom) || 1);
+      const dx = (touch.clientX - startX) / scale;
+      const dy = (touch.clientY - startY) / scale;
       
       const newLeft = Math.max(0, startLeft + dx);
       const newTop = Math.max(0, startTop + dy);
@@ -6769,11 +6819,12 @@ function setupArrangeMode() {
         e.preventDefault();
         
         const touch = e.touches ? e.touches[0] : e;
-        const dx = touch.clientX - resizeStartX;
-        const dy = touch.clientY - resizeStartY;
+        const scale = Math.max(0.1, Number(state.playZoom) || 1);
+        const dx = (touch.clientX - resizeStartX) / scale;
+        const dy = (touch.clientY - resizeStartY) / scale;
         
         const def = state.config?.widgets?.find(w => w.id === wid);
-        const minDim = def?.t === 'separator' ? 24 : 50;
+        const minDim = def?.t === 'separator' ? 8 : 50;
         const newW = Math.max(minDim, resizeStartW + dx);
         const newH = Math.max(minDim, resizeStartH + dy);
         
@@ -6846,35 +6897,50 @@ function teardownArrangeMode() {
 function updateRuntimeGridSize() {
   const grid = $('#runtimeGrid');
   if (!grid || !state.config) return;
-  
+
   let maxX = 0, maxY = 0;
-  state.config.widgets.forEach(w => {
-    maxX = Math.max(maxX, w.x + w.w);
-    maxY = Math.max(maxY, w.y + w.h);
+  state.config.widgets.filter(w => !w.hidden).forEach(w => {
+    maxX = Math.max(maxX, Number(w.x || 0) + Number(w.w || 0));
+    maxY = Math.max(maxY, Number(w.y || 0) + Number(w.h || 0));
   });
-  
-  grid.style.width = `${Math.max(400, maxX + 20)}px`;
-  grid.style.height = `${Math.max(320, maxY + 20)}px`;
+
+  // Arrange may expand the canvas when a control is moved/resized beyond its edge,
+  // but it never shrinks the canvas implicitly. Shrinking is an explicit Build
+  // operation (Trim Canvas), which keeps mode transitions deterministic.
+  const cur = state.runtimeCanvasSize || state.config.canvas || {
+    w: parseFloat(grid.style.width) || 400,
+    h: parseFloat(grid.style.height) || 320
+  };
+  const next = {
+    w: Math.max(300, Number(cur.w) || 0, Math.ceil(maxX + 20)),
+    h: Math.max(200, Number(cur.h) || 0, Math.ceil(maxY + 20))
+  };
+  state.runtimeCanvasSize = next;
+  state.config.canvas = { ...next };
+  grid.style.width = `${next.w}px`;
+  grid.style.height = `${next.h}px`;
+  try { window.appZoom?.setZoom?.(state.playZoom || 1); } catch (_) {}
 }
 
 function syncRuntimeToBuild() {
   if (!state.config || !state.config.widgets) return;
-  
-  // Update state.widgets with new positions from runtime config
+  if (state.runtimeSource !== 'build') return;
+
+  try { saveUndoState(); } catch (_) {}
   state.config.widgets.forEach(rtW => {
     const buildW = state.widgets.find(w => w.id === rtW.id);
     if (buildW) {
-      buildW.x = rtW.x;
-      buildW.y = rtW.y;
-      buildW.w = rtW.w;
-      buildW.h = rtW.h;
+      buildW.x = Number(rtW.x) || 0;
+      buildW.y = Number(rtW.y) || 0;
+      buildW.w = Number(rtW.w) || buildW.w;
+      buildW.h = Number(rtW.h) || buildW.h;
     }
   });
-  
-  // Re-render build view with updated positions
+  const canvas = state.runtimeCanvasSize || state.config.canvas;
+  if (canvas?.w && canvas?.h) state.buildCanvasSize = { w:Math.round(Number(canvas.w)), h:Math.round(Number(canvas.h)) };
+
   renderWidgets();
-  
-  // Auto-save
+  applyBuildCanvasView();
   scheduleAutoSave();
 }
 
@@ -7151,6 +7217,7 @@ function bindRuntimeWidget(el, w) {
       const btn = el.querySelector('.rt-button');
       let btnPressed = false;
       const press = e => { 
+        if (runtimeInteractionBlocked(e)) return;
         e.preventDefault();
         if (btnPressed) return;
         btnPressed = true;
@@ -7161,14 +7228,18 @@ function bindRuntimeWidget(el, w) {
       const release = () => {
         if (!btnPressed) return;
         btn.style.transform = '';
-        // Delay release message slightly
-        setTimeout(() => {
-          btnPressed = false;
-          send(`SET ${w.id} 0`);
-        }, 100);
+        btnPressed = false;
+        // Runtime controls should release immediately; artificial debounce on
+        // actuator buttons only adds lag and can leave a command active while
+        // switching views.
+        send(`SET ${w.id} 0`);
       };
       btn.onmousedown = btn.ontouchstart = press;
       btn.onmouseup = btn.onmouseleave = btn.ontouchend = release;
+      registerRuntimeBindingCleanup(() => {
+        if (btnPressed && state.ble.connected) send(`SET ${w.id} 0`);
+        btnPressed = false;
+      });
       break;
     case 'slider':
       let sliderEl = el.querySelector('.rt-slider');
@@ -7213,6 +7284,7 @@ function bindRuntimeWidget(el, w) {
       };
 
       sliderEl.addEventListener('pointerdown', e => {
+        if (runtimeInteractionBlocked(e)) return;
         if (e.button !== undefined && e.button !== 0) return;
         sliderPointerId = e.pointerId;
         sliderEl.classList.add('adjusting');
@@ -7221,6 +7293,7 @@ function bindRuntimeWidget(el, w) {
         e.preventDefault();
       });
       sliderEl.addEventListener('pointermove', e => {
+        if (state.arrangeMode) return;
         if (sliderPointerId !== e.pointerId) return;
         commitSliderValue(valueFromPointer(e));
         e.preventDefault();
@@ -7241,18 +7314,21 @@ function bindRuntimeWidget(el, w) {
       });
 
       sliderEl.oninput = e => {
+        if (runtimeInteractionBlocked(e)) return;
         const val = quantizeSliderValue(parseFloat(e.target.value) || sliderMin);
         reflectSliderValue(val);
         send(`SET ${w.id} ${val}`);
       };
       sliderEl.onchange = e => {
+        if (runtimeInteractionBlocked(e)) return;
         const val = quantizeSliderValue(parseFloat(e.target.value) || sliderMin);
         reflectSliderValue(val);
         send(`SET ${w.id} ${val}`);
       };
       break;
     case 'toggle':
-      el.querySelector('.rt-toggle').onclick = function() {
+      el.querySelector('.rt-toggle').onclick = function(e) {
+        if (runtimeInteractionBlocked(e)) return;
         const on = this.classList.toggle('on');
         this.textContent = on ? '😃' : '😴';
         beepToggle(on);
@@ -7272,7 +7348,7 @@ function bindRuntimeWidget(el, w) {
       // mix) so the firmware never has to reconstruct nx/ny via
       // cos()/sin() from a rounded integer angle+distance pair.
       const handleMove = e => {
-        if (!isDown) return;
+        if (!isDown || state.arrangeMode) return;
         const rect = base.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -7304,6 +7380,7 @@ function bindRuntimeWidget(el, w) {
         send(`SET ${w.id} 0 0`);
       };
       const startJoystick = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         if (e.type === 'touchstart') e.preventDefault();
         if (isDown) return; // Prevent multiple starts
         isDown = true;
@@ -7315,6 +7392,15 @@ function bindRuntimeWidget(el, w) {
       document.addEventListener('touchmove', handleMove, { passive: false });
       document.addEventListener('mouseup', resetJoystick);
       document.addEventListener('touchend', resetJoystick);
+      registerRuntimeBindingCleanup(() => {
+        if (isDown && state.ble.connected) send(`SET ${w.id} 0 0`);
+        isDown = false;
+        if (resetTimer) clearTimeout(resetTimer);
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('touchmove', handleMove);
+        document.removeEventListener('mouseup', resetJoystick);
+        document.removeEventListener('touchend', resetJoystick);
+      });
       break;
     
     case 'dpad':
@@ -7328,6 +7414,7 @@ function bindRuntimeWidget(el, w) {
         let keepaliveTimer = null;
 
         const press = e => {
+          if (runtimeInteractionBlocked(e)) return;
           e.preventDefault();
           e.stopPropagation();
           if (dpadPressed) return;
@@ -7411,7 +7498,7 @@ function bindRuntimeWidget(el, w) {
       let xyDown = false;
       let lastX = 50, lastY = 50;
       const handleXY = e => {
-        if (!xyDown) return;
+        if (!xyDown || state.arrangeMode) return;
         e.preventDefault();
         const rect = xypad.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -7427,11 +7514,13 @@ function bindRuntimeWidget(el, w) {
       const releaseXY = () => {
         if (!xyDown) return;
         xyDown = false;
+        if (state.arrangeMode) return;
         // Send final position on release
         console.log('[XYPAD] Sending final:', lastX, lastY);
         send(`SET ${w.id} ${lastX} ${lastY}`);
       };
       xypad.onmousedown = xypad.ontouchstart = e => { 
+        if (runtimeInteractionBlocked(e)) return;
         xyDown = true; 
         handleXY(e); 
       };
@@ -7439,6 +7528,13 @@ function bindRuntimeWidget(el, w) {
       document.addEventListener('touchmove', handleXY, { passive: false });
       document.addEventListener('mouseup', releaseXY);
       document.addEventListener('touchend', releaseXY);
+      registerRuntimeBindingCleanup(() => {
+        xyDown = false;
+        document.removeEventListener('mousemove', handleXY);
+        document.removeEventListener('touchmove', handleXY);
+        document.removeEventListener('mouseup', releaseXY);
+        document.removeEventListener('touchend', releaseXY);
+      });
       break;
     
     case 'timer':
@@ -7451,9 +7547,12 @@ function bindRuntimeWidget(el, w) {
         const sec = s % 60;
         return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
       };
-      el.querySelector('[data-action="start"]').onclick = () => {
+      el.querySelector('[data-action="start"]').onclick = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         if (timerInterval) return;
         timerInterval = setInterval(() => {
+          // Arrange mode is editing geometry, not running the controller.
+          if (state.arrangeMode) return;
           timerVal++;
           display.textContent = formatTime(timerVal);
           // Only send every 5 seconds to avoid BLE spam
@@ -7464,14 +7563,16 @@ function bindRuntimeWidget(el, w) {
         }, 1000);
         beepClick();
       };
-      el.querySelector('[data-action="pause"]').onclick = () => {
+      el.querySelector('[data-action="pause"]').onclick = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         clearInterval(timerInterval);
         timerInterval = null;
         // Send current value on pause
         send(`SET ${w.id} ${timerVal}`);
         beepClick();
       };
-      el.querySelector('[data-action="reset"]').onclick = () => {
+      el.querySelector('[data-action="reset"]').onclick = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         clearInterval(timerInterval);
         timerInterval = null;
         timerVal = 0;
@@ -7480,11 +7581,16 @@ function bindRuntimeWidget(el, w) {
         send(`SET ${w.id} 0`);
         beepClick();
       };
+      registerRuntimeBindingCleanup(() => {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+      });
       break;
 
     case 'select': {
       const sel = el.querySelector('.rt-select');
-      sel.onchange = () => {
+      sel.onchange = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         beepClick();
         const msg = `SET ${w.id} ${sel.value}`;
         // Mode changes transfer ownership of the motors. They must never be
@@ -7499,12 +7605,13 @@ function bindRuntimeWidget(el, w) {
     case 'editfield': {
       const input = el.querySelector('.rt-editfield');
       const sendBtn = el.querySelector('.rt-editfield-send');
-      const submit = () => {
+      const submit = (e) => {
+        if (runtimeInteractionBlocked(e)) return;
         beepClick();
         send(`SET ${w.id} ${input.value}`);
       };
       sendBtn.onclick = submit;
-      input.onkeydown = e => { if (e.key === 'Enter') submit(); };
+      input.onkeydown = e => { if (e.key === 'Enter') submit(e); };
       break;
     }
   }
@@ -8063,8 +8170,8 @@ document.addEventListener('click', (e)=>{
     buildViewRefreshT = setTimeout(() => {
       try {
         if (!document.querySelector('.builder-view.active')) return;
-        applyBuildCanvasView();
-        updateBuildCanvasBadge();
+        if (state.buildFitActive) fitBuildCanvas();
+        else { applyBuildCanvasView(); updateBuildCanvasBadge(); }
       } catch(e) {}
     }, 80);
   }
@@ -9071,7 +9178,7 @@ document.addEventListener('click', (e)=>{
 (function() {
   // Zoom functionality
   let currentZoom = 1;
-  const minZoom = 0.5;
+  const minZoom = 0.2;
   const maxZoom = 3;
   const zoomStep = 0.15;
   
@@ -9163,7 +9270,10 @@ document.addEventListener('click', (e)=>{
 
     const runtimeView = document.querySelector('.runtime-view');
     const inRuntime = !!(runtimeView && runtimeView.classList.contains('active'));
-    if (inRuntime) state.playZoom = currentZoom;
+    if (inRuntime) {
+      state.playZoom = currentZoom;
+      state.playViewRequestToken++;
+    }
 
     const target = getZoomTarget();
     if (target) {
@@ -9186,7 +9296,7 @@ document.addEventListener('click', (e)=>{
     const playLevel = document.getElementById('playZoomLevel');
     if (playLevel && inRuntime) playLevel.textContent = Math.round(currentZoom * 100) + '%';
     if (currentZoom >= 0.5 && currentZoom <= 3) {
-      try { localStorage.setItem('app_zoom', currentZoom); } catch(e) {}
+      try { if (inRuntime) localStorage.setItem('play_zoom', currentZoom); else localStorage.setItem('build_zoom', currentZoom); } catch(e) {}
     }
   }
 
@@ -9202,6 +9312,7 @@ document.addEventListener('click', (e)=>{
     const runtimeView = document.querySelector('.runtime-view.active');
     if (!runtimeView) return;
     runtimeView.classList.toggle('play-content-fit', !!on);
+    state.playFitActive = !!on;
   }
 
   function getRuntimeOccupiedBounds() {
@@ -9209,19 +9320,32 @@ document.addEventListener('click', (e)=>{
     // Structural helpers should not force Play to waste screen space. A group
     // may intentionally be much larger than its useful controls, and a long
     // separator may span the authoring canvas. Fit the functional widgets.
-    const primary = widgets.filter(w => w && w.t !== 'group' && w.t !== 'separator'
+    const primary = widgets.filter(w => w && !w.hidden && w.t !== 'group' && w.t !== 'separator'
       && Number.isFinite(Number(w.x)) && Number.isFinite(Number(w.y))
       && Number(w.w) > 0 && Number(w.h) > 0);
-    const list = primary.length ? primary : widgets.filter(w => w && Number(w.w) > 0 && Number(w.h) > 0);
+    const list = primary.length ? [...primary] : widgets.filter(w => w && !w.hidden && Number(w.w) > 0 && Number(w.h) > 0);
     if (!list.length) return null;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    list.forEach(w => {
+    const union = w => {
       const x = Number(w.x) || 0, y = Number(w.y) || 0;
       const width = Math.max(1, Number(w.w) || 1), height = Math.max(1, Number(w.h) || 1);
       minX = Math.min(minX, x); minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + width); maxY = Math.max(maxY, y + height);
-    });
+    };
+    list.forEach(union);
+
+    // Preserve useful structural decoration without letting an accidental giant
+    // group/separator define the whole Fit rectangle.
+    if (primary.length) {
+      const baseW = Math.max(1, maxX - minX), baseH = Math.max(1, maxY - minY);
+      widgets.filter(w => w && !w.hidden && (w.t === 'group' || w.t === 'separator')).forEach(w => {
+        const x = Number(w.x)||0, y=Number(w.y)||0, ww=Math.max(1,Number(w.w)||1), hh=Math.max(1,Number(w.h)||1);
+        const intersects = !(x+ww < minX || x > maxX || y+hh < minY || y > maxY);
+        const reasonable = ww <= baseW * 1.5 && hh <= baseH * 1.5;
+        if (intersects && reasonable) union(w);
+      });
+    }
     return { minX, minY, maxX, maxY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY) };
   }
 
@@ -9254,18 +9378,31 @@ document.addEventListener('click', (e)=>{
     // Measure the actual space below the fixed application header and Play
     // toolbar. Do not use the huge logical grid's current bounding box.
     const isFs = document.body.classList.contains('runtime-fullscreen');
+    // In narrow fullscreen layouts the Play toolbar can wrap to two rows and the
+    // title can become taller. Reserve the *actual* chrome height before fitting
+    // content instead of assuming a fixed 68px strip. This keeps the controller
+    // below the toolbar/title at desktop, tablet and phone widths.
+    if (isFs) {
+      const titleRect = document.getElementById('runtimeTitle')?.getBoundingClientRect();
+      const toolbarRect = document.querySelector('.runtime-top-btns')?.getBoundingClientRect();
+      const chromeBottom = Math.max(
+        Number(titleRect?.bottom) || 0,
+        Number(toolbarRect?.bottom) || 0,
+        68
+      );
+      runtimeView.style.setProperty('--play-fullscreen-top', `${Math.ceil(chromeBottom + 12)}px`);
+    }
     const rvStyle = getComputedStyle(runtimeView);
     const padX = (parseFloat(rvStyle.paddingLeft) || 0) + (parseFloat(rvStyle.paddingRight) || 0);
     const contentRect = runtimeContent.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
     const availW = Math.max(160, runtimeView.clientWidth - padX - 16);
-    let availH;
-    if (isFs) {
-      // The fullscreen toolbar occupies the top strip; runtime-view already
-      // reserves padding, so keep a small safety margin only.
-      availH = Math.max(160, runtimeView.clientHeight - 72);
-    } else {
-      availH = Math.max(160, window.innerHeight - Math.max(contentRect.top, 0) - 18);
-    }
+    // Measure from where the controller frame actually starts after all fixed
+    // header/fullscreen chrome has been laid out. Using runtimeView.clientHeight
+    // in fullscreen over-counted the 68px reserved top strip, making the fitted
+    // frame extend below the viewport on common 16:9 screens.
+    const top = Math.max(contentRect.top, frameRect.top, 0);
+    const availH = Math.max(160, window.innerHeight - top - 18);
 
     const fitZoom = Math.max(minZoom, Math.min(maxZoom, availW / cropW, availH / cropH));
     currentZoom = fitZoom;
@@ -9388,6 +9525,8 @@ document.addEventListener('click', (e)=>{
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('reset_zoom') === '1' || urlParams.get('reset') === '1') {
       localStorage.removeItem('app_zoom');
+      localStorage.removeItem('build_zoom');
+      localStorage.removeItem('play_zoom');
       console.log('[Zoom] Reset via URL parameter');
       // Clean URL
       if (window.history.replaceState) {
@@ -9396,23 +9535,27 @@ document.addEventListener('click', (e)=>{
       }
     }
     
-    const savedZoom = localStorage.getItem('app_zoom');
-    if (savedZoom) {
-      const parsed = parseFloat(savedZoom);
-      // Validate zoom is in reasonable range (0.5 to 3)
-      if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 3) {
-        applyZoom(parsed);
-      } else {
-        // Invalid zoom value - remove it and use default
-        console.warn('[Zoom] Invalid saved zoom:', savedZoom, '- resetting to 1');
-        localStorage.removeItem('app_zoom');
-        applyZoom(1);
-      }
-    }
+    const legacyZoom = localStorage.getItem('app_zoom');
+    const savedBuildZoom = localStorage.getItem('build_zoom') || legacyZoom;
+    const savedPlayZoom = localStorage.getItem('play_zoom');
+    const bz = parseFloat(savedBuildZoom || '1');
+    const pz = parseFloat(savedPlayZoom || '1');
+    if (!isNaN(bz) && bz >= 0.15 && bz <= 2.5) state.buildZoom = bz;
+    if (!isNaN(pz) && pz >= minZoom && pz <= maxZoom) state.playZoom = pz;
+    currentZoom = state.buildZoom || 1;
+    try { applyBuildCanvasView(); } catch (_) {}
   } catch(e) {
     console.warn('[Zoom] Error loading saved zoom:', e);
   }
   
+  // Keep an active Fit stable when the browser/fullscreen viewport changes.
+  let playFitResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!state.playFitActive || !document.querySelector('.runtime-view.active')) return;
+    clearTimeout(playFitResizeTimer);
+    playFitResizeTimer = setTimeout(() => { try { zoomFit(); } catch (_) {} }, 80);
+  });
+
   // Expose for other scripts
   window.appZoom = {
     zoomIn,

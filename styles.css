@@ -6522,3 +6522,79 @@ body.runtime-fullscreen .runtime-canvas-viewport > #runtimeGrid{
   margin:0 !important;
   transform-origin:top left !important;
 }
+
+
+/* =========================================================
+   v2.13 — Build / Play consistency audit
+   ========================================================= */
+/* Normal Play: reserve the top control strip, then lay content from top-left.
+   Fit mode recenters only the compact occupied-content frame. 1:1/zoomed views
+   stay fully scrollable instead of being flex-centered into negative space. */
+.runtime-view.active #runtimeContent{
+  justify-content:flex-start !important;
+  min-height:0 !important;
+}
+.runtime-view.active:not(.play-content-fit) #runtimeContent{
+  align-items:flex-start !important;
+}
+.runtime-view.active:not(.play-content-fit) .runtime-canvas-viewport{
+  margin-left:0 !important;
+  margin-right:0 !important;
+}
+.runtime-view.active.play-content-fit #runtimeContent{
+  align-items:center !important;
+}
+
+/* Fullscreen title and toolbar share one top strip without overlapping. */
+body.runtime-fullscreen #runtimeTitle{
+  top:12px !important;
+  left:16px !important;
+  transform:none !important;
+  /* Leave a guaranteed gutter before the right-side Play toolbar. */
+  max-width:calc(100vw - 580px) !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+body.runtime-fullscreen .runtime-view.active{
+  padding-top:var(--play-fullscreen-top, 68px) !important;
+  box-sizing:border-box !important;
+}
+@media (max-width:900px){
+  body.runtime-fullscreen #runtimeTitle{
+    max-width:42vw !important;
+    padding:7px 12px !important;
+    font-size:1rem !important;
+  }
+  body.runtime-fullscreen .runtime-top-btns{
+    max-width:54vw !important;
+  }
+}
+
+/* Hidden is semantic in both Build and Play. */
+#runtimeGrid .rt-widget[hidden],
+#runtimeGrid .rt-widget.is-hidden{ display:none !important; }
+
+
+/* Full logical-canvas views must anchor at top-left so both axes remain reachable. */
+.runtime-view.active:not(.play-content-fit){
+  align-items:flex-start !important;
+}
+.runtime-view.active:not(.play-content-fit) #runtimeContent{
+  width:max-content !important;
+  min-width:100% !important;
+}
+.runtime-view.active.play-content-fit #runtimeContent{
+  width:100% !important;
+}
+
+/* Arrange mode is geometry editing, not control activation. Route pointer
+   input to the widget frame so dragging a slider/D-pad/select cannot command
+   the robot or swallow the drag before the Arrange handler sees it. */
+#runtimeGrid.arrange-mode .rt-widget > :not(.rt-resize-handle){
+  pointer-events:none !important;
+}
+#runtimeGrid.arrange-mode .rt-widget .rt-resize-handle{
+  pointer-events:auto !important;
+}
