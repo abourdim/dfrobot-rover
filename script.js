@@ -1,7 +1,7 @@
 // Bumped on every push to this repo — shown in the header next to the
 // subtitle. Simple incrementing build number, not semver: there's no
 // meaningful "breaking change" concept for a single-page kid tool.
-const APP_VERSION = 'v2.13';
+const APP_VERSION = 'v2.14';
 
 window.__ovl = window.__ovl || { t:null };
 
@@ -779,7 +779,7 @@ const I18N = {
     loadingTitle: "🧩 Loading your remote...",
     loadingSub: "Getting layout from micro:bit",
     loadingRequesting: "Checking layout version…",
-    loadingReceiving: "Receiving layout…",
+    loadingReceiving: "Receiving layout…", loadingOf: "of",
     loadingDecoding: "Decoding layout…",
     loadingReady: "Ready!",
     codeModal: {
@@ -900,7 +900,7 @@ const I18N = {
     loadingTitle: "🧩 Chargement de ta télécommande...",
     loadingSub: "Récupération depuis le micro:bit",
     loadingRequesting: "Vérification de la version de la disposition…",
-    loadingReceiving: "Réception de la disposition…",
+    loadingReceiving: "Réception de la disposition…", loadingOf: "sur",
     loadingDecoding: "Décodage de la disposition…",
     loadingReady: "Prêt !",
     codeModal: {
@@ -1021,7 +1021,7 @@ const I18N = {
     loadingTitle: "🧩 جارٍ تحميل جهاز التحكم...",
     loadingSub: "الحصول على التخطيط من micro:bit",
     loadingRequesting: "جارٍ التحقق من إصدار التخطيط…",
-    loadingReceiving: "جارٍ استقبال التخطيط…",
+    loadingReceiving: "جارٍ استقبال التخطيط…", loadingOf: "من",
     loadingDecoding: "جارٍ فك ترميز التخطيط…",
     loadingReady: "جاهز!",
     codeModal: {
@@ -4797,6 +4797,31 @@ function widgetChildren(group, widgets = state.widgets) {
   return ids.map(id => widgets.find(w => w.id === id)).filter(Boolean);
 }
 
+// Restored. Added in 0b15820, removed by 3cb894b, which left all seven call
+// sites intact -- so dragging a group, or deleting one, threw a ReferenceError
+// in Build mode. Same regression as keystudio_4wd_mecanum_rxy, same fix.
+
+function moveGroupChildren(group, dx, dy, widgets = state.widgets, rootSelector = '.widget') {
+  if (!group || group.t !== 'group' || (!dx && !dy)) return;
+  widgetChildren(group, widgets).forEach(child => {
+    child.x = Math.max(0, Number(child.x || 0) + dx);
+    child.y = Math.max(0, Number(child.y || 0) + dy);
+    const el = document.querySelector(`${rootSelector}[data-id="${CSS.escape(child.id)}"]`);
+    if (el) {
+      el.style.left = child.x + 'px';
+      el.style.top = child.y + 'px';
+    }
+  });
+}
+
+function detachGroup(group, widgets = state.widgets) {
+  if (!group || group.t !== 'group') return;
+  widgetChildren(group, widgets).forEach(child => {
+    if (child.groupId === group.id) delete child.groupId;
+  });
+  group.children = [];
+}
+
 function normalizeGroupMembership(widgets = state.widgets) {
   const groups = widgets.filter(w => w.t === 'group');
   const byId = new Map(widgets.map(w => [w.id, w]));
@@ -6120,6 +6145,9 @@ function updateBleUI() {
 
 let configBuffer = '';
 var configChunks = 0;
+// Total chunk count announced by "CFGBEGIN <n>". 0 means the firmware did not
+// say, in which case the progress bar falls back to the old open-ended guess.
+var configTotal = 0;
 
 // ═══════════════════════════════════════════════════════════════
 // ⚡ v47 CONFIG REVISION CACHE
@@ -6442,6 +6470,10 @@ function processLine(line) {
     }
   }
   else if (line.startsWith('CFGBEGIN')) {
+    // Firmware may append the chunk count: "CFGBEGIN 421". Anything that does
+    // not send it still matches this branch, so configTotal simply stays 0.
+    const announced = parseInt(line.slice(8).trim(), 10);
+    configTotal = Number.isFinite(announced) && announced > 0 ? announced : 0;
     console.log('[BLE] Config begin');
     cancelConfigRetry();   // firmware answered — stop the retry timer
     configBuffer = '';
@@ -6454,7 +6486,15 @@ function processLine(line) {
     cancelConfigRetry();
     configBuffer += line.substring(4);
     configChunks++;
-    setLoadingProgress(Math.min(90, 12 + configChunks * 4), `${tr('loadingReceiving')} (${configChunks})`);
+    // With a known total this is a true fraction. Without one the old guess is
+    // kept, but it pins at 90% after chunk 20 and a big layout can be 400+
+    // chunks, which reads as a stalled bar.
+    if (configTotal > 0) {
+      const pct = 12 + Math.round(78 * Math.min(1, configChunks / configTotal));
+      setLoadingProgress(pct, `${tr('loadingReceiving')} (${configChunks} ${tr('loadingOf')} ${configTotal})`);
+    } else {
+      setLoadingProgress(Math.min(90, 12 + configChunks * 4), `${tr('loadingReceiving')} (${configChunks})`);
+    }
     console.log('[BLE] Config chunk, total length:', configBuffer.length);
   }
   else if (line === 'CFGEND') {

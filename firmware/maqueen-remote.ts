@@ -182,7 +182,7 @@
  *    App → micro:bit   <a..p> + newline        (FAST D-pad: 1-byte mask)
  *    App → micro:bit   SET <widgetId> <value...>
  *    App → micro:bit   GETCFG                 (asks for the layout once, on connect)
- *    micro:bit → App   CFGBEGIN / CFG <b64 chunk> / CFGEND
+ *    micro:bit → App   CFGBEGIN <chunkCount> / CFG <b64 chunk> / CFGEND
  *    micro:bit → App   UPD <widgetId> <value>  (optional — push sensor/status updates)
  */
 
@@ -1295,7 +1295,12 @@ basic.forever(function () {
     if (btConnected && cfgTxActive) {
         if (now >= cfgTxNextAt) {
             if (cfgTxStage == 0) {
-                bluetooth.uartWriteLine("CFGBEGIN")
+                // Announce how many chunks are coming. The app matches this
+                // line with startsWith(), so a client that ignores the argument
+                // is unaffected -- but one that reads it can show a truthful
+                // progress bar instead of guessing. The same total is already
+                // computed below for the LED sweep.
+                bluetooth.uartWriteLine("CFGBEGIN " + Math.idiv(CFG.length + 17, 18))
                 cfgTxStage = 1
                 cfgTxNextAt = now + CFG_TX_GAP_MS
             } else if (cfgTxStage == 1) {
