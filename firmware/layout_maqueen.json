@@ -1,0 +1,345 @@
+{
+ "title": "Maqueen Remote",
+ "widgets": [
+  {
+   "id": "grp_drive",
+   "t": "group",
+   "label": "DRIVE",
+   "color": "#00d4ff",
+   "x": 56,
+   "y": 42,
+   "w": 937,
+   "h": 538,
+   "children": "dpad_move,spd,btn_stop,gauge_spd"
+  },
+  {
+   "id": "grp_head",
+   "t": "group",
+   "label": "HEAD",
+   "color": "#ff9500",
+   "x": 56,
+   "y": 642,
+   "w": 661,
+   "h": 285,
+   "children": "slider_srv1,gauge_srv1,slider_srv2,gauge_srv2"
+  },
+  {
+   "id": "grp_light",
+   "t": "group",
+   "label": "LIGHTS & SOUND",
+   "color": "#c084fc",
+   "x": 736,
+   "y": 642,
+   "w": 262,
+   "h": 348,
+   "children": "toggle_led_l,toggle_led_r,btn_buzz"
+  },
+  {
+   "id": "grp_dist",
+   "t": "group",
+   "label": "DISTANCE",
+   "color": "#ffb020",
+   "x": 1036,
+   "y": 42,
+   "w": 529,
+   "h": 680,
+   "children": "gauge_dist,alert,dist_read,graph_dist"
+  },
+  {
+   "id": "grp_auto",
+   "t": "group",
+   "label": "AUTONOMY",
+   "color": "#00e676",
+   "x": 1036,
+   "y": 752,
+   "w": 421,
+   "h": 187,
+   "children": "ln_l,ln_r,mode"
+  },
+  {
+   "id": "grp_sys",
+   "t": "group",
+   "label": "SYSTEM",
+   "color": "#8892b0",
+   "x": 1036,
+   "y": 962,
+   "w": 415,
+   "h": 276,
+   "children": "lbl_ver,lbl_heartbeat,upd"
+  },
+  {
+   "id": "sep_cols",
+   "t": "separator",
+   "x": 1012,
+   "y": 100,
+   "w": 8,
+   "h": 680
+  },
+  {
+   "id": "sep_left",
+   "t": "separator",
+   "x": 80,
+   "y": 605,
+   "w": 890,
+   "h": 8
+  },
+  {
+   "id": "sep_rt1",
+   "t": "separator",
+   "x": 1060,
+   "y": 730,
+   "w": 490,
+   "h": 8
+  },
+  {
+   "id": "sep_rt2",
+   "t": "separator",
+   "x": 1060,
+   "y": 946,
+   "w": 490,
+   "h": 8
+  },
+  {
+   "id": "dpad_move",
+   "t": "dpad",
+   "x": 80,
+   "y": 100,
+   "w": 449,
+   "h": 456,
+   "label": "Drive",
+   "model": "classic"
+  },
+  {
+   "id": "spd",
+   "t": "slider",
+   "x": 560,
+   "y": 100,
+   "w": 148,
+   "h": 262,
+   "label": "Speed",
+   "min": 60,
+   "max": 255,
+   "step": 5,
+   "value": 200
+  },
+  {
+   "id": "btn_stop",
+   "t": "button",
+   "x": 740,
+   "y": 100,
+   "w": 107,
+   "h": 115,
+   "label": "STOP"
+  },
+  {
+   "id": "gauge_spd",
+   "t": "gauge",
+   "x": 740,
+   "y": 250,
+   "w": 229,
+   "h": 252,
+   "label": "Speed",
+   "min": 60,
+   "max": 255,
+   "units": "",
+   "decimals": 0,
+   "model": "min",
+   "source": "spd",
+   "value": 200
+  },
+  {
+   "id": "slider_srv1",
+   "t": "slider",
+   "x": 80,
+   "y": 700,
+   "w": 99,
+   "h": 203,
+   "label": "Servo 1",
+   "min": 0,
+   "max": 180,
+   "step": 1,
+   "value": 90
+  },
+  {
+   "id": "gauge_srv1",
+   "t": "gauge",
+   "x": 200,
+   "y": 700,
+   "w": 164,
+   "h": 185,
+   "label": "Servo 1",
+   "min": 0,
+   "max": 180,
+   "units": "°",
+   "decimals": 0,
+   "model": "min",
+   "source": "slider_srv1",
+   "value": 90
+  },
+  {
+   "id": "slider_srv2",
+   "t": "slider",
+   "x": 400,
+   "y": 700,
+   "w": 99,
+   "h": 201,
+   "label": "Servo 2",
+   "min": 0,
+   "max": 180,
+   "step": 1,
+   "value": 90
+  },
+  {
+   "id": "gauge_srv2",
+   "t": "gauge",
+   "x": 520,
+   "y": 700,
+   "w": 173,
+   "h": 181,
+   "label": "Servo 2",
+   "min": 0,
+   "max": 180,
+   "units": "°",
+   "decimals": 0,
+   "model": "min",
+   "source": "slider_srv2",
+   "value": 90
+  },
+  {
+   "id": "toggle_led_l",
+   "t": "toggle",
+   "x": 760,
+   "y": 700,
+   "w": 97,
+   "h": 121,
+   "label": "LED L"
+  },
+  {
+   "id": "toggle_led_r",
+   "t": "toggle",
+   "x": 877,
+   "y": 700,
+   "w": 97,
+   "h": 121,
+   "label": "LED R"
+  },
+  {
+   "id": "btn_buzz",
+   "t": "button",
+   "x": 760,
+   "y": 845,
+   "w": 108,
+   "h": 121,
+   "label": "Buzz"
+  },
+  {
+   "id": "gauge_dist",
+   "t": "gauge",
+   "x": 1060,
+   "y": 100,
+   "w": 264,
+   "h": 187,
+   "label": "Distance",
+   "min": 0,
+   "max": 200,
+   "units": "cm",
+   "decimals": 0,
+   "model": "classic"
+  },
+  {
+   "id": "alert",
+   "t": "notification",
+   "x": 1350,
+   "y": 100,
+   "w": 90,
+   "h": 186,
+   "label": "Alert"
+  },
+  {
+   "id": "dist_read",
+   "t": "select",
+   "x": 1060,
+   "y": 320,
+   "w": 194,
+   "h": 62,
+   "label": "Distance read",
+   "options": "Auto,Read now"
+  },
+  {
+   "id": "graph_dist",
+   "t": "graph",
+   "x": 1060,
+   "y": 400,
+   "w": 481,
+   "h": 298,
+   "label": "Distance cm",
+   "model": "grid",
+   "windowSec": 30,
+   "series": 1
+  },
+  {
+   "id": "ln_l",
+   "t": "led",
+   "x": 1060,
+   "y": 810,
+   "w": 76,
+   "h": 105,
+   "label": "Line L",
+   "model": "dot",
+   "colorOn": "#4ade80"
+  },
+  {
+   "id": "ln_r",
+   "t": "led",
+   "x": 1156,
+   "y": 810,
+   "w": 78,
+   "h": 105,
+   "label": "Line R",
+   "model": "dot",
+   "colorOn": "#4ade80"
+  },
+  {
+   "id": "mode",
+   "t": "select",
+   "x": 1254,
+   "y": 820,
+   "w": 179,
+   "h": 92,
+   "label": "Mode",
+   "options": "Manual,Line,Avoid"
+  },
+  {
+   "id": "lbl_ver",
+   "t": "label",
+   "x": 1060,
+   "y": 1020,
+   "w": 109,
+   "h": 79,
+   "label": "Firmware"
+  },
+  {
+   "id": "lbl_heartbeat",
+   "t": "label",
+   "x": 1190,
+   "y": 1020,
+   "w": 237,
+   "h": 76,
+   "label": "Uptime"
+  },
+  {
+   "id": "upd",
+   "t": "select",
+   "x": 1060,
+   "y": 1120,
+   "w": 182,
+   "h": 94,
+   "label": "Telemetry",
+   "options": "All,Basic,Off"
+  }
+ ],
+ "canvas": {
+  "w": 1621,
+  "h": 1294
+ }
+}
