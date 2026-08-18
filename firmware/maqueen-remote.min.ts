@@ -852,19 +852,21 @@ basic.forever(function () {
     // for it explicitly. It can therefore cause one brief HC-SR04 timeout stall,
     // but it never turns continuous polling back on in Manual/Line.
     let forceDist = forceDistanceOnce
-    let autoDistDue = driveMode == MODE_AVOID && now >= nextDistAt
+    // Poll in every mode, not only Avoid: with Telemetry on All the graph is
+    // expected to keep drawing, and in Manual it drew nothing. Avoid still
+    // polls at any telemetry level because distance is its input, not a
+    // readout. busyDriving below remains the real safety guard.
+    let autoDistDue = (driveMode == MODE_AVOID || updLevel == UPD_ALL) && now >= nextDistAt
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
     if (cfgSent && (forceDist || (autoDistDue && !busyDriving))) {
         if (forceDist) forceDistanceOnce = false
-        if (driveMode == MODE_AVOID) nextDistAt = now + distInterval
+        nextDistAt = now + distInterval   // every mode now, or it re-measures each pass
         {
             let cm = maqueen.Ultrasonic()
-            if (driveMode == MODE_AVOID) {
-                if (cm >= 500 || cm <= 0) {
-                    distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
-                } else {
-                    distInterval = DIST_INTERVAL_MS
-                }
+            if (cm >= 500 || cm <= 0) {
+                distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
+            } else {
+                distInterval = DIST_INTERVAL_MS
             }
             let reported = -1
             if (cm >= 500) {

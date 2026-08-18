@@ -1492,23 +1492,45 @@ basic.forever(function () {
     // for it explicitly. It can therefore cause one brief HC-SR04 timeout stall,
     // but it never turns continuous polling back on in Manual/Line.
     let forceDist = forceDistanceOnce
-    let autoDistDue = driveMode == MODE_AVOID && now >= nextDistAt
+    // Poll in EVERY mode, not only Avoid. The Distance-read selector offers
+    // "Auto", and with Telemetry on All the graph is expected to keep drawing
+    // -- in Manual it drew nothing at all, because this used to require
+    // MODE_AVOID and the only other path was the one-shot "Read now".
+    //
+    // What actually makes polling unsafe is not the mode but driving:
+    // Ultrasonic() busy-waits, and a missing echo costs ~250ms with the whole
+    // runtime frozen. busyDriving below is that guard, and it still applies --
+    // so the graph runs while the robot is parked, which is when anyone is
+    // looking at it, and stops the moment the wheels turn.
+    //
+    // Avoid mode must keep measuring whatever the telemetry level says -- the
+    // distance is its input, not a readout, and gating it on UPD_ALL would
+    // leave the robot driving blind at Basic or Off. Outside Avoid the reading
+    // exists only to be displayed, so it is not worth the stall unless the
+    // graph and gauge can actually leave the robot, which is UPD_ALL only
+    // (see sendValue).
+    let autoDistDue = (driveMode == MODE_AVOID || updLevel == UPD_ALL) && now >= nextDistAt
     let busyDriving = (lastDriveL != 0 || lastDriveR != 0) && driveMode != MODE_AVOID
     if (cfgSent && (forceDist || (autoDistDue && !busyDriving))) {
         if (forceDist) forceDistanceOnce = false
-        if (driveMode == MODE_AVOID) nextDistAt = now + distInterval
+        // Must advance in every mode now. Leaving this Avoid-only would let
+        // the loop re-measure on every pass, which is precisely the freeze
+        // the interval exists to prevent.
+        nextDistAt = now + distInterval
         {
             let cm = maqueen.Ultrasonic()
             // Adapt the next interval to what we just got back. 500 is
             // the "no echo" sentinel and is the reading that costs the
             // full ~250ms retry stall, so keep backing off while it
             // persists; any real distance restores the fast rate.
-            if (driveMode == MODE_AVOID) {
-                if (cm >= 500 || cm <= 0) {
-                    distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
-                } else {
-                    distInterval = DIST_INTERVAL_MS
-                }
+            // Backoff applies in every mode for the same reason it exists in
+            // Avoid: a sensor that never echoes costs the full retry stall on
+            // each attempt, so slow down while that persists and recover the
+            // fast rate as soon as a real distance comes back.
+            if (cm >= 500 || cm <= 0) {
+                distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
+            } else {
+                distInterval = DIST_INTERVAL_MS
             }
             // Decide what we'd report; -1 means "nothing to report".
             let reported = -1
