@@ -33,7 +33,7 @@
 // Core lesson: for a real-time robot, reliable delivery of OLD steering
 // events becomes latency. Preserve the newest desired motor STATE instead.
 
-const FIRMWARE_VERSION = "v52"
+const FIRMWARE_VERSION = "v53"
 
 let debugEnabled = false
 let logQueue: string[] = []
