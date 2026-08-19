@@ -156,7 +156,7 @@
    "h": 120,
    "label": "Left motor",
    "icon": "⚙️",
-   "spin": 1,
+   "spin": -1,
    "color": "#0e7490"
   },
   {

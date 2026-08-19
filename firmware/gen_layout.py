@@ -39,11 +39,19 @@ def at(wid, x, y):
     return w
 
 
+# Widgets declared with new() are OWNED by this file: their full definition
+# lives here, so changing one (say, flipping a spin direction) is the point, not
+# a regression. Widgets touched only with at() are the opposite -- the previous
+# CFG is their source of truth and nothing but x/y may differ.
+OWNED = set()
+
+
 def new(wid, t, x, y, w, h, **kw):
-    """A widget that did not exist in the previous CFG."""
+    """A widget whose definition lives in this file rather than the old CFG."""
     d = dict(id=wid, t=t, x=x, y=y, w=w, h=h)
     d.update(kw)
     W[wid] = d
+    OWNED.add(wid)
     return d
 
 
@@ -74,8 +82,10 @@ drive = [
     # about a wheel. A gear that visibly turns while the button is held does.
     # The cyan matches the DRIVE zone and the pad, so the pair reads as part of
     # the same control rather than two stray buttons.
+    # spin -1 on the left, +1 on the right: the two gears turn opposite ways, the
+    # way the wheels on either side of the robot do. Both still drive forward.
     new("btn_ml", "button",  80, 580, 200, 120, label="Left motor",
-        icon="⚙️", spin=1, color="#0e7490"),
+        icon="⚙️", spin=-1, color="#0e7490"),
     new("btn_mr", "button", 300, 580, 200, 120, label="Right motor",
         icon="⚙️", spin=1, color="#0e7490"),
 ]
@@ -168,8 +178,8 @@ if missing:
 # Only x and y may differ from the original. Guards against a rewrite quietly
 # losing a select's `options` or a gauge's `source`.
 for w in controls:
-    if w["id"] not in ORIG:
-        continue                      # added by this layout, nothing to preserve
+    if w["id"] in OWNED or w["id"] not in ORIG:
+        continue                      # declared above; this file is its source of truth
     lost = [k for k, v in ORIG[w["id"]].items() if k not in ("x", "y") and w.get(k) != v]
     if lost:
         errs.append(f"{w['id']} lost/changed {lost}")
@@ -197,8 +207,9 @@ for g in groups:
 print()
 if errs:
     print("  FAILED"); [print("   -", e) for e in errs]; raise SystemExit(1)
-added = sorted(set(w["id"] for w in controls) - set(ORIG))
-print(f"  PASS - geometry valid, all {len(ORIG)} original widgets intact; added {added}")
+kept = sorted(set(ORIG) - OWNED)
+print(f"  PASS - geometry valid; {len(kept)} carried-over widgets untouched, "
+      f"{len(OWNED)} declared here: {sorted(OWNED)}")
 
 # Compact the wire form. `groupId` on each member and `children` on each group
 # are two spellings of the same fact, and every app that understands groups
