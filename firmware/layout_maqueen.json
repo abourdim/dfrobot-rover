@@ -154,7 +154,10 @@
    "y": 580,
    "w": 200,
    "h": 120,
-   "label": "Left motor"
+   "label": "Left motor",
+   "icon": "⚙️",
+   "spin": 1,
+   "color": "#0e7490"
   },
   {
    "id": "btn_mr",
@@ -163,7 +166,10 @@
    "y": 580,
    "w": 200,
    "h": 120,
-   "label": "Right motor"
+   "label": "Right motor",
+   "icon": "⚙️",
+   "spin": 1,
+   "color": "#0e7490"
   },
   {
    "id": "slider_srv1",

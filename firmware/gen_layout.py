@@ -69,8 +69,15 @@ drive = [
     # Per-wheel jog buttons, directly under the pad. Held, not clicked: the app
     # sends "SET <id> 1" on press and "SET <id> 0" on release, so each is a
     # dead-man switch. Holding both at once runs both wheels -> straight ahead.
-    new("btn_ml", "button",  80, 580, 200, 120, label="Left motor"),
-    new("btn_mr", "button", 300, 580, 200, 120, label="Right motor"),
+    # icon/spin/color, not the defaults: without an explicit icon the app hashes
+    # the widget id and these landed on a sparkle and a rocket, which say nothing
+    # about a wheel. A gear that visibly turns while the button is held does.
+    # The cyan matches the DRIVE zone and the pad, so the pair reads as part of
+    # the same control rather than two stray buttons.
+    new("btn_ml", "button",  80, 580, 200, 120, label="Left motor",
+        icon="⚙️", spin=1, color="#0e7490"),
+    new("btn_mr", "button", 300, 580, 200, 120, label="Right motor",
+        icon="⚙️", spin=1, color="#0e7490"),
 ]
 
 # ── HEAD ────────────────────────────────────────────────────────────────────
