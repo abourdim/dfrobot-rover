@@ -24,8 +24,12 @@ PAD, TITLE = 24, 34          # side padding, and clearance for the header chip
 src = open(SRC, encoding="utf-8").read()
 OLD_B64 = re.search(r'const CFG = "([^"]*)"', src).group(1)
 old = json.loads(base64.b64decode(OLD_B64).decode())
-ORIG = {w["id"]: dict(w) for w in old["widgets"]}
-W = {w["id"]: dict(w) for w in old["widgets"]}
+# Structural widgets are regenerated from scratch every run, so they are not
+# part of the "preserve everything" contract -- otherwise re-running this over
+# its own output would report the groups it just built as dropped widgets.
+CONTROLS = [w for w in old["widgets"] if w["t"] not in ("group", "separator")]
+ORIG = {w["id"]: dict(w) for w in CONTROLS}
+W = {w["id"]: dict(w) for w in CONTROLS}
 
 
 def at(wid, x, y):
@@ -33,6 +37,14 @@ def at(wid, x, y):
     w = W[wid]
     w["x"], w["y"] = x, y
     return w
+
+
+def new(wid, t, x, y, w, h, **kw):
+    """A widget that did not exist in the previous CFG."""
+    d = dict(id=wid, t=t, x=x, y=y, w=w, h=h)
+    d.update(kw)
+    W[wid] = d
+    return d
 
 
 def group(gid, label, color, members):
@@ -54,6 +66,11 @@ drive = [
     at("spd",       560, 100),
     at("btn_stop",  740, 100),
     at("gauge_spd", 740, 250),
+    # Per-wheel jog buttons, directly under the pad. Held, not clicked: the app
+    # sends "SET <id> 1" on press and "SET <id> 0" on release, so each is a
+    # dead-man switch. Holding both at once runs both wheels -> straight ahead.
+    new("btn_ml", "button",  80, 580, 200, 120, label="Left motor"),
+    new("btn_mr", "button", 300, 580, 200, 120, label="Right motor"),
 ]
 
 # ── HEAD ────────────────────────────────────────────────────────────────────
@@ -61,19 +78,19 @@ drive = [
 # were together and the two gauges were together, so neither pairing showed --
 # even though gauge_srv1 mirrors slider_srv1 through `source`.
 head = [
-    at("slider_srv1",  80, 700),
-    at("gauge_srv1",  200, 700),
-    at("slider_srv2", 400, 700),
-    at("gauge_srv2",  520, 700),
+    at("slider_srv1",  80, 820),
+    at("gauge_srv1",  200, 820),
+    at("slider_srv2", 400, 820),
+    at("gauge_srv2",  520, 820),
 ]
 
 # ── LIGHTS & SOUND ──────────────────────────────────────────────────────────
 # Two rows, not one: a single row of three reached x=1142 and collided with the
 # DISTANCE column. The left column has to stay clear of the x=1010 gutter.
 lights = [
-    at("toggle_led_l", 760, 700),
-    at("toggle_led_r", 877, 700),
-    at("btn_buzz",     760, 845),
+    at("toggle_led_l", 760, 820),
+    at("toggle_led_r", 877, 820),
+    at("btn_buzz",     760, 965),
 ]
 
 # ── DISTANCE ────────────────────────────────────────────────────────────────
@@ -120,7 +137,7 @@ for gid, label, color, members in ZONES:
 # nothing.
 seps = [
     dict(id="sep_cols", t="separator", x=1012, y=100, w=8,   h=680),   # column split
-    dict(id="sep_left", t="separator", x=80,   y=605, w=890, h=8),     # drive / rest
+    dict(id="sep_left", t="separator", x=80,   y=745, w=890, h=8),     # drive / rest
     dict(id="sep_rt1",  t="separator", x=1060, y=730, w=490, h=8),     # distance / autonomy
     dict(id="sep_rt2",  t="separator", x=1060, y=946, w=490, h=8),     # autonomy / system
 ]
@@ -144,6 +161,8 @@ if missing:
 # Only x and y may differ from the original. Guards against a rewrite quietly
 # losing a select's `options` or a gauge's `source`.
 for w in controls:
+    if w["id"] not in ORIG:
+        continue                      # added by this layout, nothing to preserve
     lost = [k for k, v in ORIG[w["id"]].items() if k not in ("x", "y") and w.get(k) != v]
     if lost:
         errs.append(f"{w['id']} lost/changed {lost}")
@@ -171,7 +190,8 @@ for g in groups:
 print()
 if errs:
     print("  FAILED"); [print("   -", e) for e in errs]; raise SystemExit(1)
-print("  PASS - geometry valid, all 21 widgets kept with their properties intact")
+added = sorted(set(w["id"] for w in controls) - set(ORIG))
+print(f"  PASS - geometry valid, all {len(ORIG)} original widgets intact; added {added}")
 
 # Compact the wire form. `groupId` on each member and `children` on each group
 # are two spellings of the same fact, and every app that understands groups

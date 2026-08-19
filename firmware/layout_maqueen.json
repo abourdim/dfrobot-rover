@@ -9,8 +9,8 @@
    "x": 56,
    "y": 42,
    "w": 937,
-   "h": 538,
-   "children": "dpad_move,spd,btn_stop,gauge_spd"
+   "h": 682,
+   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr"
   },
   {
    "id": "grp_head",
@@ -18,7 +18,7 @@
    "label": "HEAD",
    "color": "#ff9500",
    "x": 56,
-   "y": 642,
+   "y": 762,
    "w": 661,
    "h": 285,
    "children": "slider_srv1,gauge_srv1,slider_srv2,gauge_srv2"
@@ -29,7 +29,7 @@
    "label": "LIGHTS & SOUND",
    "color": "#c084fc",
    "x": 736,
-   "y": 642,
+   "y": 762,
    "w": 262,
    "h": 348,
    "children": "toggle_led_l,toggle_led_r,btn_buzz"
@@ -79,7 +79,7 @@
    "id": "sep_left",
    "t": "separator",
    "x": 80,
-   "y": 605,
+   "y": 745,
    "w": 890,
    "h": 8
   },
@@ -148,10 +148,28 @@
    "value": 200
   },
   {
+   "id": "btn_ml",
+   "t": "button",
+   "x": 80,
+   "y": 580,
+   "w": 200,
+   "h": 120,
+   "label": "Left motor"
+  },
+  {
+   "id": "btn_mr",
+   "t": "button",
+   "x": 300,
+   "y": 580,
+   "w": 200,
+   "h": 120,
+   "label": "Right motor"
+  },
+  {
    "id": "slider_srv1",
    "t": "slider",
    "x": 80,
-   "y": 700,
+   "y": 820,
    "w": 99,
    "h": 203,
    "label": "Servo 1",
@@ -164,7 +182,7 @@
    "id": "gauge_srv1",
    "t": "gauge",
    "x": 200,
-   "y": 700,
+   "y": 820,
    "w": 164,
    "h": 185,
    "label": "Servo 1",
@@ -180,7 +198,7 @@
    "id": "slider_srv2",
    "t": "slider",
    "x": 400,
-   "y": 700,
+   "y": 820,
    "w": 99,
    "h": 201,
    "label": "Servo 2",
@@ -193,7 +211,7 @@
    "id": "gauge_srv2",
    "t": "gauge",
    "x": 520,
-   "y": 700,
+   "y": 820,
    "w": 173,
    "h": 181,
    "label": "Servo 2",
@@ -209,7 +227,7 @@
    "id": "toggle_led_l",
    "t": "toggle",
    "x": 760,
-   "y": 700,
+   "y": 820,
    "w": 97,
    "h": 121,
    "label": "LED L"
@@ -218,7 +236,7 @@
    "id": "toggle_led_r",
    "t": "toggle",
    "x": 877,
-   "y": 700,
+   "y": 820,
    "w": 97,
    "h": 121,
    "label": "LED R"
@@ -227,7 +245,7 @@
    "id": "btn_buzz",
    "t": "button",
    "x": 760,
-   "y": 845,
+   "y": 965,
    "w": 108,
    "h": 121,
    "label": "Buzz"

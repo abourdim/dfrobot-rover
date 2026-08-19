@@ -33,7 +33,7 @@
 // Core lesson: for a real-time robot, reliable delivery of OLD steering
 // events becomes latency. Preserve the newest desired motor STATE instead.
 
-const FIRMWARE_VERSION = "v54"
+const FIRMWARE_VERSION = "v55"
 
 let debugEnabled = false
 let logQueue: string[] = []
@@ -93,7 +93,7 @@ function cfgRevisionFromCfg(text: string): string {
     return "d" + (hash >>> 0)
 }
 
-const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJncnBfZHJpdmUiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IkRSSVZFIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo5MzcsImgiOjUzOCwiY2hpbGRyZW4iOiJkcGFkX21vdmUsc3BkLGJ0bl9zdG9wLGdhdWdlX3NwZCJ9LHsiaWQiOiJncnBfaGVhZCIsInQiOiJncm91cCIsImxhYmVsIjoiSEVBRCIsImNvbG9yIjoiI2ZmOTUwMCIsIngiOjU2LCJ5Ijo2NDIsInciOjY2MSwiaCI6Mjg1LCJjaGlsZHJlbiI6InNsaWRlcl9zcnYxLGdhdWdlX3NydjEsc2xpZGVyX3NydjIsZ2F1Z2Vfc3J2MiJ9LHsiaWQiOiJncnBfbGlnaHQiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IkxJR0hUUyAmIFNPVU5EIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6NzM2LCJ5Ijo2NDIsInciOjI2MiwiaCI6MzQ4LCJjaGlsZHJlbiI6InRvZ2dsZV9sZWRfbCx0b2dnbGVfbGVkX3IsYnRuX2J1enoifSx7ImlkIjoiZ3JwX2Rpc3QiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IkRJU1RBTkNFIiwiY29sb3IiOiIjZmZiMDIwIiwieCI6MTAzNiwieSI6NDIsInciOjUyOSwiaCI6NjgwLCJjaGlsZHJlbiI6ImdhdWdlX2Rpc3QsYWxlcnQsZGlzdF9yZWFkLGdyYXBoX2Rpc3QifSx7ImlkIjoiZ3JwX2F1dG8iLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IkFVVE9OT01ZIiwiY29sb3IiOiIjMDBlNjc2IiwieCI6MTAzNiwieSI6NzUyLCJ3Ijo0MjEsImgiOjE4NywiY2hpbGRyZW4iOiJsbl9sLGxuX3IsbW9kZSJ9LHsiaWQiOiJncnBfc3lzIiwidCI6Imdyb3VwIiwibGFiZWwiOiJTWVNURU0iLCJjb2xvciI6IiM4ODkyYjAiLCJ4IjoxMDM2LCJ5Ijo5NjIsInciOjQxNSwiaCI6Mjc2LCJjaGlsZHJlbiI6ImxibF92ZXIsbGJsX2hlYXJ0YmVhdCx1cGQifSx7ImlkIjoic2VwX2NvbHMiLCJ0Ijoic2VwYXJhdG9yIiwieCI6MTAxMiwieSI6MTAwLCJ3Ijo4LCJoIjo2ODB9LHsiaWQiOiJzZXBfbGVmdCIsInQiOiJzZXBhcmF0b3IiLCJ4Ijo4MCwieSI6NjA1LCJ3Ijo4OTAsImgiOjh9LHsiaWQiOiJzZXBfcnQxIiwidCI6InNlcGFyYXRvciIsIngiOjEwNjAsInkiOjczMCwidyI6NDkwLCJoIjo4fSx7ImlkIjoic2VwX3J0MiIsInQiOiJzZXBhcmF0b3IiLCJ4IjoxMDYwLCJ5Ijo5NDYsInciOjQ5MCwiaCI6OH0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInkiOjEwMCwidyI6NDQ5LCJoIjo0NTYsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNsaWRlciIsIngiOjU2MCwieSI6MTAwLCJ3IjoxNDgsImgiOjI2MiwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1LCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6NzQwLCJ5IjoxMDAsInciOjEwNywiaCI6MTE1LCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6ImdhdWdlIiwieCI6NzQwLCJ5IjoyNTAsInciOjIyOSwiaCI6MjUyLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsInVuaXRzIjoiIiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3BkIiwidmFsdWUiOjIwMH0seyJpZCI6InNsaWRlcl9zcnYxIiwidCI6InNsaWRlciIsIngiOjgwLCJ5Ijo3MDAsInciOjk5LCJoIjoyMDMsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInN0ZXAiOjEsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX3NydjEiLCJ0IjoiZ2F1Z2UiLCJ4IjoyMDAsInkiOjcwMCwidyI6MTY0LCJoIjoxODUsImxhYmVsIjoiU2Vydm8gMSIsIm1pbiI6MCwibWF4IjoxODAsInVuaXRzIjoiwrAiLCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzbGlkZXJfc3J2MSIsInZhbHVlIjo5MH0seyJpZCI6InNsaWRlcl9zcnYyIiwidCI6InNsaWRlciIsIngiOjQwMCwieSI6NzAwLCJ3Ijo5OSwiaCI6MjAxLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9zcnYyIiwidCI6ImdhdWdlIiwieCI6NTIwLCJ5Ijo3MDAsInciOjE3MywiaCI6MTgxLCJsYWJlbCI6IlNlcnZvIDIiLCJtaW4iOjAsIm1heCI6MTgwLCJ1bml0cyI6IsKwIiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic2xpZGVyX3NydjIiLCJ2YWx1ZSI6OTB9LHsiaWQiOiJ0b2dnbGVfbGVkX2wiLCJ0IjoidG9nZ2xlIiwieCI6NzYwLCJ5Ijo3MDAsInciOjk3LCJoIjoxMjEsImxhYmVsIjoiTEVEIEwifSx7ImlkIjoidG9nZ2xlX2xlZF9yIiwidCI6InRvZ2dsZSIsIngiOjg3NywieSI6NzAwLCJ3Ijo5NywiaCI6MTIxLCJsYWJlbCI6IkxFRCBSIn0seyJpZCI6ImJ0bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjc2MCwieSI6ODQ1LCJ3IjoxMDgsImgiOjEyMSwibGFiZWwiOiJCdXp6In0seyJpZCI6ImdhdWdlX2Rpc3QiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMDYwLCJ5IjoxMDAsInciOjI2NCwiaCI6MTg3LCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgiOjIwMCwidW5pdHMiOiJjbSIsImRlY2ltYWxzIjowLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoiYWxlcnQiLCJ0Ijoibm90aWZpY2F0aW9uIiwieCI6MTM1MCwieSI6MTAwLCJ3Ijo5MCwiaCI6MTg2LCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImRpc3RfcmVhZCIsInQiOiJzZWxlY3QiLCJ4IjoxMDYwLCJ5IjozMjAsInciOjE5NCwiaCI6NjIsImxhYmVsIjoiRGlzdGFuY2UgcmVhZCIsIm9wdGlvbnMiOiJBdXRvLFJlYWQgbm93In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4IjoxMDYwLCJ5Ijo0MDAsInciOjQ4MSwiaCI6Mjk4LCJsYWJlbCI6IkRpc3RhbmNlIGNtIiwibW9kZWwiOiJncmlkIiwid2luZG93U2VjIjozMCwic2VyaWVzIjoxfSx7ImlkIjoibG5fbCIsInQiOiJsZWQiLCJ4IjoxMDYwLCJ5Ijo4MTAsInciOjc2LCJoIjoxMDUsImxhYmVsIjoiTGluZSBMIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJsbl9yIiwidCI6ImxlZCIsIngiOjExNTYsInkiOjgxMCwidyI6NzgsImgiOjEwNSwibGFiZWwiOiJMaW5lIFIiLCJtb2RlbCI6ImRvdCIsImNvbG9yT24iOiIjNGFkZTgwIn0seyJpZCI6Im1vZGUiLCJ0Ijoic2VsZWN0IiwieCI6MTI1NCwieSI6ODIwLCJ3IjoxNzksImgiOjkyLCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25zIjoiTWFudWFsLExpbmUsQXZvaWQifSx7ImlkIjoibGJsX3ZlciIsInQiOiJsYWJlbCIsIngiOjEwNjAsInkiOjEwMjAsInciOjEwOSwiaCI6NzksImxhYmVsIjoiRmlybXdhcmUifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjExOTAsInkiOjEwMjAsInciOjIzNywiaCI6NzYsImxhYmVsIjoiVXB0aW1lIn0seyJpZCI6InVwZCIsInQiOiJzZWxlY3QiLCJ4IjoxMDYwLCJ5IjoxMTIwLCJ3IjoxODIsImgiOjk0LCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn1dLCJjYW52YXMiOnsidyI6MTYyMSwiaCI6MTI5NH19"
+const CFG = "eyJ0aXRsZSI6Ik1hcXVlZW4gUmVtb3RlIiwid2lkZ2V0cyI6W3siaWQiOiJncnBfZHJpdmUiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IkRSSVZFIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo5MzcsImgiOjY4MiwiY2hpbGRyZW4iOiJkcGFkX21vdmUsc3BkLGJ0bl9zdG9wLGdhdWdlX3NwZCxidG5fbWwsYnRuX21yIn0seyJpZCI6ImdycF9oZWFkIiwidCI6Imdyb3VwIiwibGFiZWwiOiJIRUFEIiwiY29sb3IiOiIjZmY5NTAwIiwieCI6NTYsInkiOjc2MiwidyI6NjYxLCJoIjoyODUsImNoaWxkcmVuIjoic2xpZGVyX3NydjEsZ2F1Z2Vfc3J2MSxzbGlkZXJfc3J2MixnYXVnZV9zcnYyIn0seyJpZCI6ImdycF9saWdodCIsInQiOiJncm91cCIsImxhYmVsIjoiTElHSFRTICYgU09VTkQiLCJjb2xvciI6IiNjMDg0ZmMiLCJ4Ijo3MzYsInkiOjc2MiwidyI6MjYyLCJoIjozNDgsImNoaWxkcmVuIjoidG9nZ2xlX2xlZF9sLHRvZ2dsZV9sZWRfcixidG5fYnV6eiJ9LHsiaWQiOiJncnBfZGlzdCIsInQiOiJncm91cCIsImxhYmVsIjoiRElTVEFOQ0UiLCJjb2xvciI6IiNmZmIwMjAiLCJ4IjoxMDM2LCJ5Ijo0MiwidyI6NTI5LCJoIjo2ODAsImNoaWxkcmVuIjoiZ2F1Z2VfZGlzdCxhbGVydCxkaXN0X3JlYWQsZ3JhcGhfZGlzdCJ9LHsiaWQiOiJncnBfYXV0byIsInQiOiJncm91cCIsImxhYmVsIjoiQVVUT05PTVkiLCJjb2xvciI6IiMwMGU2NzYiLCJ4IjoxMDM2LCJ5Ijo3NTIsInciOjQyMSwiaCI6MTg3LCJjaGlsZHJlbiI6ImxuX2wsbG5fcixtb2RlIn0seyJpZCI6ImdycF9zeXMiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IlNZU1RFTSIsImNvbG9yIjoiIzg4OTJiMCIsIngiOjEwMzYsInkiOjk2MiwidyI6NDE1LCJoIjoyNzYsImNoaWxkcmVuIjoibGJsX3ZlcixsYmxfaGVhcnRiZWF0LHVwZCJ9LHsiaWQiOiJzZXBfY29scyIsInQiOiJzZXBhcmF0b3IiLCJ4IjoxMDEyLCJ5IjoxMDAsInciOjgsImgiOjY4MH0seyJpZCI6InNlcF9sZWZ0IiwidCI6InNlcGFyYXRvciIsIngiOjgwLCJ5Ijo3NDUsInciOjg5MCwiaCI6OH0seyJpZCI6InNlcF9ydDEiLCJ0Ijoic2VwYXJhdG9yIiwieCI6MTA2MCwieSI6NzMwLCJ3Ijo0OTAsImgiOjh9LHsiaWQiOiJzZXBfcnQyIiwidCI6InNlcGFyYXRvciIsIngiOjEwNjAsInkiOjk0NiwidyI6NDkwLCJoIjo4fSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4Ijo4MCwieSI6MTAwLCJ3Ijo0NDksImgiOjQ1NiwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NTYwLCJ5IjoxMDAsInciOjE0OCwiaCI6MjYyLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsInN0ZXAiOjUsInZhbHVlIjoyMDB9LHsiaWQiOiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4Ijo3NDAsInkiOjEwMCwidyI6MTA3LCJoIjoxMTUsImxhYmVsIjoiU1RPUCJ9LHsiaWQiOiJnYXVnZV9zcGQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo3NDAsInkiOjI1MCwidyI6MjI5LCJoIjoyNTIsImxhYmVsIjoiU3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwidW5pdHMiOiIiLCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcGQiLCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX21sIiwidCI6ImJ1dHRvbiIsIngiOjgwLCJ5Ijo1ODAsInciOjIwMCwiaCI6MTIwLCJsYWJlbCI6IkxlZnQgbW90b3IifSx7ImlkIjoiYnRuX21yIiwidCI6ImJ1dHRvbiIsIngiOjMwMCwieSI6NTgwLCJ3IjoyMDAsImgiOjEyMCwibGFiZWwiOiJSaWdodCBtb3RvciJ9LHsiaWQiOiJzbGlkZXJfc3J2MSIsInQiOiJzbGlkZXIiLCJ4Ijo4MCwieSI6ODIwLCJ3Ijo5OSwiaCI6MjAzLCJsYWJlbCI6IlNlcnZvIDEiLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9zcnYxIiwidCI6ImdhdWdlIiwieCI6MjAwLCJ5Ijo4MjAsInciOjE2NCwiaCI6MTg1LCJsYWJlbCI6IlNlcnZvIDEiLCJtaW4iOjAsIm1heCI6MTgwLCJ1bml0cyI6IsKwIiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic2xpZGVyX3NydjEiLCJ2YWx1ZSI6OTB9LHsiaWQiOiJzbGlkZXJfc3J2MiIsInQiOiJzbGlkZXIiLCJ4Ijo0MDAsInkiOjgyMCwidyI6OTksImgiOjIwMSwibGFiZWwiOiJTZXJ2byAyIiwibWluIjowLCJtYXgiOjE4MCwic3RlcCI6MSwidmFsdWUiOjkwfSx7ImlkIjoiZ2F1Z2Vfc3J2MiIsInQiOiJnYXVnZSIsIngiOjUyMCwieSI6ODIwLCJ3IjoxNzMsImgiOjE4MSwibGFiZWwiOiJTZXJ2byAyIiwibWluIjowLCJtYXgiOjE4MCwidW5pdHMiOiLCsCIsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNsaWRlcl9zcnYyIiwidmFsdWUiOjkwfSx7ImlkIjoidG9nZ2xlX2xlZF9sIiwidCI6InRvZ2dsZSIsIngiOjc2MCwieSI6ODIwLCJ3Ijo5NywiaCI6MTIxLCJsYWJlbCI6IkxFRCBMIn0seyJpZCI6InRvZ2dsZV9sZWRfciIsInQiOiJ0b2dnbGUiLCJ4Ijo4NzcsInkiOjgyMCwidyI6OTcsImgiOjEyMSwibGFiZWwiOiJMRUQgUiJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0b24iLCJ4Ijo3NjAsInkiOjk2NSwidyI6MTA4LCJoIjoxMjEsImxhYmVsIjoiQnV6eiJ9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTA2MCwieSI6MTAwLCJ3IjoyNjQsImgiOjE4NywibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngiOjEzNTAsInkiOjEwMCwidyI6OTAsImgiOjE4NiwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJkaXN0X3JlYWQiLCJ0Ijoic2VsZWN0IiwieCI6MTA2MCwieSI6MzIwLCJ3IjoxOTQsImgiOjYyLCJsYWJlbCI6IkRpc3RhbmNlIHJlYWQiLCJvcHRpb25zIjoiQXV0byxSZWFkIG5vdyJ9LHsiaWQiOiJncmFwaF9kaXN0IiwidCI6ImdyYXBoIiwieCI6MTA2MCwieSI6NDAwLCJ3Ijo0ODEsImgiOjI5OCwibGFiZWwiOiJEaXN0YW5jZSBjbSIsIm1vZGVsIjoiZ3JpZCIsIndpbmRvd1NlYyI6MzAsInNlcmllcyI6MX0seyJpZCI6ImxuX2wiLCJ0IjoibGVkIiwieCI6MTA2MCwieSI6ODEwLCJ3Ijo3NiwiaCI6MTA1LCJsYWJlbCI6IkxpbmUgTCIsIm1vZGVsIjoiZG90IiwiY29sb3JPbiI6IiM0YWRlODAifSx7ImlkIjoibG5fciIsInQiOiJsZWQiLCJ4IjoxMTU2LCJ5Ijo4MTAsInciOjc4LCJoIjoxMDUsImxhYmVsIjoiTGluZSBSIiwibW9kZWwiOiJkb3QiLCJjb2xvck9uIjoiIzRhZGU4MCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjEyNTQsInkiOjgyMCwidyI6MTc5LCJoIjo5MiwibGFiZWwiOiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxMaW5lLEF2b2lkIn0seyJpZCI6ImxibF92ZXIiLCJ0IjoibGFiZWwiLCJ4IjoxMDYwLCJ5IjoxMDIwLCJ3IjoxMDksImgiOjc5LCJsYWJlbCI6IkZpcm13YXJlIn0seyJpZCI6ImxibF9oZWFydGJlYXQiLCJ0IjoibGFiZWwiLCJ4IjoxMTkwLCJ5IjoxMDIwLCJ3IjoyMzcsImgiOjc2LCJsYWJlbCI6IlVwdGltZSJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6MTA2MCwieSI6MTEyMCwidyI6MTgyLCJoIjo5NCwibGFiZWwiOiJUZWxlbWV0cnkiLCJvcHRpb25zIjoiQWxsLEJhc2ljLE9mZiJ9XSwiY2FudmFzIjp7InciOjE2MjEsImgiOjEyOTR9fQ=="
 // v52: computed from CFG itself at boot.
 let CFG_REV = cfgRevisionFromCfg(CFG)
 
@@ -406,6 +406,41 @@ function driveAuto(nx: number, ny: number) {
     requestDriveDebug(l, r)
 }
 
+// Per-wheel jog buttons (v55). Held, not clicked: the app sends "1" on press
+// and "0" on release. Each button's state is tracked separately, so holding
+// BOTH runs both wheels and the robot goes straight. State is kept here rather
+// than read back from lastDriveL/R, which Line/Avoid also write.
+let jogL = false
+let jogR = false
+
+function applyJog() {
+    if (driveMode != MODE_MANUAL) return
+    let l = jogL ? driveSpeed : 0
+    let r = jogR ? driveSpeed : 0
+    lastDriveCmdAt = input.runningTime()
+    if (l == 0 && r == 0) {
+        maqueen.motorStop(maqueen.Motors.All)
+        lastDriveL = 0
+        lastDriveR = 0
+        lastDriveAt = lastDriveCmdAt
+        requestDriveDebug(0, 0)
+        return
+    }
+    // Always forward: these prove a wheel turns, they do not steer.
+    maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, l)
+    maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, r)
+    lastDriveL = l
+    lastDriveR = r
+    lastDriveAt = lastDriveCmdAt
+    requestDriveDebug(l, r)
+}
+
+// A button held when the link drops must not read as pressed on reconnect.
+function clearJog() {
+    jogL = false
+    jogR = false
+}
+
 function handleWidget(id: string, val: string) {
     dbg("recv: " + id + " = " + val)
 
@@ -413,8 +448,18 @@ function handleWidget(id: string, val: string) {
         maqueen.motorStop(maqueen.Motors.All)
         lastDriveL = 0
         lastDriveR = 0
+        // Else a still-held jog button restarts its wheel on the next applyJog().
+        clearJog()
         requestStopIcon()
         dbg("stop button pressed")
+    }
+
+    // M1 is the LEFT wheel, M2 the RIGHT -- same assignment handleDpadMask uses.
+    if (id == "btn_ml" || id == "btn_mr") {
+        if (id == "btn_ml") jogL = (val == "1")
+        else jogR = (val == "1")
+        applyJog()
+        dbg("jog: L=" + (jogL ? 1 : 0) + " R=" + (jogR ? 1 : 0))
     }
 
     if (id == "spd") {
@@ -448,6 +493,7 @@ function handleWidget(id: string, val: string) {
         btnBack = false
         btnLeft = false
         btnRight = false
+        clearJog()
         avoidPhase = 0
         avoidUntil = 0
         if (val == "Line") driveMode = MODE_LINE
@@ -569,6 +615,7 @@ function handleLinkLost() {
     btnBack = false
     btnLeft = false
     btnRight = false
+    clearJog()
     pendingDebugL = 0
     pendingDebugR = 0
     requestGlyph(GLYPH_DISCONNECTED)
@@ -621,6 +668,16 @@ basic.forever(function () {
     // Manual safety watchdog only. v43 accidentally supervised Line/Avoid
     // with the D-pad keepalive timeout too. Avoid can legitimately spend
     // longer than that between ultrasonic polls after no-echo backoff.
+    // A held jog sends nothing between press and release, so refresh the drive
+    // stamp or the watchdog cuts the wheel mid-press. Gated on recent traffic:
+    // the app pings every 3s, so if the link dies lastRxAt goes stale, this
+    // stops refreshing and the watchdog stops the wheel 2.5s later -- the same
+    // protection the D-pad gets, without waiting out the 9s LINK_TIMEOUT_MS.
+    if ((jogL || jogR) && driveMode == MODE_MANUAL && !linkLostHandled
+        && (now - lastRxAt) < DRIVE_WATCHDOG_MS) {
+        lastDriveCmdAt = now
+    }
+
     if (driveMode == MODE_MANUAL && (lastDriveL != 0 || lastDriveR != 0) && now - lastDriveCmdAt > DRIVE_WATCHDOG_MS) {
         maqueen.motorStop(maqueen.Motors.All)
         dbg("watchdog: no drive update for " + DRIVE_WATCHDOG_MS + "ms, auto-stop")
