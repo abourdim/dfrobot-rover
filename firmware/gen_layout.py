@@ -58,6 +58,9 @@ drive = [
 ]
 
 # ── DISTANCE ────────────────────────────────────────────────────────────────
+# The sweep head lives here rather than with DRIVE: it aims the sensor, so it
+# belongs beside the reading it changes. Turning the head while watching the
+# gauge is the whole point of having it on a servo.
 dist = [
     W("gauge_dist", "gauge", 1000, 100, 220, 200, label="Distance",
       min=0, max=200, units="cm", decimals=0, model="classic"),
@@ -66,6 +69,12 @@ dist = [
       options="Auto,Read now"),
     W("graph_dist", "graph", 1000, 430, 420, 250, label="Distance cm",
       model="grid", windowSec=30, series=1),
+    W("srv_head", "slider", 1000, 730, 100, 190, label="Look",
+      min=0, max=180, step=1, value=90),
+    W("gauge_head", "gauge", 1120, 730, 180, 190, label="Angle",
+      min=0, max=180, units="°", decimals=0, model="min",
+      source="srv_head", value=90),
+    W("btn_head_center", "button", 1320, 760, 100, 100, label="Ahead"),
 ]
 
 # ── SYSTEM ──────────────────────────────────────────────────────────────────

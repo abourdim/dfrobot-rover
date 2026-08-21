@@ -68,7 +68,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v1"
+const FIRMWARE_VERSION = "R1-v3"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -262,7 +262,7 @@ function cfgRevisionFromCfg(text: string): string {
     return "d" + (hash >>> 0)
 }
 
-const CFG = "eyJ0aXRsZSI6IlJvdmVyIFJlbW90ZSIsIndpZGdldHMiOlt7ImlkIjoiZ3JwX2RyaXZlIiwidCI6Imdyb3VwIiwibGFiZWwiOiJEUklWRSIsImNvbG9yIjoiIzAwZDRmZiIsIngiOjU2LCJ5Ijo0MiwidyI6ODY4LCJoIjo3MjIsImNoaWxkcmVuIjoiZHBhZF9tb3ZlLHNwZCxidG5fc3RvcCxnYXVnZV9zcGQsYnRuX21sLGJ0bl9tcix0cmltX2wsdHJpbV9yIn0seyJpZCI6ImdycF9kaXN0IiwidCI6Imdyb3VwIiwibGFiZWwiOiJESVNUQU5DRSIsImNvbG9yIjoiI2ZmYjAyMCIsIngiOjk3NiwieSI6NDIsInciOjQ2OCwiaCI6NjYyLCJjaGlsZHJlbiI6ImdhdWdlX2Rpc3QsYWxlcnQsZGlzdF9yZWFkLGdyYXBoX2Rpc3QifSx7ImlkIjoiZ3JwX3N5cyIsInQiOiJncm91cCIsImxhYmVsIjoiU1lTVEVNIiwiY29sb3IiOiIjODg5MmIwIiwieCI6NTYsInkiOjc5MiwidyI6ODM4LCJoIjozMTIsImNoaWxkcmVuIjoibW9kZSx1cGQsbGJsX3ZlcixsYmxfaGVhcnRiZWF0LGJ0bl9idXp6In0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInkiOjEwMCwidyI6NDIwLCJoIjo0MjAsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNsaWRlciIsIngiOjU0MCwieSI6MTAwLCJ3IjoxMjAsImgiOjI2MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1LCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6NzAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6ImdhdWdlIiwieCI6NzAwLCJ5IjoyNjAsInciOjIwMCwiaCI6MTkwLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNwZCIsInZhbHVlIjoyMDB9LHsiaWQiOiJidG5fbWwiLCJ0IjoiYnV0dG9uIiwieCI6ODAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVmdCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjotMSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9tciIsInQiOiJidXR0b24iLCJ4IjoyOTAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQiOiJzbGlkZXIiLCJ4Ijo1MzAsInkiOjU2MCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiVHJpbSBMIiwibWluIjotMjAsIm1heCI6MjAsInN0ZXAiOjEsInZhbHVlIjowfSx7ImlkIjoidHJpbV9yIiwidCI6InNsaWRlciIsIngiOjY1MCwieSI6NTYwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJUcmltIFIiLCJtaW4iOi0yMCwibWF4IjoyMCwic3RlcCI6MSwidmFsdWUiOjB9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAwLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngiOjEyNTAsInkiOjExMCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoiZGlzdF9yZWFkIiwidCI6InNlbGVjdCIsIngiOjEwMDAsInkiOjMzMCwidyI6MTgwLCJoIjo3MCwibGFiZWwiOiJEaXN0YW5jZSByZWFkIiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjEwMDAsInkiOjQzMCwidyI6NDIwLCJoIjoyNTAsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsQXZvaWQifSx7ImlkIjoidXBkIiwidCI6InNlbGVjdCIsIngiOjI3MCwieSI6ODUwLCJ3IjoxNjAsImgiOjcwLCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn0seyJpZCI6ImxibF92ZXIiLCJ0IjoibGFiZWwiLCJ4Ijo0NjAsInkiOjg1MCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJGaXJtd2FyZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6NjUwLCJ5Ijo4NTAsInciOjIyMCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImJ0bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjgwLCJ5Ijo5NjAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IkJlZXAifV0sImNhbnZhcyI6eyJ3IjoxNTAwLCJoIjoxMTYwfX0="
+const CFG = "eyJ0aXRsZSI6IlJvdmVyIFJlbW90ZSIsIndpZGdldHMiOlt7ImlkIjoiZ3JwX2RyaXZlIiwidCI6Imdyb3VwIiwibGFiZWwiOiJEUklWRSIsImNvbG9yIjoiIzAwZDRmZiIsIngiOjU2LCJ5Ijo0MiwidyI6ODY4LCJoIjo3MjIsImNoaWxkcmVuIjoiZHBhZF9tb3ZlLHNwZCxidG5fc3RvcCxnYXVnZV9zcGQsYnRuX21sLGJ0bl9tcix0cmltX2wsdHJpbV9yIn0seyJpZCI6ImdycF9kaXN0IiwidCI6Imdyb3VwIiwibGFiZWwiOiJESVNUQU5DRSIsImNvbG9yIjoiI2ZmYjAyMCIsIngiOjk3NiwieSI6NDIsInciOjQ2OCwiaCI6OTAyLCJjaGlsZHJlbiI6ImdhdWdlX2Rpc3QsYWxlcnQsZGlzdF9yZWFkLGdyYXBoX2Rpc3Qsc3J2X2hlYWQsZ2F1Z2VfaGVhZCxidG5faGVhZF9jZW50ZXIifSx7ImlkIjoiZ3JwX3N5cyIsInQiOiJncm91cCIsImxhYmVsIjoiU1lTVEVNIiwiY29sb3IiOiIjODg5MmIwIiwieCI6NTYsInkiOjc5MiwidyI6ODM4LCJoIjozMTIsImNoaWxkcmVuIjoibW9kZSx1cGQsbGJsX3ZlcixsYmxfaGVhcnRiZWF0LGJ0bl9idXp6In0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInkiOjEwMCwidyI6NDIwLCJoIjo0MjAsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNsaWRlciIsIngiOjU0MCwieSI6MTAwLCJ3IjoxMjAsImgiOjI2MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJzdGVwIjo1LCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6NzAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6ImdhdWdlIiwieCI6NzAwLCJ5IjoyNjAsInciOjIwMCwiaCI6MTkwLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNwZCIsInZhbHVlIjoyMDB9LHsiaWQiOiJidG5fbWwiLCJ0IjoiYnV0dG9uIiwieCI6ODAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVmdCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjotMSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9tciIsInQiOiJidXR0b24iLCJ4IjoyOTAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQiOiJzbGlkZXIiLCJ4Ijo1MzAsInkiOjU2MCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiVHJpbSBMIiwibWluIjotMjAsIm1heCI6MjAsInN0ZXAiOjEsInZhbHVlIjowfSx7ImlkIjoidHJpbV9yIiwidCI6InNsaWRlciIsIngiOjY1MCwieSI6NTYwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJUcmltIFIiLCJtaW4iOi0yMCwibWF4IjoyMCwic3RlcCI6MSwidmFsdWUiOjB9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAwLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngiOjEyNTAsInkiOjExMCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoiZGlzdF9yZWFkIiwidCI6InNlbGVjdCIsIngiOjEwMDAsInkiOjMzMCwidyI6MTgwLCJoIjo3MCwibGFiZWwiOiJEaXN0YW5jZSByZWFkIiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjEwMDAsInkiOjQzMCwidyI6NDIwLCJoIjoyNTAsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJzcnZfaGVhZCIsInQiOiJzbGlkZXIiLCJ4IjoxMDAwLCJ5Ijo3MzAsInciOjEwMCwiaCI6MTkwLCJsYWJlbCI6Ikxvb2siLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9oZWFkIiwidCI6ImdhdWdlIiwieCI6MTEyMCwieSI6NzMwLCJ3IjoxODAsImgiOjE5MCwibGFiZWwiOiJBbmdsZSIsIm1pbiI6MCwibWF4IjoxODAsInVuaXRzIjoiwrAiLCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6ImJ0bl9oZWFkX2NlbnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzIwLCJ5Ijo3NjAsInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6IkFoZWFkIn0seyJpZCI6Im1vZGUiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjg1MCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxBdm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6MjcwLCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVGVsZW1ldHJ5Iiwib3B0aW9ucyI6IkFsbCxCYXNpYyxPZmYifSx7ImlkIjoibGJsX3ZlciIsInQiOiJsYWJlbCIsIngiOjQ2MCwieSI6ODUwLCJ3IjoxNjAsImgiOjcwLCJsYWJlbCI6IkZpcm13YXJlIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImxibF9oZWFydGJlYXQiLCJ0IjoibGFiZWwiLCJ4Ijo2NTAsInkiOjg1MCwidyI6MjIwLCJoIjo3MCwibGFiZWwiOiJVcHRpbWUiLCJtb2RlbCI6ImNhcmQifSx7ImlkIjoiYnRuX2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6ODAsInkiOjk2MCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoiQmVlcCJ9XSwiY2FudmFzIjp7InciOjE1MDAsImgiOjExNjB9fQ=="
 // v52: computed from CFG itself at boot.
 let CFG_REV = cfgRevisionFromCfg(CFG)
 
@@ -378,6 +378,7 @@ let driveSpeed = 200
 // that callback-side TX can destabilize reconnects. Handlers only mark the
 // latest value dirty; the forever loop coalesces and publishes it later.
 let uiGaugeSpdDirty = false
+let uiGaugeHeadDirty = false
 let uiGaugeLastInputAt = 0
 let uiGaugeTxNextAt = 0
 let uiInitialSyncStage = 0
@@ -589,6 +590,42 @@ function wheels(l: number, r: number) {
 function wheelsStop() {
     motor.servo(motor.Servos.S1, WHEEL_STOP + trimL)
     motor.servo(motor.Servos.S2, WHEEL_STOP - trimR)
+}
+
+// ── SWEEP HEAD (S3) ──────────────────────────────────────────────────
+// The sonar sits on a third servo so it can look around without turning the
+// whole rover. Unlike S1/S2 this is a POSITIONAL servo: the angle IS the
+// angle, where on the wheels an angle means a speed. Same call, opposite
+// meaning -- worth remembering before "fixing" one to match the other.
+const HEAD_CENTER = 90
+
+// Writes are rate-limited because dragging the slider emits a SET per step,
+// and every one is an I2C transaction on the same bus as the wheels and the
+// screen. Flooding it does not merely stutter: it can lock the bus hard
+// enough to freeze the whole firmware, heartbeat included.
+//
+// The pending value matters as much as the limit. A naive guard that simply
+// drops writes loses the LAST one, so the head stops a few degrees short of
+// wherever the finger lifted. Anything dropped here is remembered and written
+// by the loop instead.
+const HEAD_MIN_INTERVAL_MS = 40
+let headAngle = HEAD_CENTER
+let headWritten = -1
+let headWrittenAt = 0
+let headPending = false
+
+function headWrite() {
+    motor.servo(motor.Servos.S3, headAngle)
+    headWritten = headAngle
+    headWrittenAt = input.runningTime()
+    headPending = false
+}
+
+function head(angle: number) {
+    headAngle = Math.constrain(angle, 0, 180)
+    if (headAngle == headWritten) { headPending = false; return }
+    if (input.runningTime() - headWrittenAt >= HEAD_MIN_INTERVAL_MS) headWrite()
+    else headPending = true
 }
 
 // "Nothing bounced back." Everything downstream is written around this
@@ -803,6 +840,22 @@ function handleWidget(id: string, val: string) {
         dbg("jog: L=" + (jogL ? 1 : 0) + " R=" + (jogR ? 1 : 0))
     }
 
+    // Slider: sweep head. 0-180 is a real angle here, not a speed.
+    if (id == "srv_head") {
+        head(parseInt(val))
+        uiGaugeHeadDirty = true
+        uiGaugeLastInputAt = input.runningTime()
+        requestGlyphValue(GLYPH_SERVO, headAngle)
+        dbg("head -> " + headAngle)
+    }
+
+    // Button: look straight ahead again.
+    if (id == "btn_head_center" && val == "1") {
+        head(HEAD_CENTER)
+        uiGaugeHeadDirty = true
+        dbg("head centred")
+    }
+
     // Sliders: straight-line trim, one per wheel. trimL/trimR are applied by
     // wheels(); without these handlers they could never leave 0, and two
     // 360-degree servos never run at matched speeds, so the rover always
@@ -948,8 +1001,9 @@ function sendValue(id: string, val: string) {
 // 🚀 STARTUP
 // ═══════════════════════════════════════════════════════════════
 
-// Safety: stop any leftover motion and center servos on boot.
+// Safety: stop any leftover motion and centre the sweep head on boot.
 wheelsStop()
+headWrite()
 basic.showString(FIRMWARE_VERSION)
 // Idle indicator: a hollow ring, held until BLE connects. Deliberately
 // not a filled shape — ■ already means "STOP pressed" and the centre dot
@@ -1023,6 +1077,9 @@ function handleLinkLost() {
     pendingDebugL = 0
     pendingDebugR = 0
     requestGlyph(GLYPH_DISCONNECTED)
+    // Point the sensor forward again. Left aimed sideways it would report the
+    // wall next to the rover as the distance ahead on the next connection.
+    head(HEAD_CENTER)
     // Heartbeat restarts per session, so the clock reads session uptime
     // rather than time since power-on.
     heartbeat = 0
@@ -1230,6 +1287,10 @@ basic.forever(function () {
         }
     }
 
+    // Write the angle the rate guard above had to defer, so the head always
+    // ends up where the finger left it rather than a few degrees short.
+    if (headPending && now - headWrittenAt >= HEAD_MIN_INTERVAL_MS) headWrite()
+
     // The beep runs on its own fiber: music.playTone() blocks for the length
     // of the note, and this loop also feeds the drive watchdog and the LED
     // matrix. Blocking it for half a second would stall both.
@@ -1347,6 +1408,11 @@ basic.forever(function () {
             if (uiGaugeSpdDirty) {
                 sendUiValue("gauge_spd", "" + driveSpeed)
                 uiGaugeSpdDirty = false
+                uiSent = true
+            } else if (uiGaugeHeadDirty) {
+                sendUiValue("gauge_head", "" + headAngle)
+                sendUiValue("srv_head", "" + headAngle)
+                uiGaugeHeadDirty = false
                 uiSent = true
             }
             if (uiSent) uiGaugeTxNextAt = now + UI_GAUGE_TX_GAP_MS
