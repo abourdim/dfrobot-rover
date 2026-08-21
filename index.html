@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dfrobot-rover</title>
+<meta name="description" content="A micro:bit rover on the DFRobot micro:Driver — drive it from your browser over Bluetooth.">
+<style>
+  :root{
+    --bg:#f2f5f3; --card:#fff; --fg:#16241d; --mut:#5b6e64; --line:#d7e0da;
+    --accent:#14804a; --accent-ink:#fff; --code:#eef3f0;
+    --shadow:0 1px 2px rgba(22,36,29,.05), 0 8px 24px rgba(22,36,29,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0d1411; --card:#151f1a; --fg:#e6efe9; --mut:#9ab0a4; --line:#26332c;
+      --accent:#3fbf7f; --accent-ink:#08130d; --code:#111a15;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:clamp(24px,5vw,56px) clamp(16px,4vw,28px) 72px;
+    background:var(--bg); color:var(--fg); line-height:1.6;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .wrap{max-width:62rem;margin:0 auto;display:flex;flex-direction:column;gap:clamp(26px,4vw,40px)}
+  h1{font-size:clamp(2rem,5.5vw,3rem);margin:0;line-height:1.1;letter-spacing:-.02em}
+  h2{font-size:1.25rem;margin:0 0 2px;letter-spacing:-.01em}
+  .lede{color:var(--mut);font-size:clamp(1.02rem,2.2vw,1.15rem);margin:.6rem 0 0;max-width:46ch}
+  .eyebrow{
+    font-size:.78rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .5rem;
+  }
+  a{color:var(--accent)}
+
+  /* primary action */
+  .go{
+    display:inline-flex;align-items:center;gap:12px;align-self:flex-start;
+    background:var(--accent);color:var(--accent-ink);text-decoration:none;
+    font-size:1.12rem;font-weight:700;padding:16px 28px;border-radius:14px;
+    box-shadow:var(--shadow);
+  }
+  .go:hover{filter:brightness(1.06)}
+  .go small{display:block;font-weight:500;opacity:.85;font-size:.8rem;letter-spacing:.02em}
+  .note{color:var(--mut);font-size:.9rem;margin:.7rem 0 0}
+
+  img.pinout{width:100%;height:auto;border-radius:14px;box-shadow:var(--shadow);display:block}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:14px}
+  .card{
+    display:block;text-decoration:none;color:inherit;background:var(--card);
+    border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);
+  }
+  .card:hover{border-color:var(--accent)}
+  .card .k{font-size:1.35rem;line-height:1;margin-bottom:9px;display:block}
+  .card p{margin:4px 0 0;color:var(--mut);font-size:.9rem}
+
+  ol.steps{margin:0;padding-left:1.3rem;display:flex;flex-direction:column;gap:10px}
+  ol.steps li{padding-left:.2rem}
+  code{background:var(--code);padding:.15em .45em;border-radius:5px;font-size:.9em}
+
+  .facts{width:100%;border-collapse:collapse;font-size:.94rem}
+  .facts td{border-bottom:1px solid var(--line);padding:9px 4px;vertical-align:top}
+  .facts tr:last-child td{border-bottom:none}
+  .facts td:first-child{color:var(--mut);white-space:nowrap;padding-right:18px}
+  .tw{overflow-x:auto}
+
+  footer{border-top:1px solid var(--line);padding-top:18px;color:var(--mut);font-size:.88rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">micro:bit V2 &middot; DFRobot micro:Driver</p>
+    <h1>dfrobot&#8209;rover</h1>
+    <p class="lede">A rover that drives on two servo wheels, sees with an ultrasonic sensor, and lights up. You drive it from this browser &mdash; nothing to install.</p>
+  </header>
+
+  <div>
+    <a class="go" href="https://abourdim.github.io/rxy_web/">
+      <span>▶</span>
+      <span>Launch the remote
+        <small>opens the control app &middot; press Connect</small>
+      </span>
+    </a>
+    <p class="note">Needs <strong>Chrome</strong> or <strong>Edge</strong> &mdash; Safari and Firefox have no Web Bluetooth. Turn the rover on first, then press Connect: its controls appear by themselves, because the robot sends its own panel.</p>
+  </div>
+
+  <section>
+    <h2>Where everything plugs in</h2>
+    <p class="note" style="margin-bottom:14px">Match the colour of the wire to the colour of the port &mdash; no pin numbers to read.</p>
+    <a href="assets/pinout.svg"><img class="pinout" src="assets/pinout.svg" alt="Wiring: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P13 and P14, light strip to P15"></a>
+  </section>
+
+  <section>
+    <h2>Get it running</h2>
+    <ol class="steps" style="margin-top:12px">
+      <li>Wire it up as above, batteries last, switch <strong>off</strong>.</li>
+      <li>Open <a href="https://makecode.microbit.org">makecode.microbit.org</a> &rarr; <em>Extensions</em>, and paste <code>https://github.com/DFRobot/pxt-motor</code>. Paste the URL &mdash; don't search, the name is just <code>motor</code> and there are many look-alikes.</li>
+      <li>Switch to the JavaScript view, paste <a href="firmware/rover-remote.ts">rover-remote.ts</a>, download to the micro:bit.</li>
+      <li>Switch the rover on, press <strong>Launch the remote</strong> above, then <strong>Connect</strong>.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Everything else</h2>
+    <div class="grid" style="margin-top:14px">
+      <a class="card" href="README.html">
+        <span class="k">📖</span><strong>Full guide</strong>
+        <p>Parts, wiring, the two traps, how the app and robot talk.</p>
+      </a>
+      <a class="card" href="https://github.com/DFRobot/pxt-motor">
+        <span class="k">🧩</span><strong>MakeCode extension</strong>
+        <p>Shows up as <code>motor</code>. Paste the URL, never search.</p>
+      </a>
+      <a class="card" href="https://www.dfrobot.com/product-1738.html">
+        <span class="k">🛒</span><strong>micro:Driver board</strong>
+        <p>DFR0548 at DFRobot &mdash; 4 motors, 8 servos, 9 GPIO.</p>
+      </a>
+      <a class="card" href="https://wiki.dfrobot.com/dfr0548/">
+        <span class="k">📐</span><strong>Board documentation</strong>
+        <p>DFRobot's wiki for the DFR0548 expansion board.</p>
+      </a>
+      <a class="card" href="firmware/rover-remote.ts">
+        <span class="k">⚙️</span><strong>The firmware</strong>
+        <p>One file. Paste the whole thing into MakeCode.</p>
+      </a>
+      <a class="card" href="https://github.com/abourdim/dfrobot-rover">
+        <span class="k">🐙</span><strong>Source</strong>
+        <p>This repository, issues and history.</p>
+      </a>
+      <a class="card" href="https://github.com/abourdim/rxy_web">
+        <span class="k">📱</span><strong>The remote app</strong>
+        <p>Works with every robot in this family, not just this one.</p>
+      </a>
+      <a class="card" href="https://microbit.org/get-started/user-guide/overview/">
+        <span class="k">🐣</span><strong>New to micro:bit?</strong>
+        <p>Start here &mdash; what the board is and how to flash it.</p>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Quick facts</h2>
+    <div class="tw">
+      <table class="facts" style="margin-top:10px">
+        <tr><td>Board</td><td>micro:bit <strong>V2</strong> — V1 hasn't enough memory for Bluetooth plus the strip and screen</td></tr>
+        <tr><td>Wheels</td><td>Two 360° servos on <code>S1</code> and <code>S2</code>, driven over I²C — they use no pins</td></tr>
+        <tr><td>Screen</td><td>128×32 OLED on the I²C port, address <code>0x3C</code></td></tr>
+        <tr><td>Distance</td><td>HC-SR04<strong>P</strong> — trig <code>P13</code>, echo <code>P14</code>, powered at 3.3 V</td></tr>
+        <tr><td>Lights</td><td>8 NeoPixels on <code>P15</code></td></tr>
+        <tr><td>Power</td><td>4×AA to the DC socket, 3.5–5.5 V — never run the servos from USB</td></tr>
+        <tr><td>Free pins</td><td><code>P0 P1 P2 P8 P12 P16</code></td></tr>
+      </table>
+    </div>
+    <p class="note"><strong>Before the first power-on:</strong> measure the <code>V</code> pin on the P13 or P14 socket. It should read about 3.3&nbsp;V — the distance sensor's echo copies whatever voltage you feed it, and 5&nbsp;V would go straight onto a 3.3&nbsp;V pin.</p>
+  </section>
+
+  <footer>
+    Powered by <a href="https://workshop-diy.org">Workshop-DIY.org</a>
+  </footer>
+
+</div>
+</body>
+</html>

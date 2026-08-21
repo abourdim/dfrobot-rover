@@ -1,13 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 570" width="920" height="570" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P13 and P14, light strip to P15.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 492" width="920" height="492" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P13 and P14, light strip to P15.">
   <title>Where everything plugs in</title>
 
   <!-- Fixed light card. Deliberately not theme-reactive: this renders as an
        <img> on GitHub and in the printed build sheet, so it has to look
        intentional on a white page and a dark one alike. -->
-  <rect width="920" height="570" rx="18" fill="#F5F8F6"/>
+  <rect width="920" height="492" rx="18" fill="#F5F8F6"/>
+  <g transform="translate(0,-78)">
 
-  <text x="46" y="52" font-family="Verdana,DejaVu Sans,sans-serif" font-size="26" font-weight="bold" fill="#16241D">Where everything plugs in</text>
-  <text x="46" y="76" font-family="Verdana,DejaVu Sans,sans-serif" font-size="14" fill="#5B6E64">Match the colour of the wire to the colour of the line. You never need to read a pin number.</text>
 
   <!-- ── the board ────────────────────────────────────────────── -->
   <rect x="46" y="104" width="250" height="418" rx="14" fill="#1B2A23"/>
@@ -29,13 +28,13 @@
 
   <!-- ── wires ────────────────────────────────────────────────── -->
   <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="296,237 400,237 400,150 556,150" stroke="#D93A3A"/>
+    <polyline points="296,237 340,237 340,150 556,150" stroke="#D93A3A"/>
     <polyline points="296,279 400,279 400,232 556,232" stroke="#E0801E"/>
-    <polyline points="296,321 400,321 400,300 556,300" stroke="#E0801E"/>
-    <polyline points="296,363 430,363 430,370 556,370" stroke="#7A4FD1"/>
-    <polyline points="296,405 418,405 418,440 556,440" stroke="#1E6FD9"/>
-    <polyline points="296,439 410,439 410,462 556,462" stroke="#1E6FD9"/>
-    <polyline points="296,481 400,481 400,528 556,528" stroke="#159E5C"/>
+    <polyline points="296,321 460,321 460,300 556,300" stroke="#E0801E"/>
+    <polyline points="296,363 500,363 500,370 556,370" stroke="#7A4FD1"/>
+    <polyline points="296,405 460,405 460,440 556,440" stroke="#1E6FD9"/>
+    <polyline points="296,439 400,439 400,462 556,462" stroke="#1E6FD9"/>
+    <polyline points="296,481 340,481 340,528 556,528" stroke="#159E5C"/>
   </g>
 
   <!-- ── devices ──────────────────────────────────────────────── -->
@@ -71,5 +70,6 @@
       <text x="576" y="520" font-size="15" font-weight="bold" fill="#16241D">Light strip</text>
       <text x="576" y="540" font-size="12" fill="#5B6E64">8 lights · arrow points away</text>
     </g>
+  </g>
   </g>
 </svg>
