@@ -5,10 +5,15 @@
  * ║                  Powered by Workshop-DIY.org                   ║
  * ╚════════════════════════════════════════════════════════════════╝
  *
- * A rover that drives on two continuous-rotation servos, sees with an
- * HC-SR04P, shows its state on a 128x32 OLED and lights an 8-pixel strip.
- * Controlled over Bluetooth from the rxy web app, which asks the robot for
- * its own control panel on connect (GETCFG) and renders whatever arrives.
+ * A rover that drives on two continuous-rotation servos and sees with an
+ * HC-SR04P. Controlled over Bluetooth from the rxy web app, which asks the
+ * robot for its own control panel on connect (GETCFG) and renders whatever
+ * arrives.
+ *
+ * NOT YET IMPLEMENTED: the 128x32 OLED and the 8-pixel NeoPixel strip are
+ * wired and listed below, but no code drives them yet. The control panel is
+ * also still the donor layout -- it names widgets this file no longer
+ * handles, so some controls will render and do nothing until it is rebuilt.
  *
  * ── HARDWARE ────────────────────────────────────────────────────────
  *   left wheel servo   S1        360 degree, 90 = stop
@@ -63,7 +68,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "v57"
+const FIRMWARE_VERSION = "R1-v1"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -463,6 +468,8 @@ const GLYPH_LED_R = 5
 const GLYPH_BUZZ = 6
 const GLYPH_SERVO = 7
 let pendingGlyph = GLYPH_DRIVE
+// Set by the Buzz handler, played by the loop — never from the RX callback.
+let pendingBeep = false
 // Extra payload for glyphs that show a value: 0/1 for the LED toggles,
 // 0-180 for the servo bar graph.
 let pendingValue = 0
@@ -551,7 +558,7 @@ let heartbeat = 0
 // and moves nothing).
 //
 // The rest of this file — BLE, CFG chunking, the GETCFGVER cache, telemetry,
-// the drive watchdog, the D-pad mask — is unchanged from the sibling firmware and
+// the drive watchdog, the D-pad mask — is unchanged from the donor firmware and
 // should stay diffable against it. Swapping to another driver board means
 // rewriting these functions and nothing else.
 // ═══════════════════════════════════════════════════════════════
@@ -584,10 +591,21 @@ function wheelsStop() {
     motor.servo(motor.Servos.S2, WHEEL_STOP - trimR)
 }
 
+// "Nothing bounced back." Everything downstream is written around this
+// sentinel meaning PATH CLEAR rather than "bad reading", so pingCm() must
+// return it rather than 0 -- see the comment inside.
+const NO_ECHO_CM = 500
+
 // HC-SR04P on P13/P14, read directly rather than through a board library.
-// Returns 0 for "no echo", which the caller already treats as a failed read.
 // 30000us caps the wait at roughly 5 m so a missing sensor cannot stall the
 // loop; 58 is the standard microseconds-per-centimetre round-trip constant.
+//
+// Returns NO_ECHO_CM when nothing comes back, NOT 0. This matters: the caller
+// reads >= 500 as "no echo, so the path is clear" and reports full scale,
+// while <= 0 means "bad reading, show nothing". Returning 0 put the normal
+// case -- a robot pointed at an open room -- into the bad-reading branch, so
+// the gauge and the graph stayed blank exactly when there was nothing in the
+// way. A single-shot pulseIn cannot distinguish the two anyway.
 function pingCm(): number {
     pins.setPull(PIN_ECHO, PinPullMode.PullNone)
     pins.digitalWritePin(PIN_TRIG, 0)
@@ -596,7 +614,7 @@ function pingCm(): number {
     control.waitMicros(10)
     pins.digitalWritePin(PIN_TRIG, 0)
     const echo = pins.pulseIn(PIN_ECHO, PulseValue.High, 30000)
-    if (echo == 0) return 0
+    if (echo == 0) return NO_ECHO_CM
     return Math.idiv(echo, 58)
 }
 
@@ -775,9 +793,9 @@ function handleWidget(id: string, val: string) {
         dbg("stop button pressed")
     }
 
-    // Buttons: per-wheel jog. M1 is the LEFT wheel and M2 the RIGHT — the same
-    // assignment handleDpadMask() relies on, where a left turn drives M1
-    // backward and M2 forward.
+    // Buttons: per-wheel jog. S1 is the LEFT wheel and S2 the RIGHT, the same
+    // assignment wheels() relies on -- a left turn drives S1 backward and S2
+    // forward.
     if (id == "btn_ml" || id == "btn_mr") {
         if (id == "btn_ml") jogL = (val == "1")
         else jogR = (val == "1")
@@ -848,14 +866,22 @@ function handleWidget(id: string, val: string) {
         dbg("mode -> " + val)
     }
 
-    // Button: Buzz — short confirmation beep.
+    // Button: Buzz — short confirmation beep on the V2's built-in speaker.
+    //
+    // Only REQUESTS the beep. music.playTone() blocks the calling fiber for
+    // the whole note -- a quarter beat is ~500ms at the default tempo -- and
+    // this function runs inside onUartDataReceived. Playing it here would
+    // stall the receive callback for half a second, which is the same
+    // landmine documented at the top of this file for serial.writeLine() and
+    // basic.show*. The loop plays it on a background fiber instead.
     if (id == "btn_buzz" && val == "1") {
         requestGlyph(GLYPH_BUZZ)
-        music.playTone(440, music.beat(BeatFraction.Quarter))
+        pendingBeep = true
     }
 
-    // the sibling firmware drives two auxiliary servos from slider_srv1/slider_srv2.
-    // Here S1 and S2 ARE the wheels, so those sliders are gone -- a slider
+    // The donor firmware drives two auxiliary servos from slider_srv1 and
+    // slider_srv2. Here S1 and S2 ARE the wheels, so those sliders are gone: a
+    // slider
     // that jerked the drive servos to an absolute angle would fight the
     // D-pad for control of the same hardware.
 
@@ -1064,15 +1090,13 @@ function uptimeString(totalSec: number): string {
 }
 // Ultrasonic polling cadence.
 //
-// The ultrasonic read is the most expensive call in this firmware, and
-// its cost depends entirely on whether an echo comes back. From the
-// library source, one readUlt() is basic.pause(1) + basic.pause(20) +
-// pins.pulseIn(..., 500*58) — a 29ms timeout. An echo returns almost at
-// once; no echo waits the timeout out, and Ultrasonic() then retries up
-// to four more times. So a working sensor at ~30cm costs ~25ms, while a
-// disconnected or out-of-range one costs ~250ms — and pulseIn BUSY-WAITS
-// without yielding, freezing the whole runtime rather than just this
-// loop. Polling this carelessly is what made the robot feel frozen.
+// The ultrasonic read is still the most expensive call in this firmware,
+// though far cheaper than the board library it replaced: pingCm() is ONE
+// pulseIn with a 30ms cap and no retries, where the old library retried
+// four more times and could cost ~250ms. An echo returns almost at once;
+// no echo waits the 30ms out. pulseIn BUSY-WAITS without yielding, so even
+// 30ms freezes the whole runtime rather than just this loop -- which is
+// why the guards below still earn their place.
 //
 // Two mitigations, both still earning their place:
 //   1. Skipped while the wheels are turning (except in Avoid, where the
@@ -1192,6 +1216,16 @@ basic.forever(function () {
         } else {
             showDriveDebug(pendingDebugL, pendingDebugR)
         }
+    }
+
+    // The beep runs on its own fiber: music.playTone() blocks for the length
+    // of the note, and this loop also feeds the drive watchdog and the LED
+    // matrix. Blocking it for half a second would stall both.
+    if (pendingBeep) {
+        pendingBeep = false
+        control.inBackground(function () {
+            music.playTone(440, music.beat(BeatFraction.Quarter))
+        })
     }
 
     // ── LINK LOSS BY SILENCE ─────────────────────────────────────
@@ -1416,15 +1450,15 @@ basic.forever(function () {
             // Avoid: a sensor that never echoes costs the full retry stall on
             // each attempt, so slow down while that persists and recover the
             // fast rate as soon as a real distance comes back.
-            if (cm >= 500 || cm <= 0) {
+            if (cm >= NO_ECHO_CM || cm <= 0) {
                 distInterval = Math.min(distInterval * 2, DIST_INTERVAL_MAX_MS)
             } else {
                 distInterval = DIST_INTERVAL_MS
             }
             // Decide what we'd report; -1 means "nothing to report".
             let reported = -1
-            if (cm >= 500) {
-                // the board extension's "no echo" sentinel. No echo means
+            if (cm >= NO_ECHO_CM) {
+                // Nothing bounced back. No echo means
                 // nothing bounced back, i.e. the path is CLEAR — so
                 // report the top of the gauge, not 0. Reporting 0 would
                 // read as "obstacle touching the bumper", the exact
