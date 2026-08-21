@@ -1,75 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 492" width="920" height="492" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P13 and P14, light strip to P15.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 546" width="920" height="546" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, the two wheels to S1 and S2, the sensor head servo to S3, the screen to the I2C port, the distance sensor to P13 and P14, and the light strip to P15.">
   <title>Where everything plugs in</title>
 
   <!-- Fixed light card. Deliberately not theme-reactive: this renders as an
-       <img> on GitHub and in the printed build sheet, so it has to look
+       <img> on GitHub and on a printed build sheet, so it has to look
        intentional on a white page and a dark one alike. -->
-  <rect width="920" height="492" rx="18" fill="#F5F8F6"/>
-  <g transform="translate(0,-78)">
-
+  <rect width="920" height="546" rx="18" fill="#F5F8F6"/>
 
   <!-- ── the board ────────────────────────────────────────────── -->
-  <rect x="46" y="104" width="250" height="418" rx="14" fill="#1B2A23"/>
-  <rect x="70" y="126" width="202" height="78" rx="9" fill="#2E4137"/>
-  <text x="171" y="160" text-anchor="middle" font-family="Verdana,sans-serif" font-size="15" font-weight="bold" fill="#EAF3EE">micro:bit V2</text>
-  <text x="171" y="182" text-anchor="middle" font-family="Verdana,sans-serif" font-size="12" fill="#9DBBAC">slides in gold-edge first</text>
+  <rect x="46" y="26" width="250" height="494" rx="14" fill="#1B2A23"/>
+  <rect x="70" y="46" width="202" height="74" rx="9" fill="#2E4137"/>
+  <text x="171" y="78" text-anchor="middle" font-family="Verdana,sans-serif" font-size="15" font-weight="bold" fill="#EAF3EE">micro:bit V2</text>
+  <text x="171" y="100" text-anchor="middle" font-family="Verdana,sans-serif" font-size="12" fill="#9DBBAC">slides in gold-edge first</text>
   <text x="171" y="504" text-anchor="middle" font-family="Verdana,sans-serif" font-size="13" fill="#7FA292">micro:Driver board</text>
 
-  <!-- port pads, all on the same right edge so the eye tracks one column -->
+  <!-- Port pads, one column so the eye tracks a single edge. -->
   <g font-family="Verdana,sans-serif" font-size="13" font-weight="bold" text-anchor="middle">
-    <rect x="222" y="222" width="74" height="30" rx="7" fill="#D93A3A"/><text x="259" y="242" fill="#fff">DC</text>
-    <rect x="222" y="264" width="74" height="30" rx="7" fill="#E0801E"/><text x="259" y="284" fill="#fff">S1</text>
-    <rect x="222" y="306" width="74" height="30" rx="7" fill="#E0801E"/><text x="259" y="326" fill="#fff">S2</text>
-    <rect x="222" y="348" width="74" height="30" rx="7" fill="#7A4FD1"/><text x="259" y="368" fill="#fff">I2C</text>
-    <rect x="222" y="390" width="74" height="30" rx="7" fill="#1E6FD9"/><text x="259" y="410" fill="#fff">P13</text>
-    <rect x="222" y="424" width="74" height="30" rx="7" fill="#1E6FD9"/><text x="259" y="444" fill="#fff">P14</text>
-    <rect x="222" y="466" width="74" height="30" rx="7" fill="#159E5C"/><text x="259" y="486" fill="#fff">P15</text>
+    <rect x="222" y="140" width="74" height="28" rx="7" fill="#D93A3A"/><text x="259" y="159" fill="#fff">DC</text>
+    <rect x="222" y="182" width="74" height="28" rx="7" fill="#E0801E"/><text x="259" y="201" fill="#fff">S1</text>
+    <rect x="222" y="224" width="74" height="28" rx="7" fill="#E0801E"/><text x="259" y="243" fill="#fff">S2</text>
+    <rect x="222" y="266" width="74" height="28" rx="7" fill="#C2410C"/><text x="259" y="285" fill="#fff">S3</text>
+    <rect x="222" y="308" width="74" height="28" rx="7" fill="#7A4FD1"/><text x="259" y="327" fill="#fff">I2C</text>
+    <rect x="222" y="350" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="369" fill="#fff">P13</text>
+    <rect x="222" y="386" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="405" fill="#fff">P14</text>
+    <rect x="222" y="428" width="74" height="28" rx="7" fill="#159E5C"/><text x="259" y="447" fill="#fff">P15</text>
   </g>
 
-  <!-- ── wires ────────────────────────────────────────────────── -->
+  <!-- ── wires ────────────────────────────────────────────────────
+       Each wire turns in its own column, ordered top to bottom, so the
+       bundle fans out without a single crossing. A crossing would be the
+       one thing that misleads on a diagram whose whole premise is
+       "match the colour of the wire to the colour of the port". -->
   <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="296,237 340,237 340,150 556,150" stroke="#D93A3A"/>
-    <polyline points="296,279 400,279 400,232 556,232" stroke="#E0801E"/>
-    <polyline points="296,321 460,321 460,300 556,300" stroke="#E0801E"/>
-    <polyline points="296,363 500,363 500,370 556,370" stroke="#7A4FD1"/>
-    <polyline points="296,405 460,405 460,440 556,440" stroke="#1E6FD9"/>
-    <polyline points="296,439 400,439 400,462 556,462" stroke="#1E6FD9"/>
-    <polyline points="296,481 340,481 340,528 556,528" stroke="#159E5C"/>
+    <polyline points="296,154 340,154 340,72  556,72"  stroke="#D93A3A"/>
+    <polyline points="296,196 360,196 360,138 556,138" stroke="#E0801E"/>
+    <polyline points="296,238 380,238 380,204 556,204" stroke="#E0801E"/>
+    <polyline points="296,280 400,280 400,270 556,270" stroke="#C2410C"/>
+    <polyline points="296,322 420,322 420,336 556,336" stroke="#7A4FD1"/>
+    <polyline points="296,364 440,364 440,398 556,398" stroke="#1E6FD9"/>
+    <polyline points="296,400 460,400 460,424 556,424" stroke="#1E6FD9"/>
+    <polyline points="296,442 480,442 480,490 556,490" stroke="#159E5C"/>
   </g>
 
   <!-- ── devices ──────────────────────────────────────────────── -->
   <g font-family="Verdana,sans-serif">
     <g>
-      <rect x="556" y="122" width="318" height="56" rx="11" fill="#fff" stroke="#D93A3A" stroke-width="2.5"/>
-      <text x="576" y="146" font-size="15" font-weight="bold" fill="#16241D">Battery pack</text>
-      <text x="576" y="166" font-size="12" fill="#5B6E64">4 × AA · plug in last, switch off</text>
+      <rect x="556" y="46" width="318" height="52" rx="11" fill="#fff" stroke="#D93A3A" stroke-width="2.5"/>
+      <text x="576" y="68" font-size="15" font-weight="bold" fill="#16241D">Battery pack</text>
+      <text x="576" y="87" font-size="12" fill="#5B6E64">4 × AA · plug in last, switch off</text>
     </g>
     <g>
-      <rect x="556" y="204" width="318" height="56" rx="11" fill="#fff" stroke="#E0801E" stroke-width="2.5"/>
-      <text x="576" y="228" font-size="15" font-weight="bold" fill="#16241D">Left wheel</text>
-      <text x="576" y="248" font-size="12" fill="#5B6E64">brown wire to the outside edge</text>
+      <rect x="556" y="112" width="318" height="52" rx="11" fill="#fff" stroke="#E0801E" stroke-width="2.5"/>
+      <text x="576" y="134" font-size="15" font-weight="bold" fill="#16241D">Left wheel</text>
+      <text x="576" y="153" font-size="12" fill="#5B6E64">brown wire to the outside edge</text>
     </g>
     <g>
-      <rect x="556" y="272" width="318" height="56" rx="11" fill="#fff" stroke="#E0801E" stroke-width="2.5"/>
-      <text x="576" y="296" font-size="15" font-weight="bold" fill="#16241D">Right wheel</text>
-      <text x="576" y="316" font-size="12" fill="#5B6E64">same way round as the left one</text>
+      <rect x="556" y="178" width="318" height="52" rx="11" fill="#fff" stroke="#E0801E" stroke-width="2.5"/>
+      <text x="576" y="200" font-size="15" font-weight="bold" fill="#16241D">Right wheel</text>
+      <text x="576" y="219" font-size="12" fill="#5B6E64">same way round as the left one</text>
     </g>
     <g>
-      <rect x="556" y="342" width="318" height="56" rx="11" fill="#fff" stroke="#7A4FD1" stroke-width="2.5"/>
-      <text x="576" y="366" font-size="15" font-weight="bold" fill="#16241D">Little screen</text>
-      <text x="576" y="386" font-size="12" fill="#5B6E64">128 × 32 · one cable, one socket</text>
+      <rect x="556" y="244" width="318" height="52" rx="11" fill="#fff" stroke="#C2410C" stroke-width="2.5"/>
+      <text x="576" y="266" font-size="15" font-weight="bold" fill="#16241D">Sensor head</text>
+      <text x="576" y="285" font-size="12" fill="#5B6E64">turns the eyes left and right</text>
     </g>
     <g>
-      <rect x="556" y="412" width="318" height="70" rx="11" fill="#fff" stroke="#1E6FD9" stroke-width="2.5"/>
-      <text x="576" y="436" font-size="15" font-weight="bold" fill="#16241D">Distance sensor</text>
-      <text x="576" y="456" font-size="12" fill="#5B6E64">the two round eyes · trig → P13</text>
-      <text x="576" y="473" font-size="12" fill="#5B6E64">echo → P14 · power it at 3.3 V</text>
+      <rect x="556" y="310" width="318" height="52" rx="11" fill="#fff" stroke="#7A4FD1" stroke-width="2.5"/>
+      <text x="576" y="332" font-size="15" font-weight="bold" fill="#16241D">Little screen</text>
+      <text x="576" y="351" font-size="12" fill="#5B6E64">128 × 32 · one cable, one socket</text>
     </g>
     <g>
-      <rect x="556" y="496" width="318" height="56" rx="11" fill="#fff" stroke="#159E5C" stroke-width="2.5"/>
-      <text x="576" y="520" font-size="15" font-weight="bold" fill="#16241D">Light strip</text>
-      <text x="576" y="540" font-size="12" fill="#5B6E64">8 lights · arrow points away</text>
+      <rect x="556" y="376" width="318" height="66" rx="11" fill="#fff" stroke="#1E6FD9" stroke-width="2.5"/>
+      <text x="576" y="398" font-size="15" font-weight="bold" fill="#16241D">Distance sensor</text>
+      <text x="576" y="416" font-size="12" fill="#5B6E64">the two round eyes · trig → P13</text>
+      <text x="576" y="433" font-size="12" fill="#5B6E64">echo → P14 · power it at 3.3 V</text>
     </g>
-  </g>
+    <g>
+      <rect x="556" y="464" width="318" height="52" rx="11" fill="#fff" stroke="#159E5C" stroke-width="2.5"/>
+      <text x="576" y="486" font-size="15" font-weight="bold" fill="#16241D">Light strip</text>
+      <text x="576" y="505" font-size="12" fill="#5B6E64">8 lights · arrow points away</text>
+    </g>
   </g>
 </svg>
