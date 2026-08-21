@@ -1,0 +1,29 @@
+{
+  "PRODUCT_NAME": "Micro:bit Remote Builder",
+  "PRODUCT_SLUG": "MicrobitRemote",
+  "GITHUB_REPO": "bit-rxy",
+  "GITHUB_USER": "abourdim",
+  "LIVE_DEMO_URL": "https://abourdim.github.io/bit-rxy/",
+  "VERSION": "v2.13",
+  "VERSION_UPPER": "V2.13",
+  "VERSION_PLAIN": "2.13",
+  "TAGLINE": "Build • Pair • Play — no code required",
+  "HARDWARE": "BBC micro:bit V1 or V2",
+  "PRICE_LAUNCH": "12.99",
+  "PRICE_STANDARD": "17.99",
+  "PRICE_BUNDLE": "29.99",
+  "PRICE_TRIPWIRE": "5",
+  "PRICE_SITE": "199",
+  "PRICE_DISTRICT": "499",
+  "PROMO_CODE": "RXYLAUNCH",
+  "PROMO_PRICE": "7",
+  "ALLOWED_TERMS": [
+    "servo",
+    "servos",
+    "GamePad",
+    "gamepad",
+    "LED Matrix",
+    "Graph",
+    "Sensors"
+  ]
+}
