@@ -1,127 +1,61 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Maqueen RXY — Bluetooth remote for DFRobot Maqueen Lite</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dfrobot-rover</title>
 <style>
-  :root{
-    --bg:#0d1520; --panel:#152232; --ink:#e8f0fa; --muted:#93a8c4;
-    --accent:#00d4ff; --line:rgba(255,255,255,.12); --code:#0a1119;
+  :root { --bg:#fff; --fg:#1b1f24; --mut:#5a6572; --line:#d8dee6;
+           --accent:#14804a; --code:#f3f5f8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --fg:#e6edf3; --mut:#9aa7b4; --line:#283039;
+             --accent:#3fbf7f; --code:#161b22; }
   }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f6f9fc; --panel:#fff; --ink:#12202f; --muted:#5b6f88;
-           --accent:#0077dd; --line:rgba(0,0,0,.12); --code:#eef3f8; }
-  }
-  *{box-sizing:border-box}
-  body{margin:0;padding:32px 20px 64px;background:var(--bg);color:var(--ink);
-       font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:820px;margin:0 auto}
-  h1{font-size:2rem;margin:0 0 4px}
-  h2{font-size:1.25rem;margin:38px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-  .tag{color:var(--muted);margin:0 0 20px}
-  .tag a{color:var(--accent)}
-  a{color:var(--accent)}
-  table{width:100%;border-collapse:collapse;margin:14px 0;display:block;overflow-x:auto}
-  th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-  th{color:var(--muted);font-weight:600;white-space:nowrap}
-  code{background:var(--code);padding:2px 6px;border-radius:5px;font-size:.9em}
-  pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow-x:auto;
-      border:1px solid var(--line)}
-  pre code{background:none;padding:0}
-  blockquote{margin:14px 0;padding:10px 16px;border-left:3px solid var(--accent);
-             background:var(--panel);color:var(--muted);border-radius:0 8px 8px 0}
-  .glyph{font-size:1.1em}
-  ul{padding-left:20px}
-</style>
-</head>
-<body><section><h2>Web v2.13 — Build / Play fully reviewed</h2><p>Build and Play now use a deterministic state model: mode switches and view controls never rewrite geometry, disconnected Play deep-clones Build, connected Play uses only verified device CFG, Arrange is zoom-correct and command-safe, runtime listeners are lifecycle-cleaned, and Fit/fullscreen handle oversized canvases without clipping or dead space. Responsive Play/fullscreen checks passed from 640×900 through 1920×1080. Firmware remains v52.</p></section><section><h2>Web v2.10 — Play Fit Content</h2><p>Play Fit uses occupied widget bounds instead of empty authoring canvas space, while preserving the logical CFG geometry and 1:1 view.</p></section><section><h2>Web v2.4 — Stable Build/Play geometry</h2><p>Fixed Build → Import → Play → Build changing widget positions. Automatic Tidy on resize/tab switch has been removed. Build is the authoritative model and Play renders a deep-cloned snapshot; only explicit Tidy or Play/Arrange edits may change geometry.</p></section><section><h2>Web v2.3 — Fit large imported designs</h2><p>Build now uses a scrollable, zoomable editor viewport without changing the logical CFG canvas. Imports automatically fit the whole design. Use <strong>Fit Design</strong>, +/−, 1:1, mouse-wheel/controls, normal scroll, or Alt/Option + drag to navigate large layouts while preserving exact export geometry.</p></section><section><h2>Web v2.2 — Group + Line</h2><p>Build now includes config-native <strong>Group</strong> and <strong>Line/Separator</strong> widgets. Groups can capture child widget IDs and move the whole functional section together; line separators support horizontal/vertical orientation, subtle/solid/dashed styles, thickness, color and an optional label. Both survive Layout JSON and MakeCode CFG export.</p></section><section><h2>Web v2.1 — Portable layout export</h2><p>Build and Play/Arrange can export the exact design as <strong>Layout JSON</strong> or a <strong>MakeCode CFG</strong> TypeScript snippet. Both include the canvas geometry and a fresh deterministic config revision.</p></section><section><h2>v51 — Config-defined reference layout</h2><p>The MakeCode CFG now carries the approved <strong>1372 × 776</strong> layout, including widget positions/sizes and an explicit canvas size. The web app v2.1 honors that canvas metadata. Config revision: <code>47c78c1f</code>. Control behavior remains v50.</p></section><section><h2>v50 — Heartbeat follows Telemetry</h2><p>Heartbeat is now controlled by the Telemetry selector in every drive mode: <strong>All/Basic</strong> send heartbeat, while <strong>Off</strong> is silent. Line/Avoid motor activity no longer suppresses the heartbeat. The widget configuration is unchanged.</p></section><section><h2>v49 — Distance Read selector</h2><p>The MakeCode CFG now includes a <strong>Distance read</strong> selector with <strong>Auto</strong> and <strong>Read now</strong>. Read now takes one ultrasonic sample in any drive mode and updates the distance gauge and graph, then returns the selector to Auto.</p></section>
-<div class="wrap">
-
-<h1>Maqueen RXY</h1>
-<p class="tag">A drag-and-drop Bluetooth remote for the <strong>DFRobot Maqueen Lite</strong>,
-driven from a micro:bit. Powered by <a href="https://workshop-diy.org">Workshop-DIY.org</a></p>
-
-<p>The web app builds its interface from a layout the <strong>robot itself sends</strong> on
-connect — so the firmware owns the layout, and the app is a generic renderer. Nothing to
-configure on the browser side.</p>
-
-<h2>What you need</h2>
-<ul>
-  <li>BBC micro:bit (V1 or V2)</li>
-  <li>DFRobot <strong>Maqueen Lite</strong> chassis</li>
-  <li>A browser with Web Bluetooth: Chrome, Edge or Opera on desktop/Android
-      (Safari and iOS are not supported — Apple does not implement Web Bluetooth)</li>
-</ul>
-
-<h2>Flashing the firmware</h2>
-<ol>
-  <li>Open <a href="https://makecode.microbit.org">makecode.microbit.org</a> → <strong>New Project</strong></li>
-  <li>Switch to <strong>JavaScript</strong></li>
-  <li><strong>Extensions</strong> → search <code>maqueen</code> → add <strong>pxt-maqueen</strong></li>
-  <li>Paste the contents of <a href="firmware/maqueen-remote.ts"><code>firmware/maqueen-remote.ts</code></a></li>
-  <li><strong>Download</strong> to the micro:bit</li>
-</ol>
-<p>The version number scrolls across the LED matrix at boot — check it after every flash.</p>
-
-<h2>Running the app</h2>
-<p>Serve the folder over <code>http://</code> or <code>https://</code> and open <code>index.html</code>:</p>
-<pre><code>python -m http.server 8952</code></pre>
-<p>Then browse to <a href="http://localhost:8952">http://localhost:8952</a> and press <strong>Connect</strong>.</p>
-<blockquote>Opening the file directly via <code>file://</code> mostly works but is unreliable —
-<code>file://</code> is treated as a unique security origin, which breaks parts of Web Bluetooth.</blockquote>
-
-<h2>Controls</h2>
-<table>
-  <tr><th>Control</th><th>Does</th></tr>
-  <tr><td>D-pad</td><td>Drive (differential mix, diagonals supported)</td></tr>
-  <tr><td>Speed</td><td>Top speed for manual <em>and</em> autonomous driving</td></tr>
-  <tr><td>Mode</td><td><code>Manual</code> / <code>Line</code> (line-following) / <code>Avoid</code> (obstacle avoidance)</td></tr>
-  <tr><td>STOP</td><td>Cut both motors immediately</td></tr>
-  <tr><td>Buzz</td><td>Short tone</td></tr>
-  <tr><td>LED L / LED R</td><td>Headlights</td></tr>
-  <tr><td>Servo 1 / 2</td><td>Servo angle, 0–180°</td></tr>
-  <tr><td>Line L / R</td><td>Line sensors — <strong>lit = that side is on the line</strong></td></tr>
-  <tr><td>Distance</td><td>Ultrasonic reading, as a gauge and a rolling graph</td></tr>
-  <tr><td>Uptime</td><td>Session timer — proves the link is alive</td></tr>
-</table>
-
-<h2>Reading the robot without a screen</h2>
-<p>Every command leaves a mark on the micro:bit's LED matrix, so you can tell what reached the
-robot with no cable and no console attached:</p>
-<table>
-  <tr><th>Glyph</th><th>Meaning</th></tr>
-  <tr><td><code>vNN</code> scrolling</td><td>Firmware version at boot</td></tr>
-  <tr><td class="glyph">♥</td><td>Powered up, waiting for Bluetooth</td></tr>
-  <tr><td>grid filling pixel by pixel</td><td>Sending the layout</td></tr>
-  <tr><td class="glyph">✓</td><td>Connected, layout delivered</td></tr>
-  <tr><td class="glyph">✗</td><td>Bluetooth lost (motors auto-stopped)</td></tr>
-  <tr><td class="glyph">■</td><td>STOP pressed</td></tr>
-  <tr><td class="glyph">↑ ↓ ← →</td><td>Driving that way</td></tr>
-  <tr><td>centre dot</td><td>Motors idle</td></tr>
-  <tr><td>left / right band</td><td>Headlight toggled</td></tr>
-  <tr><td class="glyph">♪</td><td>Buzz</td></tr>
-  <tr><td>bar graph</td><td>Servo angle</td></tr>
-</table>
-
-<h2>Protocol</h2>
-<p>Plain text lines over the Nordic UART service.</p>
-<pre><code>App → robot    SET &lt;widgetId&gt; &lt;value...&gt;
-App → robot    GETCFG                      request the layout (sent once, on connect)
-robot → App    CFGBEGIN / CFG &lt;b64&gt; / CFGEND
-robot → App    UPD &lt;widgetId&gt; &lt;value&gt;      sensor and status updates</code></pre>
-<p><strong>Keep messages at or under 20 bytes.</strong> The micro:bit negotiates the default
-23-byte ATT MTU, leaving exactly 20 bytes of payload. A longer write is <em>silently
-truncated</em> rather than rejected — the trailing newline never arrives and the command
-vanishes with no error on either side. The app splits outgoing writes into 20-byte packets;
-the UART service reassembles them.</p>
-
-<h2>Licence</h2>
-<p>MIT</p>
-
-</div>
-
-<section><h3>Web app 2.0</h3><p>The web application version is now <strong>2.0</strong>. A single very discreet Bismillah appears at the absolute top. Firmware remains v50.</p></section>
-<p><strong>v2.11:</strong> Build adds Trim Canvas to remove unused logical canvas space while preserving relative widget layout and supporting Undo/Redo.</p>
-</body>
-</html>
+  body { background:var(--bg); color:var(--fg); margin:0 auto; padding:2.2rem 1.2rem 4rem;
+         max-width:58rem; line-height:1.65;
+         font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  h1 { font-size:1.8rem; line-height:1.25; }
+  h2 { margin-top:2.4rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+  h3 { margin-top:1.8rem; }
+  a { color:var(--accent); }
+  code { background:var(--code); padding:.15em .4em; border-radius:4px; font-size:.9em; }
+  pre { background:var(--code); padding:1rem; border-radius:8px; overflow-x:auto; }
+  pre code { background:none; padding:0; }
+  .tw { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:1rem 0; }
+  th,td { border:1px solid var(--line); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+  th { background:var(--code); }
+  li { margin:.35rem 0; }
+  footer { margin-top:3rem; padding-top:1rem; border-top:1px solid var(--line); color:var(--mut); }
+</style></head><body>
+<h1>🤖 dfrobot-rover — micro:bit rover on the DFRobot micro:Driver</h1>
+<p>A micro:bit V2 rover that drives on two continuous-rotation servos, sees with an HC-SR04, shows its mood on a 128×32 OLED and lights an 8-pixel NeoPixel strip. Controlled over Bluetooth from <a href="https://github.com/abourdim/rxy_web">rxy_web</a> — no install, no account, no WiFi.</p>
+<p><strong>The robot owns the layout.</strong> The app is a generic renderer: it connects, asks the robot for its panel, and draws whatever comes back. There is no per-robot build of the app, and nothing to configure on the browser side.</p>
+<h2>Hardware</h2>
+<div class="tw"><table><thead><tr><th>part</th><th>connection</th><th>notes</th></tr></thead><tbody><tr><td>micro:bit <strong>V2</strong></td><td>edge slot</td><td>V2 required — V1 has too little RAM for BLE + strip + OLED</td></tr><tr><td>micro:Driver <strong>DFR0548</strong></td><td>—</td><td>PCA9685 at <code>0x40</code>, motors and servos over I²C</td></tr><tr><td>left drive servo</td><td><strong>S1</strong></td><td>360° continuous rotation, <code>90</code> = stop</td></tr><tr><td>right drive servo</td><td><strong>S2</strong></td><td>mounted mirrored — see the trim note below</td></tr><tr><td>OLED 128×32</td><td><strong>I²C port</strong></td><td>SSD1306 at <code>0x3C</code>, shares the bus with the driver</td></tr><tr><td>HC-SR04<strong>P</strong></td><td><strong>P13</strong> trig · <strong>P14</strong> echo</td><td>3.3 V part; power it at 3.3 V and no divider is needed</td></tr><tr><td>NeoPixel ×8</td><td><strong>P15</strong></td><td></td></tr><tr><td>battery 4×AA</td><td><strong>DC jack</strong></td><td>3.5–5.5 V; servos draw from here, never from USB</td></tr></tbody></table></div>
+<p>Free for later: <strong>P0 P1 P2 P8 P12 P16</strong>.</p>
+<h3>MakeCode extension</h3>
+<p>Paste the URL rather than searching — several look-alike &quot;motor&quot; extensions compile cleanly and move nothing:</p>
+<pre><code>https://github.com/DFRobot/pxt-motor</code></pre>
+<h3>Two things that bite</h3>
+<p><strong>The right servo is mirrored.</strong> Forward is *down* from 90 on that side and *up* on the left. Trim is therefore added on the left and <strong>subtracted</strong> on the right, so a positive trim means &quot;more forward&quot; on both wheels. Adding it to both is what made the ESP32 rover curve right, and two 360° servos never run at matched speeds out of the box — expect to trim every robot individually.</p>
+<p><strong>A 128×32 OLED needs its init corrected.</strong> The common MakeCode libraries take a height parameter but hardcode the two registers that actually tell the SSD1306 how many rows it has. After <code>init</code>, send <code>0xA8, 0x1F</code> and <code>0xDA, 0x02</code> or the text draws doubled and interlaced — it initialises without error, so there is nothing to chase.</p>
+<h2>Where the code is</h2>
+<p>Everything board-specific lives in one seam at the top of <a href="firmware/rover-remote.ts"><code>firmware/rover-remote.ts</code></a>:</p>
+<pre><code>wheels(l, r)     drive mix -&gt; two servo pulses, with the mirror and the trim
+wheelsStop()     both wheels to neutral
+pingCm()         HC-SR04P on P13/P14, 0 means no echo</code></pre>
+<p>Everything below that seam — BLE, the chunked CFG transfer, the <code>GETCFGVER</code> cache, telemetry, the drive watchdog, the D-pad mask handling — is unchanged from <a href="https://github.com/abourdim/maqueen-rxy"><code>maqueen-rxy</code></a> and should stay diffable against it. Changing driver board again means rewriting those three functions and nothing else.</p>
+<h2>Relationship to maqueen-rxy</h2>
+<p>Forked with full history, so fixes cherry-pick both ways rather than being hand-copied. What this chassis does <strong>not</strong> have, and what was removed with it:</p>
+<div class="tw"><table><thead><tr><th>removed</th><th>why</th></tr></thead><tbody><tr><td>DC motors (<code>motorRun</code>)</td><td>servos drive this rover</td></tr><tr><td>two auxiliary servo sliders</td><td>S1/S2 *are* the wheels here — a slider jerking them to an absolute angle would fight the D-pad for the same hardware</td></tr><tr><td>two board LEDs</td><td>the NeoPixel strip replaces them</td></tr><tr><td>both line sensors</td><td>not on this chassis</td></tr><tr><td><strong>Line</strong> mode</td><td>a follower reading floating pins drives straight off the table</td></tr></tbody></table></div>
+<p><strong>Avoid</strong> mode survives — it needs only the sonar.</p>
+<h2>Flashing</h2>
+<p>There is no local build. Open <a href="https://makecode.microbit.org">makecode.microbit.org</a>, add the <code>pxt-motor</code> extension, switch to the JavaScript view, paste <code>firmware/rover-remote.ts</code>, and download to the micro:bit.</p>
+<p>Unlike the ESP32 robots in this family, <strong>this firmware cannot be compiled locally</strong> — errors only surface on paste. Treat a fresh paste as the build step, not a formality.</p>
+<h2>Status</h2>
+<div class="tw"><table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>hardware layer</td><td>ported and committed — drive, sonar, removals</td></tr><tr><td>layouts</td><td><strong>not yet regenerated</strong> — the CFG blob still names Maqueen widgets</td></tr><tr><td>fun features</td><td>designed, not built</td></tr><tr><td>compiled</td><td><strong>never</strong> — needs a MakeCode paste</td></tr></tbody></table></div>
+<p>The panels are the next piece. Until they are regenerated, the robot serves a layout containing controls it no longer handles.</p>
+<h2>Planned features</h2>
+<p>Three of these need no extra hardware at all — micro:bit V2 already has a speaker, a microphone and an accelerometer.</p>
+<ul><li><strong>A face on the screen.</strong> Two big eyes on the 128×32. Blinks, looks worried as an obstacle nears, dizzy when spinning, asleep when idle.</li><li><strong>Type a message.</strong> An edit field in the app; the text scrolls on the OLED, and the panel mirrors what is *actually* on screen.</li><li><strong>The strip as a rangefinder.</strong> Pixels light green → amber → red as something approaches, and how many light up shows how close. It makes an invisible sensor visible, which is the best teaching trick here.</li><li><strong>Ouch.</strong> The accelerometer catches a bump; the rover flinches, flashes red and backs off.</li><li><strong>Reversing beeper</strong>, only when driving backwards.</li><li><strong>Clap to go</strong> — one clap starts, two stops.</li><li><strong>Follow my hand</strong> — holds a fixed distance from whatever is in front.</li><li><strong>Record &amp; replay</strong> — drive a path, play it back. This is the one that quietly teaches programming.</li><li><strong>Light shows</strong> — rainbow, chase, sparkle, Knight Rider.</li></ul>
+<p>Powered by <a href="https://workshop-diy.org">Workshop-DIY.org</a></p>
+</body></html>
