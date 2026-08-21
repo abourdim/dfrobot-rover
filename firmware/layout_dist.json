@@ -10,7 +10,7 @@
    "y": 42,
    "w": 688,
    "h": 752,
-   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,level"
+   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,level"
   },
   {
    "id": "gauge_dist",
@@ -94,6 +94,16 @@
    "w": 120,
    "h": 120,
    "label": "Ahead"
+  },
+  {
+   "id": "head_mode",
+   "t": "select",
+   "x": 540,
+   "y": 690,
+   "w": 170,
+   "h": 70,
+   "label": "Head",
+   "options": "Manual,Sweep"
   },
   {
    "id": "level",

@@ -19,9 +19,9 @@
    "color": "#ffb020",
    "x": 976,
    "y": 42,
-   "w": 468,
-   "h": 902,
-   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center"
+   "w": 538,
+   "h": 942,
+   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode"
   },
   {
    "id": "grp_sys",
@@ -40,7 +40,7 @@
    "label": "SCREEN",
    "color": "#c084fc",
    "x": 976,
-   "y": 972,
+   "y": 1012,
    "w": 348,
    "h": 262,
    "children": "oled_text,lbl_oled"
@@ -226,6 +226,16 @@
    "label": "Ahead"
   },
   {
+   "id": "head_mode",
+   "t": "select",
+   "x": 1320,
+   "y": 890,
+   "w": 170,
+   "h": 70,
+   "label": "Head",
+   "options": "Manual,Sweep"
+  },
+  {
    "id": "mode",
    "t": "select",
    "x": 80,
@@ -288,7 +298,7 @@
    "id": "oled_text",
    "t": "editfield",
    "x": 1000,
-   "y": 1030,
+   "y": 1070,
    "w": 300,
    "h": 80,
    "label": "Say something"
@@ -297,7 +307,7 @@
    "id": "lbl_oled",
    "t": "label",
    "x": 1000,
-   "y": 1140,
+   "y": 1180,
    "w": 300,
    "h": 70,
    "label": "On the screen",
@@ -305,7 +315,7 @@
   }
  ],
  "canvas": {
-  "w": 1500,
-  "h": 1290
+  "w": 1570,
+  "h": 1330
  }
 }

@@ -69,7 +69,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v6"
+const FIRMWARE_VERSION = "R1-v7"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -287,52 +287,54 @@ const CFG_EXPERT =
     "cCIsImxhYmVsIjoiRFJJVkUiLCJjb2xvciI6IiMwMGQ0ZmYiLCJ4Ijo1NiwieSI6NDIsInciOjg2OCwiaCI6NzIy" +
     "LCJjaGlsZHJlbiI6ImRwYWRfbW92ZSxzcGQsYnRuX3N0b3AsZ2F1Z2Vfc3BkLGJ0bl9tbCxidG5fbXIsdHJpbV9s" +
     "LHRyaW1fciJ9LHsiaWQiOiJncnBfZGlzdCIsInQiOiJncm91cCIsImxhYmVsIjoiRElTVEFOQ0UiLCJjb2xvciI6" +
-    "IiNmZmIwMjAiLCJ4Ijo5NzYsInkiOjQyLCJ3Ijo0NjgsImgiOjkwMiwiY2hpbGRyZW4iOiJnYXVnZV9kaXN0LGFs" +
-    "ZXJ0LGRpc3RfcmVhZCxncmFwaF9kaXN0LHNydl9oZWFkLGdhdWdlX2hlYWQsYnRuX2hlYWRfY2VudGVyIn0seyJp" +
-    "ZCI6ImdycF9zeXMiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IlNZU1RFTSIsImNvbG9yIjoiIzg4OTJiMCIsIngiOjU2" +
-    "LCJ5Ijo3OTIsInciOjYwOCwiaCI6MzAyLCJjaGlsZHJlbiI6Im1vZGUsdXBkLGxldmVsLGxibF92ZXIsbGJsX2hl" +
-    "YXJ0YmVhdCxidG5fYnV6eiJ9LHsiaWQiOiJncnBfc2NyZWVuIiwidCI6Imdyb3VwIiwibGFiZWwiOiJTQ1JFRU4i" +
-    "LCJjb2xvciI6IiNjMDg0ZmMiLCJ4Ijo5NzYsInkiOjk3MiwidyI6MzQ4LCJoIjoyNjIsImNoaWxkcmVuIjoib2xl" +
-    "ZF90ZXh0LGxibF9vbGVkIn0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInkiOjEwMCwidyI6" +
-    "NDIwLCJoIjo0MjAsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNs" +
-    "aWRlciIsIngiOjU0MCwieSI6MTAwLCJ3IjoxMjAsImgiOjI2MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1h" +
-    "eCI6MjU1LCJzdGVwIjo1LCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6NzAw" +
-    "LCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6Imdh" +
-    "dWdlIiwieCI6NzAwLCJ5IjoyNjAsInciOjIwMCwiaCI6MTkwLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4" +
-    "IjoyNTUsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNwZCIsInZhbHVlIjoyMDB9LHsiaWQi" +
-    "OiJidG5fbWwiLCJ0IjoiYnV0dG9uIiwieCI6ODAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVm" +
-    "dCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjotMSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9t" +
-    "ciIsInQiOiJidXR0b24iLCJ4IjoyOTAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hl" +
-    "ZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQi" +
-    "OiJzbGlkZXIiLCJ4Ijo1MzAsInkiOjU2MCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiVHJpbSBMIiwibWluIjot" +
-    "MjAsIm1heCI6MjAsInN0ZXAiOjEsInZhbHVlIjowfSx7ImlkIjoidHJpbV9yIiwidCI6InNsaWRlciIsIngiOjY1" +
-    "MCwieSI6NTYwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJUcmltIFIiLCJtaW4iOi0yMCwibWF4IjoyMCwic3Rl" +
-    "cCI6MSwidmFsdWUiOjB9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAwLCJ3" +
-    "IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJk" +
-    "ZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngi" +
-    "OjEyNTAsInkiOjExMCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoiZGlzdF9yZWFkIiwi" +
-    "dCI6InNlbGVjdCIsIngiOjEwMDAsInkiOjMzMCwidyI6MTgwLCJoIjo3MCwibGFiZWwiOiJEaXN0YW5jZSByZWFk" +
-    "Iiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjEw" +
-    "MDAsInkiOjQzMCwidyI6NDIwLCJoIjoyNTAsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3" +
-    "aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJzcnZfaGVhZCIsInQiOiJzbGlkZXIiLCJ4IjoxMDAwLCJ5" +
-    "Ijo3MzAsInciOjEwMCwiaCI6MTkwLCJsYWJlbCI6Ikxvb2siLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2" +
-    "YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9oZWFkIiwidCI6ImdhdWdlIiwieCI6MTEyMCwieSI6NzMwLCJ3IjoxODAs" +
-    "ImgiOjE5MCwibGFiZWwiOiJBbmdsZSIsIm1pbiI6MCwibWF4IjoxODAsInVuaXRzIjoiwrAiLCJkZWNpbWFscyI6" +
-    "MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6ImJ0bl9oZWFkX2Nl" +
-    "bnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzIwLCJ5Ijo3NjAsInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6IkFoZWFk" +
-    "In0seyJpZCI6Im1vZGUiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjg1MCwidyI6MTYwLCJoIjo3MCwibGFiZWwi" +
-    "OiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxBdm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6Mjcw" +
-    "LCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVGVsZW1ldHJ5Iiwib3B0aW9ucyI6IkFsbCxCYXNpYyxP" +
-    "ZmYifSx7ImlkIjoibGV2ZWwiLCJ0Ijoic2VsZWN0IiwieCI6NDYwLCJ5Ijo4NTAsInciOjE3MCwiaCI6NzAsImxh" +
-    "YmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNlLFNjcmVlbiJ9LHsi" +
-    "aWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6ODAsInkiOjk2MCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJG" +
-    "aXJtd2FyZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6Mjcw" +
-    "LCJ5Ijo5NjAsInciOjIyMCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImJ0" +
-    "bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjUyMCwieSI6OTUwLCJ3IjoxMjAsImgiOjEyMCwibGFiZWwiOiJCZWVw" +
-    "In0seyJpZCI6Im9sZWRfdGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4IjoxMDAwLCJ5IjoxMDMwLCJ3IjozMDAsImgi" +
-    "OjgwLCJsYWJlbCI6IlNheSBzb21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4IjoxMDAw" +
-    "LCJ5IjoxMTQwLCJ3IjozMDAsImgiOjcwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifV0s" +
-    "ImNhbnZhcyI6eyJ3IjoxNTAwLCJoIjoxMjkwfX0="
+    "IiNmZmIwMjAiLCJ4Ijo5NzYsInkiOjQyLCJ3Ijo1MzgsImgiOjk0MiwiY2hpbGRyZW4iOiJnYXVnZV9kaXN0LGFs" +
+    "ZXJ0LGRpc3RfcmVhZCxncmFwaF9kaXN0LHNydl9oZWFkLGdhdWdlX2hlYWQsYnRuX2hlYWRfY2VudGVyLGhlYWRf" +
+    "bW9kZSJ9LHsiaWQiOiJncnBfc3lzIiwidCI6Imdyb3VwIiwibGFiZWwiOiJTWVNURU0iLCJjb2xvciI6IiM4ODky" +
+    "YjAiLCJ4Ijo1NiwieSI6NzkyLCJ3Ijo2MDgsImgiOjMwMiwiY2hpbGRyZW4iOiJtb2RlLHVwZCxsZXZlbCxsYmxf" +
+    "dmVyLGxibF9oZWFydGJlYXQsYnRuX2J1enoifSx7ImlkIjoiZ3JwX3NjcmVlbiIsInQiOiJncm91cCIsImxhYmVs" +
+    "IjoiU0NSRUVOIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6OTc2LCJ5IjoxMDEyLCJ3IjozNDgsImgiOjI2MiwiY2hp" +
+    "bGRyZW4iOiJvbGVkX3RleHQsbGJsX29sZWQifSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQiLCJ4Ijo4MCwi" +
+    "eSI6MTAwLCJ3Ijo0MjAsImgiOjQyMCwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJz" +
+    "cGQiLCJ0Ijoic2xpZGVyIiwieCI6NTQwLCJ5IjoxMDAsInciOjEyMCwiaCI6MjYwLCJsYWJlbCI6IlNwZWVkIiwi" +
+    "bWluIjo2MCwibWF4IjoyNTUsInN0ZXAiOjUsInZhbHVlIjoyMDB9LHsiaWQiOiJidG5fc3RvcCIsInQiOiJidXR0" +
+    "b24iLCJ4Ijo3MDAsInkiOjEwMCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoiU1RPUCJ9LHsiaWQiOiJnYXVnZV9z" +
+    "cGQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo3MDAsInkiOjI2MCwidyI6MjAwLCJoIjoxOTAsImxhYmVsIjoiU3BlZWQiLCJt" +
+    "aW4iOjYwLCJtYXgiOjI1NSwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3BkIiwidmFsdWUi" +
+    "OjIwMH0seyJpZCI6ImJ0bl9tbCIsInQiOiJidXR0b24iLCJ4Ijo4MCwieSI6NTYwLCJ3IjoxOTAsImgiOjEyMCwi" +
+    "bGFiZWwiOiJMZWZ0IHdoZWVsIiwiaWNvbiI6IuKame+4jyIsInNwaW4iOi0xLCJjb2xvciI6IiMwZTc0OTAifSx7" +
+    "ImlkIjoiYnRuX21yIiwidCI6ImJ1dHRvbiIsIngiOjI5MCwieSI6NTYwLCJ3IjoxOTAsImgiOjEyMCwibGFiZWwi" +
+    "OiJSaWdodCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjoxLCJjb2xvciI6IiMwZTc0OTAifSx7ImlkIjoi" +
+    "dHJpbV9sIiwidCI6InNsaWRlciIsIngiOjUzMCwieSI6NTYwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJUcmlt" +
+    "IEwiLCJtaW4iOi0yMCwibWF4IjoyMCwic3RlcCI6MSwidmFsdWUiOjB9LHsiaWQiOiJ0cmltX3IiLCJ0Ijoic2xp" +
+    "ZGVyIiwieCI6NjUwLCJ5Ijo1NjAsInciOjEwMCwiaCI6MTgwLCJsYWJlbCI6IlRyaW0gUiIsIm1pbiI6LTIwLCJt" +
+    "YXgiOjIwLCJzdGVwIjoxLCJ2YWx1ZSI6MH0seyJpZCI6ImdhdWdlX2Rpc3QiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMDAw" +
+    "LCJ5IjoxMDAsInciOjIyMCwiaCI6MjAwLCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgiOjIwMCwidW5p" +
+    "dHMiOiJjbSIsImRlY2ltYWxzIjowLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoiYWxlcnQiLCJ0Ijoibm90aWZp" +
+    "Y2F0aW9uIiwieCI6MTI1MCwieSI6MTEwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJk" +
+    "aXN0X3JlYWQiLCJ0Ijoic2VsZWN0IiwieCI6MTAwMCwieSI6MzMwLCJ3IjoxODAsImgiOjcwLCJsYWJlbCI6IkRp" +
+    "c3RhbmNlIHJlYWQiLCJvcHRpb25zIjoiQXV0byxSZWFkIG5vdyJ9LHsiaWQiOiJncmFwaF9kaXN0IiwidCI6Imdy" +
+    "YXBoIiwieCI6MTAwMCwieSI6NDMwLCJ3Ijo0MjAsImgiOjI1MCwibGFiZWwiOiJEaXN0YW5jZSBjbSIsIm1vZGVs" +
+    "IjoiZ3JpZCIsIndpbmRvd1NlYyI6MzAsInNlcmllcyI6MX0seyJpZCI6InNydl9oZWFkIiwidCI6InNsaWRlciIs" +
+    "IngiOjEwMDAsInkiOjczMCwidyI6MTAwLCJoIjoxOTAsImxhYmVsIjoiTG9vayIsIm1pbiI6MCwibWF4IjoxODAs" +
+    "InN0ZXAiOjEsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX2hlYWQiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMTIwLCJ5Ijo3" +
+    "MzAsInciOjE4MCwiaCI6MTkwLCJsYWJlbCI6IkFuZ2xlIiwibWluIjowLCJtYXgiOjE4MCwidW5pdHMiOiLCsCIs" +
+    "ImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNydl9oZWFkIiwidmFsdWUiOjkwfSx7ImlkIjoi" +
+    "YnRuX2hlYWRfY2VudGVyIiwidCI6ImJ1dHRvbiIsIngiOjEzMjAsInkiOjc2MCwidyI6MTAwLCJoIjoxMDAsImxh" +
+    "YmVsIjoiQWhlYWQifSx7ImlkIjoiaGVhZF9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEzMjAsInkiOjg5MCwidyI6" +
+    "MTcwLCJoIjo3MCwibGFiZWwiOiJIZWFkIiwib3B0aW9ucyI6Ik1hbnVhbCxTd2VlcCJ9LHsiaWQiOiJtb2RlIiwi" +
+    "dCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiTW9kZSIsIm9wdGlvbnMi" +
+    "OiJNYW51YWwsQXZvaWQifSx7ImlkIjoidXBkIiwidCI6InNlbGVjdCIsIngiOjI3MCwieSI6ODUwLCJ3IjoxNjAs" +
+    "ImgiOjcwLCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn0seyJpZCI6ImxldmVs" +
+    "IiwidCI6InNlbGVjdCIsIngiOjQ2MCwieSI6ODUwLCJ3IjoxNzAsImgiOjcwLCJsYWJlbCI6IkxldmVsIiwib3B0" +
+    "aW9ucyI6IkJlZ2lubmVyLEV4cGVydCxEcml2ZSxEaXN0YW5jZSxTY3JlZW4ifSx7ImlkIjoibGJsX3ZlciIsInQi" +
+    "OiJsYWJlbCIsIngiOjgwLCJ5Ijo5NjAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiRmlybXdhcmUiLCJtb2RlbCI6" +
+    "ImNhcmQifSx7ImlkIjoibGJsX2hlYXJ0YmVhdCIsInQiOiJsYWJlbCIsIngiOjI3MCwieSI6OTYwLCJ3IjoyMjAs" +
+    "ImgiOjcwLCJsYWJlbCI6IlVwdGltZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0" +
+    "b24iLCJ4Ijo1MjAsInkiOjk1MCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoiQmVlcCJ9LHsiaWQiOiJvbGVkX3Rl" +
+    "eHQiLCJ0IjoiZWRpdGZpZWxkIiwieCI6MTAwMCwieSI6MTA3MCwidyI6MzAwLCJoIjo4MCwibGFiZWwiOiJTYXkg" +
+    "c29tZXRoaW5nIn0seyJpZCI6ImxibF9vbGVkIiwidCI6ImxhYmVsIiwieCI6MTAwMCwieSI6MTE4MCwidyI6MzAw" +
+    "LCJoIjo3MCwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn1dLCJjYW52YXMiOnsidyI6MTU3" +
+    "MCwiaCI6MTMzMH19"
 const CFG_DRIVE =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEcml2ZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQiOiJn" +
     "cm91cCIsImxhYmVsIjoiV0hFRUxTIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo3NjgsImgi" +
@@ -358,22 +360,24 @@ const CFG_DIST =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEaXN0YW5jZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQi" +
     "OiJncm91cCIsImxhYmVsIjoiRElTVEFOQ0UiLCJjb2xvciI6IiNmZmIwMjAiLCJ4Ijo1NiwieSI6NDIsInciOjY4" +
     "OCwiaCI6NzUyLCJjaGlsZHJlbiI6ImdhdWdlX2Rpc3QsYWxlcnQsZGlzdF9yZWFkLGdyYXBoX2Rpc3Qsc3J2X2hl" +
-    "YWQsZ2F1Z2VfaGVhZCxidG5faGVhZF9jZW50ZXIsbGV2ZWwifSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVn" +
-    "ZSIsIngiOjgwLCJ5IjoxMDAsInciOjIyMCwiaCI6MjAwLCJsYWJlbCI6IkRpc3RhbmNlIiwibWluIjowLCJtYXgi" +
-    "OjIwMCwidW5pdHMiOiJjbSIsImRlY2ltYWxzIjowLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoiYWxlcnQiLCJ0" +
-    "Ijoibm90aWZpY2F0aW9uIiwieCI6MzMwLCJ5IjoxMTAsInciOjExMCwiaCI6MTgwLCJsYWJlbCI6IkFsZXJ0In0s" +
-    "eyJpZCI6ImRpc3RfcmVhZCIsInQiOiJzZWxlY3QiLCJ4Ijo4MCwieSI6MzMwLCJ3IjoxODAsImgiOjcwLCJsYWJl" +
-    "bCI6IkRpc3RhbmNlIHJlYWQiLCJvcHRpb25zIjoiQXV0byxSZWFkIG5vdyJ9LHsiaWQiOiJncmFwaF9kaXN0Iiwi" +
-    "dCI6ImdyYXBoIiwieCI6ODAsInkiOjQzMCwidyI6NDIwLCJoIjoyNDAsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJt" +
-    "b2RlbCI6ImdyaWQiLCJ3aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJzcnZfaGVhZCIsInQiOiJzbGlk" +
-    "ZXIiLCJ4Ijo1NDAsInkiOjEwMCwidyI6MTAwLCJoIjoxOTAsImxhYmVsIjoiTG9vayIsIm1pbiI6MCwibWF4Ijox" +
-    "ODAsInN0ZXAiOjEsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX2hlYWQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo1NDAsInki" +
-    "OjMyMCwidyI6MTgwLCJoIjoxOTAsImxhYmVsIjoiQW5nbGUiLCJtaW4iOjAsIm1heCI6MTgwLCJ1bml0cyI6IsKw" +
-    "IiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3J2X2hlYWQiLCJ2YWx1ZSI6OTB9LHsiaWQi" +
-    "OiJidG5faGVhZF9jZW50ZXIiLCJ0IjoiYnV0dG9uIiwieCI6NTQwLCJ5Ijo1NDAsInciOjEyMCwiaCI6MTIwLCJs" +
-    "YWJlbCI6IkFoZWFkIn0seyJpZCI6ImxldmVsIiwidCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo3MDAsInciOjE3MCwi" +
-    "aCI6NzAsImxhYmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNlLFNj" +
-    "cmVlbiJ9XSwiY2FudmFzIjp7InciOjgwMCwiaCI6ODUwfX0="
+    "YWQsZ2F1Z2VfaGVhZCxidG5faGVhZF9jZW50ZXIsaGVhZF9tb2RlLGxldmVsIn0seyJpZCI6ImdhdWdlX2Rpc3Qi" +
+    "LCJ0IjoiZ2F1Z2UiLCJ4Ijo4MCwieSI6MTAwLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1p" +
+    "biI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6" +
+    "ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngiOjMzMCwieSI6MTEwLCJ3IjoxMTAsImgiOjE4MCwibGFiZWwi" +
+    "OiJBbGVydCJ9LHsiaWQiOiJkaXN0X3JlYWQiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjMzMCwidyI6MTgwLCJo" +
+    "Ijo3MCwibGFiZWwiOiJEaXN0YW5jZSByZWFkIiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3Jh" +
+    "cGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjgwLCJ5Ijo0MzAsInciOjQyMCwiaCI6MjQwLCJsYWJlbCI6IkRpc3Rh" +
+    "bmNlIGNtIiwibW9kZWwiOiJncmlkIiwid2luZG93U2VjIjozMCwic2VyaWVzIjoxfSx7ImlkIjoic3J2X2hlYWQi" +
+    "LCJ0Ijoic2xpZGVyIiwieCI6NTQwLCJ5IjoxMDAsInciOjEwMCwiaCI6MTkwLCJsYWJlbCI6Ikxvb2siLCJtaW4i" +
+    "OjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9oZWFkIiwidCI6ImdhdWdlIiwi" +
+    "eCI6NTQwLCJ5IjozMjAsInciOjE4MCwiaCI6MTkwLCJsYWJlbCI6IkFuZ2xlIiwibWluIjowLCJtYXgiOjE4MCwi" +
+    "dW5pdHMiOiLCsCIsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNydl9oZWFkIiwidmFsdWUi" +
+    "OjkwfSx7ImlkIjoiYnRuX2hlYWRfY2VudGVyIiwidCI6ImJ1dHRvbiIsIngiOjU0MCwieSI6NTQwLCJ3IjoxMjAs" +
+    "ImgiOjEyMCwibGFiZWwiOiJBaGVhZCJ9LHsiaWQiOiJoZWFkX21vZGUiLCJ0Ijoic2VsZWN0IiwieCI6NTQwLCJ5" +
+    "Ijo2OTAsInciOjE3MCwiaCI6NzAsImxhYmVsIjoiSGVhZCIsIm9wdGlvbnMiOiJNYW51YWwsU3dlZXAifSx7Imlk" +
+    "IjoibGV2ZWwiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjcwMCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZl" +
+    "bCIsIm9wdGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsi" +
+    "dyI6ODAwLCJoIjo4NTB9fQ=="
 const CFG_SCREEN =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBTY3JlZW4gdGVzdCIsIndpZGdldHMiOlt7ImlkIjoiZ3JwX3Rlc3QiLCJ0Ijoi" +
     "Z3JvdXAiLCJsYWJlbCI6IlNDUkVFTiIsImNvbG9yIjoiI2MwODRmYyIsIngiOjU2LCJ5Ijo0MiwidyI6NTg4LCJo" +
@@ -386,9 +390,9 @@ const CFG_SCREEN =
     "dGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzAw" +
     "LCJoIjo0OTB9fQ=="
 const IDS_BEGINNER = ",dpad_move,btn_stop,gauge_dist,alert,level,lbl_ver,"
-const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,"
+const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,"
 const IDS_DRIVE = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,level,"
-const IDS_DIST = ",gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,level,"
+const IDS_DIST = ",gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,level,"
 const IDS_SCREEN = ",oled_text,lbl_oled,btn_buzz,level,"
 // <<< LAYOUTS
 
@@ -853,6 +857,28 @@ function head(angle: number) {
     else headPending = true
 }
 
+// ── SWEEP ───────────────────────────────────────────────────────────
+// The head can pan back and forth on its own, so the rover scans the room
+// instead of staring straight ahead. Driven from the loop by timestamps, never
+// by pauses, so the radio and the drive watchdog keep running through it.
+//
+// The limits stop short of the ends: a head that slams into the chassis at 0
+// or 180 stalls the servo, which draws current and buzzes rather than moving.
+const HEAD_SWEEP_MIN = 30
+const HEAD_SWEEP_MAX = 150
+const HEAD_SWEEP_STEP = 5
+const HEAD_SWEEP_MS = 120
+let headSweep = false
+let headSweepDir = 1
+let nextSweepAt = 0
+
+// The angle is mirrored to the app at most this often. Every step would be
+// eight updates a second on a link that sends 18 characters per 35ms -- the
+// gauge cannot show that much and the traffic would crowd out the drive
+// commands.
+const HEAD_TX_MS = 300
+let headTxAt = 0
+
 // "Nothing bounced back." Everything downstream is written around this
 // sentinel meaning PATH CLEAR rather than "bad reading", so pingCm() must
 // return it rather than 0 -- see the comment inside.
@@ -1065,6 +1091,14 @@ function handleWidget(id: string, val: string) {
         dbg("jog: L=" + (jogL ? 1 : 0) + " R=" + (jogR ? 1 : 0))
     }
 
+    // Select: how the head behaves — aimed by hand, or panning on its own.
+    if (id == "head_mode") {
+        headSweep = (val == "Sweep")
+        if (!headSweep) head(HEAD_CENTER)
+        dbg("head mode -> " + val)
+        return
+    }
+
     // Edit field: text for the little screen. Clearing it restores the banner.
     if (id == "oled_text") {
         oledText = val
@@ -1189,6 +1223,13 @@ function handleWidget(id: string, val: string) {
         // selector in the layout offers Manual and Avoid only.
         if (val == "Avoid") driveMode = MODE_AVOID
         else driveMode = MODE_MANUAL
+        // Avoid decides where to go from the distance STRAIGHT AHEAD. With the
+        // head panning, a wall beside the rover would read as an obstacle in
+        // front of it, so the sweep stops and the head returns to centre.
+        if (driveMode == MODE_AVOID && headSweep) {
+            headSweep = false
+            head(HEAD_CENTER)
+        }
         // Reset ownership timing at the mode boundary. The age of the last
         // Manual D-pad packet must never decide whether autonomous motors run.
         lastDriveCmdAt = input.runningTime()
@@ -1553,6 +1594,23 @@ basic.forever(function () {
             led.plotBarGraph(pendingValue, 180)
         } else {
             showDriveDebug(pendingDebugL, pendingDebugR)
+        }
+    }
+
+    // Step the sweep. Manual only -- Avoid needs the head still, and the mode
+    // handler already centres it on the way in.
+    if (headSweep && driveMode == MODE_MANUAL && now >= nextSweepAt) {
+        nextSweepAt = now + HEAD_SWEEP_MS
+        let a = headAngle + headSweepDir * HEAD_SWEEP_STEP
+        if (a >= HEAD_SWEEP_MAX) { a = HEAD_SWEEP_MAX; headSweepDir = -1 }
+        else if (a <= HEAD_SWEEP_MIN) { a = HEAD_SWEEP_MIN; headSweepDir = 1 }
+        head(a)
+        // Deliberately does NOT touch uiGaugeLastInputAt: that timer exists to
+        // wait for a human to stop dragging, and a sweep never stops, so the
+        // coalescer would wait forever and the gauge would never move.
+        if (now - headTxAt >= HEAD_TX_MS) {
+            headTxAt = now
+            uiGaugeHeadDirty = true
         }
     }
 

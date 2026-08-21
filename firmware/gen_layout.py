@@ -109,6 +109,8 @@ expert = build("Rover — Expert", [
           min=0, max=180, units="°", decimals=0, model="min",
           source="srv_head", value=90),
         W("btn_head_center", "button", 1320, 760, 100, 100, label="Ahead"),
+        W("head_mode", "select", 1320, 890, 170, 70, label="Head",
+          options="Manual,Sweep"),
     ]),
     # Two rows, kept left of x=976: one row reached into the DISTANCE column
     # and the validator refused it.
@@ -125,8 +127,8 @@ expert = build("Rover — Expert", [
     # is REALLY on the glass, truncation included, so a message too long for
     # the panel looks cut off here too rather than quietly disagreeing.
     ("grp_screen", "SCREEN", "#c084fc", [
-        W("oled_text", "editfield", 1000, 1030, 300, 80, label="Say something"),
-        W("lbl_oled", "label", 1000, 1140, 300, 70, label="On the screen",
+        W("oled_text", "editfield", 1000, 1070, 300, 80, label="Say something"),
+        W("lbl_oled", "label", 1000, 1180, 300, 70, label="On the screen",
           model="card"),
     ]),
 ])
@@ -169,6 +171,8 @@ dist_test = build("Rover — Distance test", [
           min=0, max=180, units="°", decimals=0, model="min",
           source="srv_head", value=90),
         W("btn_head_center", "button", 540, 540, 120, 120, label="Ahead"),
+        W("head_mode", "select", 540, 690, 170, 70, label="Head",
+          options="Manual,Sweep"),
         LEVEL(80, 700),
     ]),
 ])

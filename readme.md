@@ -1,7 +1,7 @@
 # 🤖 dfrobot-rover
 
-A micro:bit rover that drives on two servo wheels, sees with an ultrasonic
-sensor, shows its mood on a little screen and lights an 8-pixel strip.
+A micro:bit rover that drives on two servo wheels, looks around with an
+ultrasonic sensor on a third servo, and shows messages on a little screen.
 
 You drive it from a web page over Bluetooth — nothing to install, no account,
 no WiFi. Open [rxy_web](https://github.com/abourdim/rxy_web) in Chrome or Edge,
@@ -22,7 +22,8 @@ to configure in the browser, and no special build of the app for this robot.
 | right wheel servo | **S2** | mounted mirrored — see *Straight-line trim* below |
 | little screen | **I²C port** | SSD1306 128×32 at address `0x3C` |
 | distance sensor | **P13** trig · **P14** echo | HC-SR04**P**, the 3.3 V version |
-| light strip | **P15** | 8 NeoPixels |
+| sensor head servo | **S3** | turns the eyes left and right |
+| light strip | **P15** | 8 NeoPixels *(not driven yet)* |
 | battery pack | **DC socket** | 4×AA, 3.5–5.5 V |
 
 Still free for whatever you add next: **P0 P1 P2 P8 P12 P16**.
@@ -151,21 +152,61 @@ robot → app     UPD <widget> <v>   a reading changed
 Because the layout is cached against that id, only the **first** connection
 pays for the transfer.
 
-## Modes
+## The five panels
+
+The **Level** selector is on every panel, so you switch with a dropdown
+instead of reflashing. Each is a separate layout stored on the robot and only
+the chosen one is sent, so Beginner appears in under three seconds where
+Expert takes about nine.
+
+| panel | what's on it |
+|---|---|
+| **Beginner** | pad, STOP, distance, alert. Nothing else. |
+| **Expert** *(the default)* | everything the rover can do |
+| **Drive** | jog each wheel, watch which way it turns, trim it straight |
+| **Distance** | gauge, alert, graph, and the sensor head |
+| **Screen** | type a message, see it on the glass |
+
+## The sensor head
+
+The ultrasonic sits on its own servo, so the rover can look around without
+turning. **Look** aims it by hand, **Ahead** re-centres it, and setting
+**Head** to **Sweep** pans it back and forth on its own, so the distance graph
+draws the room instead of one fixed direction.
+
+Sweep stops automatically in **Avoid** mode and the head returns to centre.
+Avoid decides where to go from the distance *straight ahead*, so with the head
+panning a wall beside the rover would read as an obstacle in front of it.
+
+The sweep stops short of the ends, 30° to 150°. A head that slams into the
+chassis stalls the servo, which buzzes and draws current instead of moving.
+
+## Driving straight
+
+Two 360° servos never run at matched speeds, so a rover always curves a little
+at first. **Trim L** and **Trim R** correct it: drive forward on a flat floor
+and raise whichever wheel is lagging. Expect single digits — more than about
+10 usually means something mechanical.
+
+Trim lives in memory only. This board has no storage, so it resets whenever
+the rover is switched off.
+
+## Driving modes
 
 | mode | what it does |
 |---|---|
-| **Manual** | you drive, with the pad or the joystick |
+| **Manual** | you drive with the pad |
 | **Avoid** | the rover drives itself and backs away from obstacles |
 
 ## Status
 
 | | |
 |---|---|
-| drive, distance sensor | written |
-| screen, light strip | planned |
-| control panels | **not yet built** |
-| compiled on real hardware | **not yet** — needs a MakeCode paste |
+| drive, trim | working on hardware |
+| distance sensor, sweep head | working on hardware |
+| screen | written — the 128x32 correction is untested on glass |
+| five control panels | working on hardware |
+| light strip | **not driven yet** |
 
 ## Planned
 
@@ -174,7 +215,6 @@ microphone and a motion sensor.
 
 - **A face on the screen** — two big eyes that blink, look worried as something
   gets close, go dizzy when spinning, and fall asleep when idle.
-- **Type a message** and watch it scroll across the rover's screen.
 - **The strip as a distance meter** — pixels light green → amber → red as
   something approaches, and the number lit shows how close. It makes an
   invisible sensor visible.
