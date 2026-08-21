@@ -44,15 +44,22 @@ whatever voltage you feed it, so if that socket supplies 5 V instead, echo puts
 ## Programming it
 
 Open **[makecode.microbit.org](https://makecode.microbit.org)** → *Extensions*,
-and paste this URL:
+and paste this URL into the search box:
 
 ```
 https://github.com/DFRobot/pxt-motor
 ```
 
-Paste the URL rather than searching for "motor" — several look-alike extensions
-exist, and the wrong one **compiles cleanly and moves nothing**, which is a
-miserable thing to debug.
+| | |
+|---|---|
+| extension | **[DFRobot/pxt-motor](https://github.com/DFRobot/pxt-motor)** |
+| appears in MakeCode as | `motor` |
+| blocks namespace | `motor.servo()`, `motor.MotorRun()`, `motor.motorStop()` |
+
+**Paste the URL — do not search by name.** DFRobot published this as plain
+`motor`, the most generic name on the platform, so a search returns a pile of
+look-alikes with this one somewhere among them. Pick the wrong one and it
+**compiles cleanly and moves nothing**, which is a miserable thing to debug.
 
 Then switch to the JavaScript view, paste
 [`firmware/rover-remote.ts`](firmware/rover-remote.ts), and download to the

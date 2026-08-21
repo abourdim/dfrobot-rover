@@ -20,11 +20,14 @@
  *   free               P0 P1 P2 P8 P12 P16
  *
  * ── EXTENSION REQUIRED ──────────────────────────────────────────────
- *   https://github.com/DFRobot/pxt-motor
+ *   https://github.com/DFRobot/pxt-motor       <- paste this URL
+ *   appears in MakeCode as:  motor
+ *   provides:  motor.servo(), motor.MotorRun(), motor.motorStop()
  *
- *   Paste that URL into MakeCode -> Extensions. Do NOT search for "motor":
- *   several look-alike extensions exist, and the wrong one compiles cleanly
- *   and moves nothing, which is a miserable thing to debug.
+ *   Paste the URL. Do NOT search by name: DFRobot published this as plain
+ *   "motor", the most generic name on the platform, so a search returns a
+ *   pile of look-alikes with this one somewhere among them. The wrong one
+ *   compiles cleanly and moves nothing, which is a miserable thing to debug.
  *
  * ── HOW TO FLASH ────────────────────────────────────────────────────
  *   1. https://makecode.microbit.org -> new project
