@@ -1,125 +1,145 @@
-# 🤖 dfrobot-rover — micro:bit rover on the DFRobot micro:Driver
+# 🤖 dfrobot-rover
 
-A micro:bit V2 rover that drives on two continuous-rotation servos, sees with
-an HC-SR04, shows its mood on a 128×32 OLED and lights an 8-pixel NeoPixel
-strip. Controlled over Bluetooth from [rxy_web](https://github.com/abourdim/rxy_web) —
-no install, no account, no WiFi.
+A micro:bit rover that drives on two servo wheels, sees with an ultrasonic
+sensor, shows its mood on a little screen and lights an 8-pixel strip.
 
-**The robot owns the layout.** The app is a generic renderer: it connects, asks
-the robot for its panel, and draws whatever comes back. There is no per-robot
-build of the app, and nothing to configure on the browser side.
+You drive it from a web page over Bluetooth — nothing to install, no account,
+no WiFi. Open [rxy_web](https://github.com/abourdim/rxy_web) in Chrome or Edge,
+press **Connect**, and the rover's own control panel appears.
 
-## Hardware
+**The robot owns the layout.** The app is a plain renderer: it connects, asks
+the rover what controls it has, and draws whatever comes back. There is nothing
+to configure in the browser, and no special build of the app for this robot.
 
-| part | connection | notes |
+## Where everything plugs in
+
+![Pinout — battery to DC, wheels to S1 and S2, screen to I2C, distance sensor to P13 and P14, light strip to P15](assets/pinout.svg)
+
+| part | plugs into | notes |
 |---|---|---|
-| micro:bit **V2** | edge slot | V2 required — V1 has too little RAM for BLE + strip + OLED |
-| micro:Driver **DFR0548** | — | PCA9685 at `0x40`, motors and servos over I²C |
-| left drive servo | **S1** | 360° continuous rotation, `90` = stop |
-| right drive servo | **S2** | mounted mirrored — see the trim note below |
-| OLED 128×32 | **I²C port** | SSD1306 at `0x3C`, shares the bus with the driver |
-| HC-SR04**P** | **P13** trig · **P14** echo | 3.3 V part; power it at 3.3 V and no divider is needed |
-| NeoPixel ×8 | **P15** | |
-| battery 4×AA | **DC jack** | 3.5–5.5 V; servos draw from here, never from USB |
+| micro:bit **V2** | the edge slot | V2 only — V1 hasn't enough memory for Bluetooth plus the strip and screen |
+| left wheel servo | **S1** | 360° continuous rotation; `90` means stop |
+| right wheel servo | **S2** | mounted mirrored — see *Straight-line trim* below |
+| little screen | **I²C port** | SSD1306 128×32 at address `0x3C` |
+| distance sensor | **P13** trig · **P14** echo | HC-SR04**P**, the 3.3 V version |
+| light strip | **P15** | 8 NeoPixels |
+| battery pack | **DC socket** | 4×AA, 3.5–5.5 V |
 
-Free for later: **P0 P1 P2 P8 P12 P16**.
+Still free for whatever you add next: **P0 P1 P2 P8 P12 P16**.
 
-### MakeCode extension
+### Two things share one cable
 
-Paste the URL rather than searching — several look-alike "motor" extensions
-compile cleanly and move nothing:
+The screen and the motor driver both live on the I²C port and don't argue —
+the driver answers to `0x40`, the screen to `0x3C`. The wheels therefore cost
+**no pins at all**; they're driven over that same cable.
+
+### Check this before the first power-on
+
+Measure the **`V` pin** on the P13 or P14 socket with the battery connected.
+It should read about **3.3 V**. The distance sensor's echo output copies
+whatever voltage you feed it, so if that socket supplies 5 V instead, echo puts
+5 V onto a 3.3 V pin. If it does read 5 V: take the sensor's red wire from a
+3.3 V point, or fit a divider (4.7 kΩ from echo, 10 kΩ to ground).
+
+## Programming it
+
+Open **[makecode.microbit.org](https://makecode.microbit.org)** → *Extensions*,
+and paste this URL:
 
 ```
 https://github.com/DFRobot/pxt-motor
 ```
 
-### Two things that bite
+Paste the URL rather than searching for "motor" — several look-alike extensions
+exist, and the wrong one **compiles cleanly and moves nothing**, which is a
+miserable thing to debug.
 
-**The right servo is mirrored.** Forward is *down* from 90 on that side and
-*up* on the left. Trim is therefore added on the left and **subtracted** on the
-right, so a positive trim means "more forward" on both wheels. Adding it to
-both is what made the ESP32 rover curve right, and two 360° servos never run at
-matched speeds out of the box — expect to trim every robot individually.
+Then switch to the JavaScript view, paste
+[`firmware/rover-remote.ts`](firmware/rover-remote.ts), and download to the
+micro:bit.
 
-**A 128×32 OLED needs its init corrected.** The common MakeCode libraries take
-a height parameter but hardcode the two registers that actually tell the
-SSD1306 how many rows it has. After `init`, send `0xA8, 0x1F` and `0xDA, 0x02`
-or the text draws doubled and interlaced — it initialises without error, so
-there is nothing to chase.
+There is no local build step. MakeCode compiles in the browser, so **a fresh
+paste is the build** — treat a successful paste as the thing that proves the
+code, not a formality.
 
-## Where the code is
+## Two traps worth knowing
 
-Everything board-specific lives in one seam at the top of
+**Straight-line trim.** The right servo is mounted facing the other way, so
+"forward" is *down* from 90 on that side and *up* on the left. Trim is added on
+the left and **subtracted** on the right, so a positive number means "more
+forward" on both wheels. Add it to both and the rover curves. Two 360° servos
+never run at matched speeds out of the box, so expect to trim every robot
+individually — drive it forward on a flat floor and nudge whichever wheel is
+lagging.
+
+**The 128×32 screen needs its start-up corrected.** The common MakeCode screen
+libraries accept a height but hardcode the two registers that tell the display
+how many rows it actually has. After `init`, send `0xA8, 0x1F` and
+`0xDA, 0x02`, or text draws doubled and interlaced. It starts up without any
+error, so there's nothing to chase — you just get a strange-looking screen.
+
+## How the code is arranged
+
+Everything specific to this board sits in one short seam at the top of
 [`firmware/rover-remote.ts`](firmware/rover-remote.ts):
 
 ```
-wheels(l, r)     drive mix -> two servo pulses, with the mirror and the trim
+wheels(l, r)     drive mix → two servo pulses, with the mirror and the trim
 wheelsStop()     both wheels to neutral
-pingCm()         HC-SR04P on P13/P14, 0 means no echo
+pingCm()         distance sensor on P13/P14; 0 means nothing came back
 ```
 
-Everything below that seam — BLE, the chunked CFG transfer, the `GETCFGVER`
-cache, telemetry, the drive watchdog, the D-pad mask handling — is unchanged
-from [`maqueen-rxy`](https://github.com/abourdim/maqueen-rxy) and should stay
-diffable against it. Changing driver board again means rewriting those three
+Everything below that seam is the shared rxy stack — Bluetooth, the chunked
+layout transfer, the layout cache, telemetry, the drive watchdog, the D-pad
+handling. Changing to a different driver board means rewriting those three
 functions and nothing else.
 
-## Relationship to maqueen-rxy
+### How the app and the robot talk
 
-Forked with full history, so fixes cherry-pick both ways rather than being
-hand-copied. What this chassis does **not** have, and what was removed with it:
+```
+app   → robot   GETCFGVER          what layout do you have?
+robot → app     CFGVER <id>        this one
+        (match) → CFGOK            already cached, nothing to send
+        (differ)→ GETCFG           send it all
+app   → robot   SET <widget> <v>   a control moved
+robot → app     UPD <widget> <v>   a reading changed
+```
 
-| removed | why |
+Because the layout is cached against that id, only the **first** connection
+pays for the transfer.
+
+## Modes
+
+| mode | what it does |
 |---|---|
-| DC motors (`motorRun`) | servos drive this rover |
-| two auxiliary servo sliders | S1/S2 *are* the wheels here — a slider jerking them to an absolute angle would fight the D-pad for the same hardware |
-| two board LEDs | the NeoPixel strip replaces them |
-| both line sensors | not on this chassis |
-| **Line** mode | a follower reading floating pins drives straight off the table |
-
-**Avoid** mode survives — it needs only the sonar.
-
-## Flashing
-
-There is no local build. Open [makecode.microbit.org](https://makecode.microbit.org),
-add the `pxt-motor` extension, switch to the JavaScript view, paste
-`firmware/rover-remote.ts`, and download to the micro:bit.
-
-Unlike the ESP32 robots in this family, **this firmware cannot be compiled
-locally** — errors only surface on paste. Treat a fresh paste as the build
-step, not a formality.
+| **Manual** | you drive, with the pad or the joystick |
+| **Avoid** | the rover drives itself and backs away from obstacles |
 
 ## Status
 
 | | |
 |---|---|
-| hardware layer | ported and committed — drive, sonar, removals |
-| layouts | **not yet regenerated** — the CFG blob still names Maqueen widgets |
-| fun features | designed, not built |
-| compiled | **never** — needs a MakeCode paste |
+| drive, distance sensor | written |
+| screen, light strip | planned |
+| control panels | **not yet built** |
+| compiled on real hardware | **not yet** — needs a MakeCode paste |
 
-The panels are the next piece. Until they are regenerated, the robot serves a
-layout containing controls it no longer handles.
+## Planned
 
-## Planned features
+Three of these need no extra parts — a micro:bit V2 already has a speaker, a
+microphone and a motion sensor.
 
-Three of these need no extra hardware at all — micro:bit V2 already has a
-speaker, a microphone and an accelerometer.
-
-- **A face on the screen.** Two big eyes on the 128×32. Blinks, looks worried
-  as an obstacle nears, dizzy when spinning, asleep when idle.
-- **Type a message.** An edit field in the app; the text scrolls on the OLED,
-  and the panel mirrors what is *actually* on screen.
-- **The strip as a rangefinder.** Pixels light green → amber → red as something
-  approaches, and how many light up shows how close. It makes an invisible
-  sensor visible, which is the best teaching trick here.
-- **Ouch.** The accelerometer catches a bump; the rover flinches, flashes red
-  and backs off.
-- **Reversing beeper**, only when driving backwards.
+- **A face on the screen** — two big eyes that blink, look worried as something
+  gets close, go dizzy when spinning, and fall asleep when idle.
+- **Type a message** and watch it scroll across the rover's screen.
+- **The strip as a distance meter** — pixels light green → amber → red as
+  something approaches, and the number lit shows how close. It makes an
+  invisible sensor visible.
+- **Ouch** — the motion sensor feels a bump, the rover flinches and backs off.
+- **Reversing beeper**, like a truck, only when going backwards.
 - **Clap to go** — one clap starts, two stops.
-- **Follow my hand** — holds a fixed distance from whatever is in front.
-- **Record & replay** — drive a path, play it back. This is the one that
-  quietly teaches programming.
+- **Follow my hand** — holds a fixed distance from whatever is in front of it.
+- **Record & replay** — drive a path, play it back.
 - **Light shows** — rainbow, chase, sparkle, Knight Rider.
 
 Powered by [Workshop-DIY.org](https://workshop-diy.org)

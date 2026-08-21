@@ -1,189 +1,52 @@
 /**
  * ╔════════════════════════════════════════════════════════════════╗
- * ║            🎮 Micro:bit Remote Builder (bit-rxy) 🎮            ║
- * ║                                                                ║
- * ║   Powered by Workshop-DIY.org                                  ║
- *   Maqueen Lite: D-pad drive, servo sliders, LEDs, buzzer         ║
- * ╚══════════════════════════════════════════════════════════════╝
+ * ║                    🤖 dfrobot-rover  🤖                        ║
+ * ║             micro:bit V2 · micro:Driver DFR0548                ║
+ * ║                  Powered by Workshop-DIY.org                   ║
+ * ╚════════════════════════════════════════════════════════════════╝
  *
- * 📋 PROJECT: Maqueen Remote
+ * A rover that drives on two continuous-rotation servos, sees with an
+ * HC-SR04P, shows its state on a 128x32 OLED and lights an 8-pixel strip.
+ * Controlled over Bluetooth from the rxy web app, which asks the robot for
+ * its own control panel on connect (GETCFG) and renders whatever arrives.
  *
- * bit-rxy-generated skeleton for the "Maqueen" layout (D-pad drive,
- * STOP, Buzz, LED L/R toggles, Servo 1/2 sliders), with handleWidget()
- * filled in to drive a real DFRobot Maqueen Lite via the pxt-maqueen
- * extension.
+ * ── HARDWARE ────────────────────────────────────────────────────────
+ *   left wheel servo   S1        360 degree, 90 = stop
+ *   right wheel servo  S2        mounted mirrored -- see wheels()
+ *   OLED 128x32        I2C       0x3C, shares the bus with the driver at 0x40
+ *   HC-SR04P           P13 trig / P14 echo, powered at 3.3V
+ *   NeoPixel x8        P15
+ *   battery 4xAA       DC socket, 3.5-5.5V
+ *   free               P0 P1 P2 P8 P12 P16
  *
- * The D-pad → motor mix below is ported directly from Maqueen Lab's
- * own proven drive-pad code (js/maqueen-tab.js): it boils down to a
- * normalized (nx, ny) vector — nx = turn (right positive), ny =
- * forward (up positive) — fed through the same differential-drive
- * formula:
- *     L = clamp(ref * (ny + nx), -ref, ref)
- *     R = clamp(ref * (ny - nx), -ref, ref)
- * with the same 12%-of-full-scale dead zone before treating input as
- * "stopped", so behavior should match what Maqueen Lab's own UI does.
+ * ── EXTENSION REQUIRED ──────────────────────────────────────────────
+ *   https://github.com/DFRobot/pxt-motor
  *
- * ════════════════════════════════════════════════════════════════
- * ⚡ LOW-LATENCY D-PAD — REAL-HARDWARE LESSONS (v43)
- * ════════════════════════════════════════════════════════════════
+ *   Paste that URL into MakeCode -> Extensions. Do NOT search for "motor":
+ *   several look-alike extensions exist, and the wrong one compiles cleanly
+ *   and moves nothing, which is a miserable thing to debug.
  *
- * This section records the latency investigation so the same problems
- * do not get reintroduced later. The final v43 path was reached by
- * testing each layer separately: browser pointer event → Web Bluetooth
- * write → micro:bit UART receive callback → Maqueen I2C motor write.
- * v43 was the first build that felt immediate in real driving tests.
+ * ── HOW TO FLASH ────────────────────────────────────────────────────
+ *   1. https://makecode.microbit.org -> new project
+ *   2. Extensions -> paste the URL above
+ *   3. Switch to the JavaScript view
+ *   4. Paste this whole file, replacing what is there
+ *   5. Download to the micro:bit
  *
- * 1) REMOVE ARTIFICIAL UI/QUEUE DELAYS
- *    - The browser originally waited ~60 ms between BLE writes.
- *    - D-pad release had a 100 ms debounce.
- *    Those two delays were directly visible as press/stop latency and
- *    were removed. D-pad uses Pointer Events so touch devices do not
- *    generate a second synthetic mouse sequence after the touch.
+ *   There is no local build. MakeCode compiles in the browser, so a clean
+ *   paste IS the build step -- it is what proves this file, not a formality.
  *
- * 2) DO NOT REPLAY OLD MOTOR EVENTS
- *    A reliable FIFO sounds safe, but it is wrong for steering: a stale
- *    press/release queued ahead of the newest direction makes the robot
- *    faithfully execute OLD intentions. Manual drive therefore uses
- *    "latest complete state wins", not "deliver every historical click".
- *    The state is a 4-bit mask: Up=1, Down=2, Left=4, Right=8. This also
- *    preserves diagonals naturally.
+ * ── STRUCTURE ───────────────────────────────────────────────────────
+ *   Everything board-specific is in the HARDWARE SEAM below: wheels(),
+ *   wheelsStop() and pingCm(). Everything after it is the shared rxy stack
+ *   -- BLE, the chunked CFG transfer, the layout cache, telemetry, the drive
+ *   watchdog, the D-pad mask. Changing driver board means rewriting those
+ *   three functions and nothing else.
  *
- * 3) KEEP THE RADIO PACKET TINY
- *    The old text protocol could exceed the BLE UART payload used by the
- *    app. For example "SET dpad_move up 1" fit while down/left/right were
- *    longer and could require another BLE write/connection event. We
- *    first shortened the command, then removed text parsing entirely.
- *    FINAL FORMAT: one ASCII byte 'a'..'p' encodes mask 0..15, followed
- *    by newline. The browser therefore writes exactly TWO bytes for a
- *    D-pad state change.
- *
- * 4) BYPASS THE GENERAL BLE QUEUE FOR MOTORS
- *    Sliders, PINGs and other controls may be serialized/coalesced by the
- *    normal app queue. The D-pad has its own writer and replaces any
- *    pending motor state with the newest one. At most the GATT write
- *    already in progress can finish first; stale motor states do not
- *    build a backlog.
- *
- * 5) EXECUTE MOTORS DIRECTLY IN THE RECEIVE CALLBACK
- *    The one-byte packet is detected before GETCFG/SET parsing and goes
- *    straight to handleDpadMask(). That hot path does only: decode mask,
- *    calculate left/right speed, and call motorStop()/motorRun(). It does
- *    NOT call handleWidget(), dbg(), LED rendering, telemetry, or the
- *    generic drive refresh/rate-limit path.
- *
- * 6) NEVER BLOCK THE BLE RECEIVE CALLBACK WITH DISPLAY OR LOGGING
- *    basic.showArrow/showIcon/showLeds normally include hundreds of ms
- *    of display time unless interval 0 is supplied. Earlier firmware
- *    rendered arrows inside the receive path, producing ~400-600 ms of
- *    apparent control lag. Display work is now deferred to the forever
- *    loop and uses interval 0.
- *
- *    serial.writeLine() was another trap: with no USB serial reader it
- *    can block the calling fiber. bluetooth.uartWriteLine() from inside
- *    onUartDataReceived was also found to interfere with BLE turnaround.
- *    dbg() therefore only queues text; optional BLE logs drain later from
- *    the main loop, and debugging defaults OFF.
- *
- * 7) ULTRASONIC POLLING CAN FREEZE THE WHOLE RUNTIME
- *    pxt-maqueen Ultrasonic() retries pulseIn() when there is no echo.
- *    On open space this can busy-wait for roughly 250 ms. That freeze
- *    also freezes BLE command handling, so a perfectly fast D-pad packet
- *    still appears late. The latency build NEVER polls Ultrasonic() in
- *    Manual or Line mode; distance sensing is reserved for Avoid mode.
- *
- * 8) BACKGROUND BLE TRAFFIC MATTERS
- *    Telemetry/logs/heartbeat traffic shares the same BLE link with motor
- *    commands. The Telemetry selector is the explicit policy switch:
- *    All/Basic may send the lightweight heartbeat, while Off is fully
- *    silent. Expensive sensor work is still suppressed in Manual, app PING
- *    traffic is sparse around driving, and the D-pad writer has priority.
- *    bluetooth.setTransmitPower(7) is used for the strongest
- *    link available from MakeCode.
- *
- * 9) MOTOR I2C WRITES: CHANGE IMMEDIATELY, DO NOT SPAM
- *    Maqueen motors are controlled over I2C. Generic joystick/servo code
- *    still avoids redundant writes, but the D-pad hot path writes a real
- *    state change immediately. Do not restore a fixed 125 ms/8 Hz delay
- *    to handleDpadMask(); that turns directly into steering latency.
- *
- * 10) KEEP SAFETY WITHOUT MAKING CONTROL SLUGGISH
- *    A held direction is periodically re-sent as the SAME complete mask.
- *    The firmware watchdog stops the motors if those refreshes disappear,
- *    protecting against a lost release/link while still letting a held
- *    button stay active. Link-loss handling also stops both motors.
- *
- * IMPORTANT DESIGN RULE: for real-time drive controls, optimize for the
- * newest desired STATE, not guaranteed delivery of every EVENT. Reliability
- * for an old steering command is often indistinguishable from latency.
- *
- *
- * ════════════════════════════════════════════════════════════════
- * 💓 v50 — HEARTBEAT FOLLOWS TELEMETRY, NOT DRIVE MODE
- * ════════════════════════════════════════════════════════════════
- * Earlier builds suppressed heartbeat whenever the motors had been
- * updated recently. That was useful while chasing Manual D-pad latency,
- * but in Line/Avoid the motors are updated continuously by autonomous
- * code, so the UI looked as if the heartbeat had stopped.
- *
- * v50 makes the Telemetry selector the single source of truth:
- *   • All   -> heartbeat + full telemetry
- *   • Basic -> heartbeat + firmware version only
- *   • Off   -> no heartbeat / no optional telemetry
- *
- * The heartbeat counter still advances once per second internally.
- * sendValue() applies the selected telemetry level before anything is
- * written over BLE. Therefore Manual, Line and Avoid now have the same
- * heartbeat semantics, and changing mode no longer changes whether the
- * connection appears alive.
- *
- * Extension required (MakeCode → Extensions):
- *   • pxt-maqueen   (https://github.com/DFRobot/pxt-maqueen)
- *
- * 🚀 HOW TO USE:
- *    1. Copy this entire file's contents
- *    2. Go to https://makecode.microbit.org
- *    3. Create new project → Switch to JavaScript mode
- *    4. Add the pxt-maqueen extension (Extensions → search "maqueen")
- *    5. Paste this code → Download to micro:bit
- *    6. Open bit-rxy (or maqueen-rxy) and connect — the app requests
- *       the layout automatically (GETCFG) and builds the D-pad,
- *       STOP/Buzz buttons, LED toggles and servo sliders.
- *
- * ⚠️ Note on debugging: use dbg() (not serial.writeLine directly) for
- * anything you want to see while testing. It logs over BLE as
- * "LOG <msg>" lines — the app already console.logs every raw BLE line
- * it receives, so dbg() output shows up in the browser DevTools
- * console (F12) with nothing but the BLE connection already open, no
- * USB cable needed. General controls can request LED-matrix diagnostics,
- * but the v43 D-pad hot path intentionally does no display work at all;
- * nothing visual is allowed between the BLE packet and motorRun().
- *
- * 🖥️ LED MATRIX LEGEND — every glyph is distinct on purpose, so the
- * robot can be read untethered without a cable or console:
- *    "v43"        scrolling at boot   — firmware version (check after every flash)
- *    ○            hollow ring         — powered up, idle, waiting for BLE
- *    filling grid pixel by pixel      — sending the layout (GETCFG)
- *    ✓            tick                — connected, layout delivered
- *    ✗            cross               — BLE link lost (motors auto-stopped)
- *    ■            square              — STOP button pressed
- *    ↑ ↓ ← →      arrow               — driving in that direction
- *    ·            centre dot          — motors idle (direction released)
- *    ◇            small diamond       — only one wheel driving
- *    ▌ left band  solid / corners     — LED L toggled on / off
- *    ▐ right band solid / corners     — LED R toggled on / off
- *    ♪            quarter note        — Buzz pressed
- *    bar graph    rising bar          — servo angle (0-180)
- *
- * Most non-drive controls leave a visual mark. The D-pad is the one
- * deliberate exception: visual feedback was removed from its hot path
- * because responsiveness is more important than per-packet animation.
- *
- * 🔌 Wire protocol (bit-rxy's own, NOT Maqueen Lab's #N/ECHO: dialect):
- *    App → micro:bit   <a..p> + newline        (FAST D-pad: 1-byte mask)
- *    App → micro:bit   SET <widgetId> <value...>
- *    App → micro:bit   GETCFG                 (asks for the layout once, on connect)
- *    micro:bit → App   CFGBEGIN <chunkCount> / CFG <b64 chunk> / CFGEND
- *    micro:bit → App   UPD <widgetId> <value>  (optional — push sensor/status updates)
+ * ── DEBUGGING ───────────────────────────────────────────────────────
+ *   Use dbg(), never serial.writeLine() directly: the queue exists because
+ *   writing to a stalled link blocks the calling fiber and wedges the whole
+ *   firmware, display included.
  */
 
 // Bump this on every real change and check it (serial log + LED scroll
@@ -202,7 +65,7 @@ const FIRMWARE_VERSION = "v57"
 // handler hung forever right at the logging line and the hardware
 // action never ran. It only looked like it worked during debugging
 // sessions because USB + the serial monitor happened to be open and
-// actively draining the buffer at that moment. Maqueen Lab's own
+// actively draining the buffer at that moment. The reference
 // firmware has the exact same landmine and defends against it by
 // defaulting logging OFF — same fix here. Flip debugEnabled to true
 // to see dbg() output over BLE as "LOG <msg>" lines, which the app
@@ -309,7 +172,7 @@ const LINK_TIMEOUT_MS = 9000
 // Every bluetooth.uartWriteLine() in this file is gated on it, because
 // writing to a UART with no peer BLOCKS THE CALLING FIBER once the
 // buffer stops draining — the identical failure mode as serial.
-// writeLine(). Maqueen Lab's firmware keeps the same flag for the same
+// writeLine(). The reference firmware keeps the same flag for the same
 // reason. cfgSent is NOT a substitute: it only tracks whether the
 // layout was delivered, and it stays true across a link drop until the
 // disconnect handler runs.
@@ -317,7 +180,7 @@ let btConnected = false
 
 // ── TELEMETRY LEVEL ──────────────────────────────────────────────
 // How much the robot pushes back to the app. Everything the firmware
-// reports — uptime, distance, line sensors, obstacle alert — is a UPD
+// reports — uptime, distance, obstacle alert — is a UPD
 // write, and each one competes with the drive commands coming the other
 // way. Turning it down is the cheapest way to free the radio.
 //
@@ -478,16 +341,16 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
 })
 
 // ═══════════════════════════════════════════════════════════════
-// 🕹️ DRIVE MIX — ported from Maqueen Lab's js/maqueen-tab.js
+// 🕹️ DRIVE MIX — ported from the reference drive-pad implementation
 // joystick handler. nx = turn (right positive), ny = forward
 // (up positive), both in -1..1. DRIVE_REF matches the 200 (not 255)
-// ceiling Maqueen Lab itself uses — deliberately leaves headroom
+// ceiling the reference itself uses — deliberately leaves headroom
 // rather than maxing out the motor driver.
 // ═══════════════════════════════════════════════════════════════
 
 // Top speed, now live-adjustable from the Speed slider instead of a
 // constant. 200 (not 255) remains the default, matching the ceiling
-// Maqueen Lab uses — it deliberately leaves headroom rather than
+// The reference uses — it deliberately leaves headroom rather than
 // maxing out the motor driver. Autonomous modes below use it too, so
 // one slider governs manual and self-driving alike.
 let driveSpeed = 200
@@ -534,7 +397,7 @@ const DEAD_ZONE = 0.12  // below this magnitude on both axes, treat as stopped
 // which is what made directions go missing and stalled the heartbeat
 // (the watchdog called it from the forever loop too, blocking that).
 //
-// Maqueen Lab's own firmware is the reference here: its drive path
+// The reference firmware is the model here: its drive path
 // (handleMotor) issues the two motorRun() calls and NOTHING else —
 // every basic.showArrow/showIcon call in that file belongs to a
 // dedicated display verb (JOY:UP, SHOW:, icon names), never to the
@@ -617,7 +480,7 @@ function requestStopIcon() {
     requestGlyph(GLYPH_STOP)
 }
 
-// The Maqueen Lite motor driver is I2C-based (not direct PWM). Generic
+// The motor driver is I2C-based (not direct PWM). Generic
 // continuous controls still use change detection so they do not hammer
 // I2C with essentially identical values. HOWEVER, real-hardware latency
 // testing showed that a fixed 125 ms / 8 Hz gate is unacceptable for
@@ -651,13 +514,6 @@ const MODE_MANUAL = 0
 const MODE_AVOID = 2
 let driveMode = MODE_MANUAL
 
-// Line sensors. IMPORTANT: readPatrol returns 0 when the sensor is OVER
-// THE BLACK LINE and 1 when it is over pale floor — inverted from what
-// "1 = detected" would suggest. Maqueen Lab documents this explicitly
-// ("0 (on black line) or 1 (on white floor)"). The LED widgets are fed
-// the inverted value so that a LIT led means "this side is on the line",
-// which is what anyone watching would expect.
-
 // Obstacle-avoid + alert thresholds.
 const AVOID_STOP_CM = 20        // back away closer than this
 const ALERT_CM = 25             // notify the app below this
@@ -684,7 +540,7 @@ let heartbeat = 0
 // and moves nothing).
 //
 // The rest of this file — BLE, CFG chunking, the GETCFGVER cache, telemetry,
-// the drive watchdog, the D-pad mask — is unchanged from maqueen-rxy and
+// the drive watchdog, the D-pad mask — is unchanged from the sibling firmware and
 // should stay diffable against it. Swapping to another driver board means
 // rewriting these functions and nothing else.
 // ═══════════════════════════════════════════════════════════════
@@ -753,7 +609,7 @@ function driveMix(nx: number, ny: number) {
         return  // skip redundant/too-frequent I2C write
     }
 
-    // Drive path, deliberately identical in shape to Maqueen Lab's
+    // Drive path, deliberately identical in shape to the reference
     // handleMotor(): two motorRun() calls and nothing that can block.
     // dbg() only pushes to a queue; requestDriveDebug() only sets a
     // flag. No basic.show* here — see showDriveDebug()'s comment.
@@ -781,7 +637,7 @@ function updateButtonDrive() {
 
 function handleDpadMask(mask: number) {
     if (driveMode != MODE_MANUAL) return
-    // HOT PATH: a D-pad packet goes straight to the Maqueen motor driver.
+    // HOT PATH: a D-pad packet goes straight to the motor driver.
     // Do not route through handleWidget()/dbg()/LED rendering/rate limiting.
     // Those are useful for general controls but add scheduler and BLE work
     // exactly when manual driving needs the lowest possible latency.
@@ -858,7 +714,7 @@ function clearJog() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎮 WIDGET HANDLERS — driving real Maqueen hardware via pxt-maqueen
+// 🎮 WIDGET HANDLERS — driving the rover hardware
 // ═══════════════════════════════════════════════════════════════
 
 // v44 autonomous motor path. Manual D-pad packets have their own direct
@@ -987,12 +843,12 @@ function handleWidget(id: string, val: string) {
         music.playTone(440, music.beat(BeatFraction.Quarter))
     }
 
-    // maqueen-rxy drives two auxiliary servos from slider_srv1/slider_srv2.
+    // the sibling firmware drives two auxiliary servos from slider_srv1/slider_srv2.
     // Here S1 and S2 ARE the wheels, so those sliders are gone -- a slider
     // that jerked the drive servos to an absolute angle would fight the
     // D-pad for control of the same hardware.
 
-    // The Maqueen's two board LEDs are gone; this rover lights an 8-pixel
+    // The two board LEDs of the donor chassis are gone; this rover lights an 8-pixel
     // NeoPixel strip instead, handled with the other strip widgets.
 
     // D-pad: Drive (val = "<dir> <1|0>", dir = up/down/left/right).
@@ -1059,7 +915,7 @@ basic.showLeds(`
     # . . . #
     . # # # .
     `, 0)
-dbg("Maqueen Remote firmware " + FIRMWARE_VERSION + " ready, waiting for BLE connection...")
+dbg("rover remote firmware " + FIRMWARE_VERSION + " ready, waiting for BLE connection...")
 
 bluetooth.onBluetoothConnected(function () {
     btConnected = true
@@ -1474,7 +1330,7 @@ basic.forever(function () {
         if ((lastDriveL == 0 && lastDriveR == 0) || now - lastDriveCmdAt > 500) sendValue("lbl_ver", FIRMWARE_VERSION)
     }
 
-    // maqueen-rxy polls two line sensors here and runs a line-following
+    // The donor firmware polls two line sensors here and runs a line-following
     // mode from them. This chassis has neither, so the block is gone rather
     // than left reading pins that float -- a follower with no sensors would
     // just drive off. Avoid mode below still works: it needs only the sonar.
@@ -1482,7 +1338,7 @@ basic.forever(function () {
     // ── Ultrasonic (HC-SR04) — AVOID MODE ONLY ───────────────────
     //
     // This sensor is expensive enough to define the feel of the whole
-    // robot. Measured from the pxt-maqueen source, one readUlt() is
+    // robot. Measured from the old board library source, one readUlt() is
     // basic.pause(1) + basic.pause(20) + pins.pulseIn(..., 500*58) — a
     // 29ms timeout, so ~50ms per attempt. With no echo Ultrasonic()
     // retries up to four more times: ~250ms per call. pulseIn BUSY-WAITS
@@ -1557,7 +1413,7 @@ basic.forever(function () {
             // Decide what we'd report; -1 means "nothing to report".
             let reported = -1
             if (cm >= 500) {
-                // pxt-maqueen's "no echo" sentinel. No echo means
+                // the board extension's "no echo" sentinel. No echo means
                 // nothing bounced back, i.e. the path is CLEAR — so
                 // report the top of the gauge, not 0. Reporting 0 would
                 // read as "obstacle touching the bumper", the exact
@@ -1592,7 +1448,7 @@ basic.forever(function () {
             // series; a single series means a bare number is the payload.
             //
             // The RAW cm goes to the graph, not the mapped `reported`.
-            // `reported` folds pxt-maqueen's 500 "no echo" sentinel down
+            // `reported` folds the board extension's 500 "no echo" sentinel down
             // to DIST_MAX_CM (200), which made "nothing bounced back"
             // indistinguishable from "an object exactly 200cm away" — so
             // a sensor that never echoes looked identical to a clear
