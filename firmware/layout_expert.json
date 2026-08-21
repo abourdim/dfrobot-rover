@@ -10,7 +10,7 @@
    "y": 42,
    "w": 868,
    "h": 722,
-   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r"
+   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_num,trim_r_num"
   },
   {
    "id": "grp_dist",
@@ -77,7 +77,8 @@
    "min": 60,
    "max": 255,
    "step": 5,
-   "value": 200
+   "value": 200,
+   "restore": 1
   },
   {
    "id": "btn_stop",
@@ -138,7 +139,8 @@
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0
+   "value": 0,
+   "restore": 1
   },
   {
    "id": "trim_r",
@@ -151,7 +153,28 @@
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0
+   "value": 0,
+   "restore": 1
+  },
+  {
+   "id": "trim_l_num",
+   "t": "editfield",
+   "x": 770,
+   "y": 560,
+   "w": 100,
+   "h": 70,
+   "label": "L =",
+   "restore": 1
+  },
+  {
+   "id": "trim_r_num",
+   "t": "editfield",
+   "x": 770,
+   "y": 650,
+   "w": 100,
+   "h": 70,
+   "label": "R =",
+   "restore": 1
   },
   {
    "id": "gauge_dist",
@@ -332,7 +355,8 @@
    "w": 180,
    "h": 70,
    "label": "Lights",
-   "options": "Distance,Colour,Rainbow,Off"
+   "options": "Distance,Colour,Rainbow,Off",
+   "restore": 1
   },
   {
    "id": "np_colour",
@@ -342,7 +366,8 @@
    "w": 170,
    "h": 70,
    "label": "Colour",
-   "options": "Red,Orange,Yellow,Green,Blue,Purple,White"
+   "options": "Red,Orange,Yellow,Green,Blue,Purple,White",
+   "restore": 1
   },
   {
    "id": "np_bright",
@@ -355,7 +380,8 @@
    "min": 0,
    "max": 255,
    "step": 5,
-   "value": 60
+   "value": 60,
+   "restore": 1
   }
  ],
  "canvas": {

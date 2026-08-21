@@ -19,7 +19,7 @@ PAD, TITLE = 24, 34
 # Measured against the real app, not guessed.
 MIN_SIZE = {"button": (100, 100), "label": (80, 60), "select": (120, 60),
             "gauge": (120, 120), "slider": (80, 150), "led": (60, 60),
-            "editfield": (180, 70)}
+            "editfield": (100, 70)}   # measured: 100x70 renders without clipping
 
 LEVELS = "Beginner,Expert,Drive,Distance,Screen,Lights"
 
@@ -33,6 +33,30 @@ def W(wid, t, x, y, w, h, **kw):
 # `level` belongs on EVERY panel. If it lived only on Expert, choosing
 # Beginner would strand the robot there until someone reflashed it.
 LEVEL = lambda x, y: W("level", "select", x, y, 170, 70, label="Level", options=LEVELS)
+
+# restore=1 marks a value the APP should remember and replay on connect. This
+# board has no storage a MakeCode program can write, so wheel trim would
+# otherwise die with the battery.
+#
+# Deliberately NOT on `level` or `mode`: replaying Mode could put the rover
+# into a self-driving mode the instant it connects, and replaying Level would
+# swap the layout out from under the restore itself.
+def trim_pair(x, y, h=180):
+    """Slider for coarse, edit field for an exact number. Both drive the same
+    firmware value, and the firmware echoes back to both so they never
+    disagree. One degree of servo pulse is the floor -- the API takes whole
+    degrees -- so the edit field is the fine control, not a finer slider."""
+    # The numbers sit BESIDE the sliders, not under them. Stacking them grew
+    # the DRIVE zone into SYSTEM below; alongside, the zone keeps its height
+    # and the pair still reads as one control each.
+    return [
+        W("trim_l", "slider", x, y, 100, h, label="Trim L",
+          min=-20, max=20, step=1, value=0, restore=1),
+        W("trim_r", "slider", x + 120, y, 100, h, label="Trim R",
+          min=-20, max=20, step=1, value=0, restore=1),
+        W("trim_l_num", "editfield", x + 240, y, 100, 70, label="L =", restore=1),
+        W("trim_r_num", "editfield", x + 240, y + 90, 100, 70, label="R =", restore=1),
+    ]
 
 
 def group(gid, label, color, members):
@@ -80,7 +104,7 @@ expert = build("Rover — Expert", [
     ("grp_drive", "DRIVE", "#00d4ff", [
         W("dpad_move", "dpad", 80, 100, 420, 420, label="Drive", model="classic"),
         W("spd", "slider", 540, 100, 120, 260, label="Speed",
-          min=60, max=255, step=5, value=200),
+          min=60, max=255, step=5, value=200, restore=1),
         W("btn_stop", "button", 700, 100, 120, 120, label="STOP"),
         W("gauge_spd", "gauge", 700, 260, 200, 190, label="Speed",
           min=60, max=255, decimals=0, model="min", source="spd", value=200),
@@ -88,10 +112,7 @@ expert = build("Rover — Expert", [
           icon="⚙️", spin=-1, color="#0e7490"),
         W("btn_mr", "button", 290, 560, 190, 120, label="Right wheel",
           icon="⚙️", spin=1, color="#0e7490"),
-        W("trim_l", "slider", 530, 560, 100, 180, label="Trim L",
-          min=-20, max=20, step=1, value=0),
-        W("trim_r", "slider", 650, 560, 100, 180, label="Trim R",
-          min=-20, max=20, step=1, value=0),
+        *trim_pair(530, 560),
     ]),
     # The sweep head sits with DISTANCE, not DRIVE: it aims the sensor, so it
     # belongs beside the reading it changes.
@@ -133,11 +154,11 @@ expert = build("Rover — Expert", [
     ]),
     ("grp_light", "LIGHTS", "#22c55e", [
         W("np_mode", "select", 80, 1200, 180, 70, label="Lights",
-          options="Distance,Colour,Rainbow,Off"),
+          options="Distance,Colour,Rainbow,Off", restore=1),
         W("np_colour", "select", 290, 1200, 170, 70, label="Colour",
-          options="Red,Orange,Yellow,Green,Blue,Purple,White"),
+          options="Red,Orange,Yellow,Green,Blue,Purple,White", restore=1),
         W("np_bright", "slider", 500, 1190, 100, 180, label="Bright",
-          min=0, max=255, step=5, value=60),
+          min=0, max=255, step=5, value=60, restore=1),
     ]),
 ])
 
@@ -155,11 +176,8 @@ drive_test = build("Rover — Drive test", [
           icon="⚙️", spin=-1, color="#0e7490"),
         W("btn_mr", "button", 290, 480, 190, 120, label="Right wheel",
           icon="⚙️", spin=1, color="#0e7490"),
-        W("trim_l", "slider", 520, 480, 100, 180, label="Trim L",
-          min=-20, max=20, step=1, value=0),
-        W("trim_r", "slider", 640, 480, 100, 180, label="Trim R",
-          min=-20, max=20, step=1, value=0),
-        LEVEL(80, 700),
+        *trim_pair(520, 480),
+        LEVEL(80, 760),
     ]),
 ])
 

@@ -8,9 +8,9 @@
    "color": "#00d4ff",
    "x": 56,
    "y": 42,
-   "w": 768,
-   "h": 752,
-   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,level"
+   "w": 828,
+   "h": 812,
+   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_num,trim_r_num,level"
   },
   {
    "id": "dpad_move",
@@ -94,7 +94,8 @@
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0
+   "value": 0,
+   "restore": 1
   },
   {
    "id": "trim_r",
@@ -107,13 +108,34 @@
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0
+   "value": 0,
+   "restore": 1
+  },
+  {
+   "id": "trim_l_num",
+   "t": "editfield",
+   "x": 760,
+   "y": 480,
+   "w": 100,
+   "h": 70,
+   "label": "L =",
+   "restore": 1
+  },
+  {
+   "id": "trim_r_num",
+   "t": "editfield",
+   "x": 760,
+   "y": 570,
+   "w": 100,
+   "h": 70,
+   "label": "R =",
+   "restore": 1
   },
   {
    "id": "level",
    "t": "select",
    "x": 80,
-   "y": 700,
+   "y": 760,
    "w": 170,
    "h": 70,
    "label": "Level",
@@ -121,7 +143,7 @@
   }
  ],
  "canvas": {
-  "w": 880,
-  "h": 850
+  "w": 940,
+  "h": 910
  }
 }
