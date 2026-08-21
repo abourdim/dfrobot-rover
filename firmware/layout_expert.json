@@ -1,0 +1,281 @@
+{
+ "title": "Rover — Expert",
+ "widgets": [
+  {
+   "id": "grp_drive",
+   "t": "group",
+   "label": "DRIVE",
+   "color": "#00d4ff",
+   "x": 56,
+   "y": 42,
+   "w": 868,
+   "h": 722,
+   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r"
+  },
+  {
+   "id": "grp_dist",
+   "t": "group",
+   "label": "DISTANCE",
+   "color": "#ffb020",
+   "x": 976,
+   "y": 42,
+   "w": 468,
+   "h": 902,
+   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center"
+  },
+  {
+   "id": "grp_sys",
+   "t": "group",
+   "label": "SYSTEM",
+   "color": "#8892b0",
+   "x": 56,
+   "y": 792,
+   "w": 608,
+   "h": 302,
+   "children": "mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz"
+  },
+  {
+   "id": "dpad_move",
+   "t": "dpad",
+   "x": 80,
+   "y": 100,
+   "w": 420,
+   "h": 420,
+   "label": "Drive",
+   "model": "classic"
+  },
+  {
+   "id": "spd",
+   "t": "slider",
+   "x": 540,
+   "y": 100,
+   "w": 120,
+   "h": 260,
+   "label": "Speed",
+   "min": 60,
+   "max": 255,
+   "step": 5,
+   "value": 200
+  },
+  {
+   "id": "btn_stop",
+   "t": "button",
+   "x": 700,
+   "y": 100,
+   "w": 120,
+   "h": 120,
+   "label": "STOP"
+  },
+  {
+   "id": "gauge_spd",
+   "t": "gauge",
+   "x": 700,
+   "y": 260,
+   "w": 200,
+   "h": 190,
+   "label": "Speed",
+   "min": 60,
+   "max": 255,
+   "decimals": 0,
+   "model": "min",
+   "source": "spd",
+   "value": 200
+  },
+  {
+   "id": "btn_ml",
+   "t": "button",
+   "x": 80,
+   "y": 560,
+   "w": 190,
+   "h": 120,
+   "label": "Left wheel",
+   "icon": "⚙️",
+   "spin": -1,
+   "color": "#0e7490"
+  },
+  {
+   "id": "btn_mr",
+   "t": "button",
+   "x": 290,
+   "y": 560,
+   "w": 190,
+   "h": 120,
+   "label": "Right wheel",
+   "icon": "⚙️",
+   "spin": 1,
+   "color": "#0e7490"
+  },
+  {
+   "id": "trim_l",
+   "t": "slider",
+   "x": 530,
+   "y": 560,
+   "w": 100,
+   "h": 180,
+   "label": "Trim L",
+   "min": -20,
+   "max": 20,
+   "step": 1,
+   "value": 0
+  },
+  {
+   "id": "trim_r",
+   "t": "slider",
+   "x": 650,
+   "y": 560,
+   "w": 100,
+   "h": 180,
+   "label": "Trim R",
+   "min": -20,
+   "max": 20,
+   "step": 1,
+   "value": 0
+  },
+  {
+   "id": "gauge_dist",
+   "t": "gauge",
+   "x": 1000,
+   "y": 100,
+   "w": 220,
+   "h": 200,
+   "label": "Distance",
+   "min": 0,
+   "max": 200,
+   "units": "cm",
+   "decimals": 0,
+   "model": "classic"
+  },
+  {
+   "id": "alert",
+   "t": "notification",
+   "x": 1250,
+   "y": 110,
+   "w": 100,
+   "h": 180,
+   "label": "Alert"
+  },
+  {
+   "id": "dist_read",
+   "t": "select",
+   "x": 1000,
+   "y": 330,
+   "w": 180,
+   "h": 70,
+   "label": "Distance read",
+   "options": "Auto,Read now"
+  },
+  {
+   "id": "graph_dist",
+   "t": "graph",
+   "x": 1000,
+   "y": 430,
+   "w": 420,
+   "h": 250,
+   "label": "Distance cm",
+   "model": "grid",
+   "windowSec": 30,
+   "series": 1
+  },
+  {
+   "id": "srv_head",
+   "t": "slider",
+   "x": 1000,
+   "y": 730,
+   "w": 100,
+   "h": 190,
+   "label": "Look",
+   "min": 0,
+   "max": 180,
+   "step": 1,
+   "value": 90
+  },
+  {
+   "id": "gauge_head",
+   "t": "gauge",
+   "x": 1120,
+   "y": 730,
+   "w": 180,
+   "h": 190,
+   "label": "Angle",
+   "min": 0,
+   "max": 180,
+   "units": "°",
+   "decimals": 0,
+   "model": "min",
+   "source": "srv_head",
+   "value": 90
+  },
+  {
+   "id": "btn_head_center",
+   "t": "button",
+   "x": 1320,
+   "y": 760,
+   "w": 100,
+   "h": 100,
+   "label": "Ahead"
+  },
+  {
+   "id": "mode",
+   "t": "select",
+   "x": 80,
+   "y": 850,
+   "w": 160,
+   "h": 70,
+   "label": "Mode",
+   "options": "Manual,Avoid"
+  },
+  {
+   "id": "upd",
+   "t": "select",
+   "x": 270,
+   "y": 850,
+   "w": 160,
+   "h": 70,
+   "label": "Telemetry",
+   "options": "All,Basic,Off"
+  },
+  {
+   "id": "level",
+   "t": "select",
+   "x": 460,
+   "y": 850,
+   "w": 170,
+   "h": 70,
+   "label": "Level",
+   "options": "Beginner,Expert,Drive,Distance"
+  },
+  {
+   "id": "lbl_ver",
+   "t": "label",
+   "x": 80,
+   "y": 960,
+   "w": 160,
+   "h": 70,
+   "label": "Firmware",
+   "model": "card"
+  },
+  {
+   "id": "lbl_heartbeat",
+   "t": "label",
+   "x": 270,
+   "y": 960,
+   "w": 220,
+   "h": 70,
+   "label": "Uptime",
+   "model": "card"
+  },
+  {
+   "id": "btn_buzz",
+   "t": "button",
+   "x": 520,
+   "y": 950,
+   "w": 120,
+   "h": 120,
+   "label": "Beep"
+  }
+ ],
+ "canvas": {
+  "w": 1500,
+  "h": 1150
+ }
+}

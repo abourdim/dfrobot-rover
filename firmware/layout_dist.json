@@ -1,0 +1,113 @@
+{
+ "title": "Rover — Distance test",
+ "widgets": [
+  {
+   "id": "grp_test",
+   "t": "group",
+   "label": "DISTANCE",
+   "color": "#ffb020",
+   "x": 56,
+   "y": 42,
+   "w": 688,
+   "h": 752,
+   "children": "gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,level"
+  },
+  {
+   "id": "gauge_dist",
+   "t": "gauge",
+   "x": 80,
+   "y": 100,
+   "w": 220,
+   "h": 200,
+   "label": "Distance",
+   "min": 0,
+   "max": 200,
+   "units": "cm",
+   "decimals": 0,
+   "model": "classic"
+  },
+  {
+   "id": "alert",
+   "t": "notification",
+   "x": 330,
+   "y": 110,
+   "w": 110,
+   "h": 180,
+   "label": "Alert"
+  },
+  {
+   "id": "dist_read",
+   "t": "select",
+   "x": 80,
+   "y": 330,
+   "w": 180,
+   "h": 70,
+   "label": "Distance read",
+   "options": "Auto,Read now"
+  },
+  {
+   "id": "graph_dist",
+   "t": "graph",
+   "x": 80,
+   "y": 430,
+   "w": 420,
+   "h": 240,
+   "label": "Distance cm",
+   "model": "grid",
+   "windowSec": 30,
+   "series": 1
+  },
+  {
+   "id": "srv_head",
+   "t": "slider",
+   "x": 540,
+   "y": 100,
+   "w": 100,
+   "h": 190,
+   "label": "Look",
+   "min": 0,
+   "max": 180,
+   "step": 1,
+   "value": 90
+  },
+  {
+   "id": "gauge_head",
+   "t": "gauge",
+   "x": 540,
+   "y": 320,
+   "w": 180,
+   "h": 190,
+   "label": "Angle",
+   "min": 0,
+   "max": 180,
+   "units": "°",
+   "decimals": 0,
+   "model": "min",
+   "source": "srv_head",
+   "value": 90
+  },
+  {
+   "id": "btn_head_center",
+   "t": "button",
+   "x": 540,
+   "y": 540,
+   "w": 120,
+   "h": 120,
+   "label": "Ahead"
+  },
+  {
+   "id": "level",
+   "t": "select",
+   "x": 80,
+   "y": 700,
+   "w": 170,
+   "h": 70,
+   "label": "Level",
+   "options": "Beginner,Expert,Drive,Distance"
+  }
+ ],
+ "canvas": {
+  "w": 800,
+  "h": 850
+ }
+}

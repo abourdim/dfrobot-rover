@@ -1,0 +1,104 @@
+{
+ "title": "Rover — Beginner",
+ "widgets": [
+  {
+   "id": "grp_drive",
+   "t": "group",
+   "label": "DRIVE",
+   "color": "#00d4ff",
+   "x": 56,
+   "y": 42,
+   "w": 608,
+   "h": 462,
+   "children": "dpad_move,btn_stop"
+  },
+  {
+   "id": "grp_see",
+   "t": "group",
+   "label": "WHAT IT SEES",
+   "color": "#ffb020",
+   "x": 736,
+   "y": 42,
+   "w": 408,
+   "h": 282,
+   "children": "gauge_dist,alert"
+  },
+  {
+   "id": "grp_sys",
+   "t": "group",
+   "label": "ROBOT",
+   "color": "#8892b0",
+   "x": 56,
+   "y": 522,
+   "w": 408,
+   "h": 152,
+   "children": "level,lbl_ver"
+  },
+  {
+   "id": "dpad_move",
+   "t": "dpad",
+   "x": 80,
+   "y": 100,
+   "w": 380,
+   "h": 380,
+   "label": "Drive",
+   "model": "classic"
+  },
+  {
+   "id": "btn_stop",
+   "t": "button",
+   "x": 500,
+   "y": 100,
+   "w": 140,
+   "h": 140,
+   "label": "STOP"
+  },
+  {
+   "id": "gauge_dist",
+   "t": "gauge",
+   "x": 760,
+   "y": 100,
+   "w": 220,
+   "h": 200,
+   "label": "Distance",
+   "min": 0,
+   "max": 200,
+   "units": "cm",
+   "decimals": 0,
+   "model": "classic"
+  },
+  {
+   "id": "alert",
+   "t": "notification",
+   "x": 1010,
+   "y": 110,
+   "w": 110,
+   "h": 180,
+   "label": "Alert"
+  },
+  {
+   "id": "level",
+   "t": "select",
+   "x": 80,
+   "y": 580,
+   "w": 170,
+   "h": 70,
+   "label": "Level",
+   "options": "Beginner,Expert,Drive,Distance"
+  },
+  {
+   "id": "lbl_ver",
+   "t": "label",
+   "x": 280,
+   "y": 580,
+   "w": 160,
+   "h": 70,
+   "label": "Firmware",
+   "model": "card"
+  }
+ ],
+ "canvas": {
+  "w": 1200,
+  "h": 730
+ }
+}
