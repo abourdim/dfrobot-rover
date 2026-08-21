@@ -18,9 +18,10 @@ PAD, TITLE = 24, 34
 # Smallest box each widget type draws its own chrome in without clipping.
 # Measured against the real app, not guessed.
 MIN_SIZE = {"button": (100, 100), "label": (80, 60), "select": (120, 60),
-            "gauge": (120, 120), "slider": (80, 150), "led": (60, 60)}
+            "gauge": (120, 120), "slider": (80, 150), "led": (60, 60),
+            "editfield": (180, 70)}
 
-LEVELS = "Beginner,Expert,Drive,Distance"
+LEVELS = "Beginner,Expert,Drive,Distance,Screen"
 
 
 def W(wid, t, x, y, w, h, **kw):
@@ -119,6 +120,15 @@ expert = build("Rover — Expert", [
         W("lbl_heartbeat", "label", 270, 960, 220, 70, label="Uptime", model="card"),
         W("btn_buzz", "button", 520, 950, 120, 120, label="Beep"),
     ]),
+    # The screen gets its own zone: typing a message and watching it appear on
+    # the robot is a thing in itself, not a system setting. lbl_oled shows what
+    # is REALLY on the glass, truncation included, so a message too long for
+    # the panel looks cut off here too rather than quietly disagreeing.
+    ("grp_screen", "SCREEN", "#c084fc", [
+        W("oled_text", "editfield", 1000, 1030, 300, 80, label="Say something"),
+        W("lbl_oled", "label", 1000, 1140, 300, 70, label="On the screen",
+          model="card"),
+    ]),
 ])
 
 # ── DRIVE TEST ──────────────────────────────────────────────────────────────
@@ -163,8 +173,19 @@ dist_test = build("Rover — Distance test", [
     ]),
 ])
 
+# ── SCREEN TEST ─────────────────────────────────────────────────────────────
+screen_test = build("Rover — Screen test", [
+    ("grp_test", "SCREEN", "#c084fc", [
+        W("oled_text", "editfield", 80, 100, 380, 90, label="Say something"),
+        W("lbl_oled", "label", 80, 220, 380, 80, label="On the screen",
+          model="card"),
+        W("btn_buzz", "button", 500, 100, 120, 120, label="Beep"),
+        LEVEL(80, 340),
+    ]),
+])
+
 PANELS = [("BEGINNER", beginner), ("EXPERT", expert),
-          ("DRIVE", drive_test), ("DIST", dist_test)]
+          ("DRIVE", drive_test), ("DIST", dist_test), ("SCREEN", screen_test)]
 
 # ── checks ──────────────────────────────────────────────────────────────────
 src = open(SRC, encoding="utf-8").read()

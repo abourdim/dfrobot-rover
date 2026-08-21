@@ -1,0 +1,58 @@
+{
+ "title": "Rover — Screen test",
+ "widgets": [
+  {
+   "id": "grp_test",
+   "t": "group",
+   "label": "SCREEN",
+   "color": "#c084fc",
+   "x": 56,
+   "y": 42,
+   "w": 588,
+   "h": 392,
+   "children": "oled_text,lbl_oled,btn_buzz,level"
+  },
+  {
+   "id": "oled_text",
+   "t": "editfield",
+   "x": 80,
+   "y": 100,
+   "w": 380,
+   "h": 90,
+   "label": "Say something"
+  },
+  {
+   "id": "lbl_oled",
+   "t": "label",
+   "x": 80,
+   "y": 220,
+   "w": 380,
+   "h": 80,
+   "label": "On the screen",
+   "model": "card"
+  },
+  {
+   "id": "btn_buzz",
+   "t": "button",
+   "x": 500,
+   "y": 100,
+   "w": 120,
+   "h": 120,
+   "label": "Beep"
+  },
+  {
+   "id": "level",
+   "t": "select",
+   "x": 80,
+   "y": 340,
+   "w": 170,
+   "h": 70,
+   "label": "Level",
+   "options": "Beginner,Expert,Drive,Distance,Screen"
+  }
+ ],
+ "canvas": {
+  "w": 700,
+  "h": 490
+ }
+}

@@ -35,6 +35,17 @@
    "children": "mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz"
   },
   {
+   "id": "grp_screen",
+   "t": "group",
+   "label": "SCREEN",
+   "color": "#c084fc",
+   "x": 976,
+   "y": 972,
+   "w": 348,
+   "h": 262,
+   "children": "oled_text,lbl_oled"
+  },
+  {
    "id": "dpad_move",
    "t": "dpad",
    "x": 80,
@@ -242,7 +253,7 @@
    "w": 170,
    "h": 70,
    "label": "Level",
-   "options": "Beginner,Expert,Drive,Distance"
+   "options": "Beginner,Expert,Drive,Distance,Screen"
   },
   {
    "id": "lbl_ver",
@@ -272,10 +283,29 @@
    "w": 120,
    "h": 120,
    "label": "Beep"
+  },
+  {
+   "id": "oled_text",
+   "t": "editfield",
+   "x": 1000,
+   "y": 1030,
+   "w": 300,
+   "h": 80,
+   "label": "Say something"
+  },
+  {
+   "id": "lbl_oled",
+   "t": "label",
+   "x": 1000,
+   "y": 1140,
+   "w": 300,
+   "h": 70,
+   "label": "On the screen",
+   "model": "card"
   }
  ],
  "canvas": {
   "w": 1500,
-  "h": 1150
+  "h": 1290
  }
 }

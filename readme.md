@@ -50,11 +50,17 @@ and paste this URL into the search box:
 https://github.com/DFRobot/pxt-motor
 ```
 
-| | |
-|---|---|
-| extension | **[DFRobot/pxt-motor](https://github.com/DFRobot/pxt-motor)** |
-| appears in MakeCode as | `motor` |
-| blocks namespace | `motor.servo()`, `motor.MotorRun()`, `motor.motorStop()` |
+**Two** extensions are needed. Paste both URLs:
+
+```
+https://github.com/DFRobot/pxt-motor
+https://github.com/tinkertanker/pxt-oled-ssd1306
+```
+
+| | appears as | provides |
+|---|---|---|
+| [DFRobot/pxt-motor](https://github.com/DFRobot/pxt-motor) | `motor` | `motor.servo()`, `motor.MotorRun()`, `motor.motorStop()` |
+| [tinkertanker/pxt-oled-ssd1306](https://github.com/tinkertanker/pxt-oled-ssd1306) | `OLED` | `OLED.init()`, `OLED.clear()`, `OLED.writeString()` |
 
 **Paste the URL — do not search by name.** DFRobot published this as plain
 `motor`, the most generic name on the platform, so a search returns a pile of

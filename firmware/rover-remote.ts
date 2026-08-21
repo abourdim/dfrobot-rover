@@ -24,7 +24,8 @@
  *   battery 4xAA       DC socket, 3.5-5.5V
  *   free               P0 P1 P2 P8 P12 P16
  *
- * ── EXTENSION REQUIRED ──────────────────────────────────────────────
+ * ── EXTENSIONS REQUIRED (two) ───────────────────────────────────────
+ *   https://github.com/tinkertanker/pxt-oled-ssd1306   <- the screen (OLED)
  *   https://github.com/DFRobot/pxt-motor       <- paste this URL
  *   appears in MakeCode as:  motor
  *   provides:  motor.servo(), motor.MotorRun(), motor.motorStop()
@@ -68,7 +69,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v5"
+const FIRMWARE_VERSION = "R1-v6"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -278,9 +279,9 @@ const CFG_BEGINNER =
     "OiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngiOjEwMTAsInkiOjExMCwidyI6" +
     "MTEwLCJoIjoxODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoibGV2ZWwiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInki" +
     "OjU4MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9wdGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJp" +
-    "dmUsRGlzdGFuY2UifSx7ImlkIjoibGJsX3ZlciIsInQiOiJsYWJlbCIsIngiOjI4MCwieSI6NTgwLCJ3IjoxNjAs" +
-    "ImgiOjcwLCJsYWJlbCI6IkZpcm13YXJlIiwibW9kZWwiOiJjYXJkIn1dLCJjYW52YXMiOnsidyI6MTIwMCwiaCI6" +
-    "NzMwfX0="
+    "dmUsRGlzdGFuY2UsU2NyZWVuIn0seyJpZCI6ImxibF92ZXIiLCJ0IjoibGFiZWwiLCJ4IjoyODAsInkiOjU4MCwi" +
+    "dyI6MTYwLCJoIjo3MCwibGFiZWwiOiJGaXJtd2FyZSIsIm1vZGVsIjoiY2FyZCJ9XSwiY2FudmFzIjp7InciOjEy" +
+    "MDAsImgiOjczMH19"
 const CFG_EXPERT =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBFeHBlcnQiLCJ3aWRnZXRzIjpbeyJpZCI6ImdycF9kcml2ZSIsInQiOiJncm91" +
     "cCIsImxhYmVsIjoiRFJJVkUiLCJjb2xvciI6IiMwMGQ0ZmYiLCJ4Ijo1NiwieSI6NDIsInciOjg2OCwiaCI6NzIy" +
@@ -290,43 +291,48 @@ const CFG_EXPERT =
     "ZXJ0LGRpc3RfcmVhZCxncmFwaF9kaXN0LHNydl9oZWFkLGdhdWdlX2hlYWQsYnRuX2hlYWRfY2VudGVyIn0seyJp" +
     "ZCI6ImdycF9zeXMiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IlNZU1RFTSIsImNvbG9yIjoiIzg4OTJiMCIsIngiOjU2" +
     "LCJ5Ijo3OTIsInciOjYwOCwiaCI6MzAyLCJjaGlsZHJlbiI6Im1vZGUsdXBkLGxldmVsLGxibF92ZXIsbGJsX2hl" +
-    "YXJ0YmVhdCxidG5fYnV6eiJ9LHsiaWQiOiJkcGFkX21vdmUiLCJ0IjoiZHBhZCIsIngiOjgwLCJ5IjoxMDAsInci" +
-    "OjQyMCwiaCI6NDIwLCJsYWJlbCI6IkRyaXZlIiwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6InNwZCIsInQiOiJz" +
-    "bGlkZXIiLCJ4Ijo1NDAsInkiOjEwMCwidyI6MTIwLCJoIjoyNjAsImxhYmVsIjoiU3BlZWQiLCJtaW4iOjYwLCJt" +
-    "YXgiOjI1NSwic3RlcCI6NSwidmFsdWUiOjIwMH0seyJpZCI6ImJ0bl9zdG9wIiwidCI6ImJ1dHRvbiIsIngiOjcw" +
-    "MCwieSI6MTAwLCJ3IjoxMjAsImgiOjEyMCwibGFiZWwiOiJTVE9QIn0seyJpZCI6ImdhdWdlX3NwZCIsInQiOiJn" +
-    "YXVnZSIsIngiOjcwMCwieSI6MjYwLCJ3IjoyMDAsImgiOjE5MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1h" +
-    "eCI6MjU1LCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcGQiLCJ2YWx1ZSI6MjAwfSx7Imlk" +
-    "IjoiYnRuX21sIiwidCI6ImJ1dHRvbiIsIngiOjgwLCJ5Ijo1NjAsInciOjE5MCwiaCI6MTIwLCJsYWJlbCI6Ikxl" +
-    "ZnQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6LTEsImNvbG9yIjoiIzBlNzQ5MCJ9LHsiaWQiOiJidG5f" +
-    "bXIiLCJ0IjoiYnV0dG9uIiwieCI6MjkwLCJ5Ijo1NjAsInciOjE5MCwiaCI6MTIwLCJsYWJlbCI6IlJpZ2h0IHdo" +
-    "ZWVsIiwiaWNvbiI6IuKame+4jyIsInNwaW4iOjEsImNvbG9yIjoiIzBlNzQ5MCJ9LHsiaWQiOiJ0cmltX2wiLCJ0" +
-    "Ijoic2xpZGVyIiwieCI6NTMwLCJ5Ijo1NjAsInciOjEwMCwiaCI6MTgwLCJsYWJlbCI6IlRyaW0gTCIsIm1pbiI6" +
-    "LTIwLCJtYXgiOjIwLCJzdGVwIjoxLCJ2YWx1ZSI6MH0seyJpZCI6InRyaW1fciIsInQiOiJzbGlkZXIiLCJ4Ijo2" +
-    "NTAsInkiOjU2MCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiVHJpbSBSIiwibWluIjotMjAsIm1heCI6MjAsInN0" +
-    "ZXAiOjEsInZhbHVlIjowfSx7ImlkIjoiZ2F1Z2VfZGlzdCIsInQiOiJnYXVnZSIsIngiOjEwMDAsInkiOjEwMCwi" +
-    "dyI6MjIwLCJoIjoyMDAsImxhYmVsIjoiRGlzdGFuY2UiLCJtaW4iOjAsIm1heCI6MjAwLCJ1bml0cyI6ImNtIiwi" +
-    "ZGVjaW1hbHMiOjAsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4" +
-    "IjoxMjUwLCJ5IjoxMTAsInciOjEwMCwiaCI6MTgwLCJsYWJlbCI6IkFsZXJ0In0seyJpZCI6ImRpc3RfcmVhZCIs" +
-    "InQiOiJzZWxlY3QiLCJ4IjoxMDAwLCJ5IjozMzAsInciOjE4MCwiaCI6NzAsImxhYmVsIjoiRGlzdGFuY2UgcmVh" +
-    "ZCIsIm9wdGlvbnMiOiJBdXRvLFJlYWQgbm93In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijox" +
-    "MDAwLCJ5Ijo0MzAsInciOjQyMCwiaCI6MjUwLCJsYWJlbCI6IkRpc3RhbmNlIGNtIiwibW9kZWwiOiJncmlkIiwi" +
-    "d2luZG93U2VjIjozMCwic2VyaWVzIjoxfSx7ImlkIjoic3J2X2hlYWQiLCJ0Ijoic2xpZGVyIiwieCI6MTAwMCwi" +
-    "eSI6NzMwLCJ3IjoxMDAsImgiOjE5MCwibGFiZWwiOiJMb29rIiwibWluIjowLCJtYXgiOjE4MCwic3RlcCI6MSwi" +
-    "dmFsdWUiOjkwfSx7ImlkIjoiZ2F1Z2VfaGVhZCIsInQiOiJnYXVnZSIsIngiOjExMjAsInkiOjczMCwidyI6MTgw" +
-    "LCJoIjoxOTAsImxhYmVsIjoiQW5nbGUiLCJtaW4iOjAsIm1heCI6MTgwLCJ1bml0cyI6IsKwIiwiZGVjaW1hbHMi" +
-    "OjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3J2X2hlYWQiLCJ2YWx1ZSI6OTB9LHsiaWQiOiJidG5faGVhZF9j" +
-    "ZW50ZXIiLCJ0IjoiYnV0dG9uIiwieCI6MTMyMCwieSI6NzYwLCJ3IjoxMDAsImgiOjEwMCwibGFiZWwiOiJBaGVh" +
-    "ZCJ9LHsiaWQiOiJtb2RlIiwidCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVs" +
-    "IjoiTW9kZSIsIm9wdGlvbnMiOiJNYW51YWwsQXZvaWQifSx7ImlkIjoidXBkIiwidCI6InNlbGVjdCIsIngiOjI3" +
-    "MCwieSI6ODUwLCJ3IjoxNjAsImgiOjcwLCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMs" +
-    "T2ZmIn0seyJpZCI6ImxldmVsIiwidCI6InNlbGVjdCIsIngiOjQ2MCwieSI6ODUwLCJ3IjoxNzAsImgiOjcwLCJs" +
-    "YWJlbCI6IkxldmVsIiwib3B0aW9ucyI6IkJlZ2lubmVyLEV4cGVydCxEcml2ZSxEaXN0YW5jZSJ9LHsiaWQiOiJs" +
-    "YmxfdmVyIiwidCI6ImxhYmVsIiwieCI6ODAsInkiOjk2MCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJGaXJtd2Fy" +
-    "ZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6MjcwLCJ5Ijo5" +
-    "NjAsInciOjIyMCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImJ0bl9idXp6" +
-    "IiwidCI6ImJ1dHRvbiIsIngiOjUyMCwieSI6OTUwLCJ3IjoxMjAsImgiOjEyMCwibGFiZWwiOiJCZWVwIn1dLCJj" +
-    "YW52YXMiOnsidyI6MTUwMCwiaCI6MTE1MH19"
+    "YXJ0YmVhdCxidG5fYnV6eiJ9LHsiaWQiOiJncnBfc2NyZWVuIiwidCI6Imdyb3VwIiwibGFiZWwiOiJTQ1JFRU4i" +
+    "LCJjb2xvciI6IiNjMDg0ZmMiLCJ4Ijo5NzYsInkiOjk3MiwidyI6MzQ4LCJoIjoyNjIsImNoaWxkcmVuIjoib2xl" +
+    "ZF90ZXh0LGxibF9vbGVkIn0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInkiOjEwMCwidyI6" +
+    "NDIwLCJoIjo0MjAsImxhYmVsIjoiRHJpdmUiLCJtb2RlbCI6ImNsYXNzaWMifSx7ImlkIjoic3BkIiwidCI6InNs" +
+    "aWRlciIsIngiOjU0MCwieSI6MTAwLCJ3IjoxMjAsImgiOjI2MCwibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1h" +
+    "eCI6MjU1LCJzdGVwIjo1LCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX3N0b3AiLCJ0IjoiYnV0dG9uIiwieCI6NzAw" +
+    "LCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IlNUT1AifSx7ImlkIjoiZ2F1Z2Vfc3BkIiwidCI6Imdh" +
+    "dWdlIiwieCI6NzAwLCJ5IjoyNjAsInciOjIwMCwiaCI6MTkwLCJsYWJlbCI6IlNwZWVkIiwibWluIjo2MCwibWF4" +
+    "IjoyNTUsImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNwZCIsInZhbHVlIjoyMDB9LHsiaWQi" +
+    "OiJidG5fbWwiLCJ0IjoiYnV0dG9uIiwieCI6ODAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVm" +
+    "dCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjotMSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9t" +
+    "ciIsInQiOiJidXR0b24iLCJ4IjoyOTAsInkiOjU2MCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hl" +
+    "ZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQi" +
+    "OiJzbGlkZXIiLCJ4Ijo1MzAsInkiOjU2MCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiVHJpbSBMIiwibWluIjot" +
+    "MjAsIm1heCI6MjAsInN0ZXAiOjEsInZhbHVlIjowfSx7ImlkIjoidHJpbV9yIiwidCI6InNsaWRlciIsIngiOjY1" +
+    "MCwieSI6NTYwLCJ3IjoxMDAsImgiOjE4MCwibGFiZWwiOiJUcmltIFIiLCJtaW4iOi0yMCwibWF4IjoyMCwic3Rl" +
+    "cCI6MSwidmFsdWUiOjB9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAwLCJ3" +
+    "IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1pbiI6MCwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJk" +
+    "ZWNpbWFscyI6MCwibW9kZWwiOiJjbGFzc2ljIn0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlmaWNhdGlvbiIsIngi" +
+    "OjEyNTAsInkiOjExMCwidyI6MTAwLCJoIjoxODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoiZGlzdF9yZWFkIiwi" +
+    "dCI6InNlbGVjdCIsIngiOjEwMDAsInkiOjMzMCwidyI6MTgwLCJoIjo3MCwibGFiZWwiOiJEaXN0YW5jZSByZWFk" +
+    "Iiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJncmFwaCIsIngiOjEw" +
+    "MDAsInkiOjQzMCwidyI6NDIwLCJoIjoyNTAsImxhYmVsIjoiRGlzdGFuY2UgY20iLCJtb2RlbCI6ImdyaWQiLCJ3" +
+    "aW5kb3dTZWMiOjMwLCJzZXJpZXMiOjF9LHsiaWQiOiJzcnZfaGVhZCIsInQiOiJzbGlkZXIiLCJ4IjoxMDAwLCJ5" +
+    "Ijo3MzAsInciOjEwMCwiaCI6MTkwLCJsYWJlbCI6Ikxvb2siLCJtaW4iOjAsIm1heCI6MTgwLCJzdGVwIjoxLCJ2" +
+    "YWx1ZSI6OTB9LHsiaWQiOiJnYXVnZV9oZWFkIiwidCI6ImdhdWdlIiwieCI6MTEyMCwieSI6NzMwLCJ3IjoxODAs" +
+    "ImgiOjE5MCwibGFiZWwiOiJBbmdsZSIsIm1pbiI6MCwibWF4IjoxODAsInVuaXRzIjoiwrAiLCJkZWNpbWFscyI6" +
+    "MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6ImJ0bl9oZWFkX2Nl" +
+    "bnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzIwLCJ5Ijo3NjAsInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6IkFoZWFk" +
+    "In0seyJpZCI6Im1vZGUiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjg1MCwidyI6MTYwLCJoIjo3MCwibGFiZWwi" +
+    "OiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxBdm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6Mjcw" +
+    "LCJ5Ijo4NTAsInciOjE2MCwiaCI6NzAsImxhYmVsIjoiVGVsZW1ldHJ5Iiwib3B0aW9ucyI6IkFsbCxCYXNpYyxP" +
+    "ZmYifSx7ImlkIjoibGV2ZWwiLCJ0Ijoic2VsZWN0IiwieCI6NDYwLCJ5Ijo4NTAsInciOjE3MCwiaCI6NzAsImxh" +
+    "YmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNlLFNjcmVlbiJ9LHsi" +
+    "aWQiOiJsYmxfdmVyIiwidCI6ImxhYmVsIiwieCI6ODAsInkiOjk2MCwidyI6MTYwLCJoIjo3MCwibGFiZWwiOiJG" +
+    "aXJtd2FyZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6Mjcw" +
+    "LCJ5Ijo5NjAsInciOjIyMCwiaCI6NzAsImxhYmVsIjoiVXB0aW1lIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImJ0" +
+    "bl9idXp6IiwidCI6ImJ1dHRvbiIsIngiOjUyMCwieSI6OTUwLCJ3IjoxMjAsImgiOjEyMCwibGFiZWwiOiJCZWVw" +
+    "In0seyJpZCI6Im9sZWRfdGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4IjoxMDAwLCJ5IjoxMDMwLCJ3IjozMDAsImgi" +
+    "OjgwLCJsYWJlbCI6IlNheSBzb21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4IjoxMDAw" +
+    "LCJ5IjoxMTQwLCJ3IjozMDAsImgiOjcwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifV0s" +
+    "ImNhbnZhcyI6eyJ3IjoxNTAwLCJoIjoxMjkwfX0="
 const CFG_DRIVE =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEcml2ZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQiOiJn" +
     "cm91cCIsImxhYmVsIjoiV0hFRUxTIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo3NjgsImgi" +
@@ -347,7 +353,7 @@ const CFG_DRIVE =
     "NjQwLCJ5Ijo0ODAsInciOjEwMCwiaCI6MTgwLCJsYWJlbCI6IlRyaW0gUiIsIm1pbiI6LTIwLCJtYXgiOjIwLCJz" +
     "dGVwIjoxLCJ2YWx1ZSI6MH0seyJpZCI6ImxldmVsIiwidCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo3MDAsInciOjE3" +
     "MCwiaCI6NzAsImxhYmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNl" +
-    "In1dLCJjYW52YXMiOnsidyI6ODgwLCJoIjo4NTB9fQ=="
+    "LFNjcmVlbiJ9XSwiY2FudmFzIjp7InciOjg4MCwiaCI6ODUwfX0="
 const CFG_DIST =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEaXN0YW5jZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQi" +
     "OiJncm91cCIsImxhYmVsIjoiRElTVEFOQ0UiLCJjb2xvciI6IiNmZmIwMjAiLCJ4Ijo1NiwieSI6NDIsInciOjY4" +
@@ -366,12 +372,24 @@ const CFG_DIST =
     "IiwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3J2X2hlYWQiLCJ2YWx1ZSI6OTB9LHsiaWQi" +
     "OiJidG5faGVhZF9jZW50ZXIiLCJ0IjoiYnV0dG9uIiwieCI6NTQwLCJ5Ijo1NDAsInciOjEyMCwiaCI6MTIwLCJs" +
     "YWJlbCI6IkFoZWFkIn0seyJpZCI6ImxldmVsIiwidCI6InNlbGVjdCIsIngiOjgwLCJ5Ijo3MDAsInciOjE3MCwi" +
-    "aCI6NzAsImxhYmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNlIn1d" +
-    "LCJjYW52YXMiOnsidyI6ODAwLCJoIjo4NTB9fQ=="
+    "aCI6NzAsImxhYmVsIjoiTGV2ZWwiLCJvcHRpb25zIjoiQmVnaW5uZXIsRXhwZXJ0LERyaXZlLERpc3RhbmNlLFNj" +
+    "cmVlbiJ9XSwiY2FudmFzIjp7InciOjgwMCwiaCI6ODUwfX0="
+const CFG_SCREEN =
+    "eyJ0aXRsZSI6IlJvdmVyIOKAlCBTY3JlZW4gdGVzdCIsIndpZGdldHMiOlt7ImlkIjoiZ3JwX3Rlc3QiLCJ0Ijoi" +
+    "Z3JvdXAiLCJsYWJlbCI6IlNDUkVFTiIsImNvbG9yIjoiI2MwODRmYyIsIngiOjU2LCJ5Ijo0MiwidyI6NTg4LCJo" +
+    "IjozOTIsImNoaWxkcmVuIjoib2xlZF90ZXh0LGxibF9vbGVkLGJ0bl9idXp6LGxldmVsIn0seyJpZCI6Im9sZWRf" +
+    "dGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo4MCwieSI6MTAwLCJ3IjozODAsImgiOjkwLCJsYWJlbCI6IlNheSBz" +
+    "b21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4Ijo4MCwieSI6MjIwLCJ3IjozODAsImgi" +
+    "OjgwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifSx7ImlkIjoiYnRuX2J1enoiLCJ0Ijoi" +
+    "YnV0dG9uIiwieCI6NTAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IkJlZXAifSx7ImlkIjoibGV2" +
+    "ZWwiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjM0MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9w" +
+    "dGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzAw" +
+    "LCJoIjo0OTB9fQ=="
 const IDS_BEGINNER = ",dpad_move,btn_stop,gauge_dist,alert,level,lbl_ver,"
-const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,"
+const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,"
 const IDS_DRIVE = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,level,"
 const IDS_DIST = ",gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,level,"
+const IDS_SCREEN = ",oled_text,lbl_oled,btn_buzz,level,"
 // <<< LAYOUTS
 
 // Which panel the rover serves. All four are compiled in; the Level selector
@@ -383,18 +401,19 @@ const LAYOUT_BEGINNER = 0
 const LAYOUT_EXPERT = 1
 const LAYOUT_DRIVE = 2
 const LAYOUT_DIST = 3
-let layoutLevel = LAYOUT_BEGINNER
+const LAYOUT_SCREEN = 4
+let layoutLevel = LAYOUT_EXPERT
 
 // Deliberately `let`, and deliberately still called CFG: every line that
 // chunks the transfer already reads CFG.length and CFG.substr(), so pointing
 // this at a different blob switches panels without touching the transfer code
 // at all.
-let CFG = CFG_BEGINNER
+let CFG = CFG_EXPERT
 
 // Comma-wrapped id list of the panel currently being served, so telemetry can
 // skip anything the panel cannot display. On a link that sends 18 characters
 // every 35ms, publishing a value nobody can see is not free.
-let activeIds = IDS_BEGINNER
+let activeIds = IDS_EXPERT
 
 // Computed from whichever blob is active, so switching panel changes the
 // revision too and the app cannot serve a cached copy of the wrong one.
@@ -410,6 +429,7 @@ function applyLayout(level: number) {
     if (level == LAYOUT_EXPERT) { CFG = CFG_EXPERT; activeIds = IDS_EXPERT }
     else if (level == LAYOUT_DRIVE) { CFG = CFG_DRIVE; activeIds = IDS_DRIVE }
     else if (level == LAYOUT_DIST) { CFG = CFG_DIST; activeIds = IDS_DIST }
+    else if (level == LAYOUT_SCREEN) { CFG = CFG_SCREEN; activeIds = IDS_SCREEN }
     else { CFG = CFG_BEGINNER; activeIds = IDS_BEGINNER }
     CFG_REV = cfgRevisionFromCfg(CFG)
 }
@@ -742,6 +762,61 @@ function wheelsStop() {
     motor.servo(motor.Servos.S2, WHEEL_STOP - trimR)
 }
 
+// ── SCREEN (128x32 OLED on the I2C bus) ─────────────────────────────
+// Extension: https://github.com/tinkertanker/pxt-oled-ssd1306  (namespace OLED)
+//
+// That library hardcodes the two registers that tell an SSD1306 how many rows
+// it physically has -- multiplex ratio 0xA8 and COM pin config 0xDA -- at the
+// 128x64 values, and its own command() is private, so the correction is sent
+// here over raw I2C instead. Without it a 128x32 panel initialises with no
+// error at all and draws every line doubled and interlaced.
+const OLED_ADDR = 0x3C
+const OLED_COLS = 21          // characters that fit across at the default font
+
+function oledCmd(c: number) {
+    const b = pins.createBuffer(2)
+    b.setNumber(NumberFormat.UInt8LE, 0, 0x00)   // 0x00 = "a command follows"
+    b.setNumber(NumberFormat.UInt8LE, 1, c)
+    pins.i2cWriteBuffer(OLED_ADDR, b)
+}
+
+function oledInit() {
+    // Argument order follows the library's own signature, init(width, height).
+    // Its README example passes (64, 128) for a 128x64 panel, which reads as
+    // (height, width) -- the two disagree. If the text comes out at the wrong
+    // scale, swap these before suspecting anything else.
+    OLED.init(128, 32)
+    oledCmd(0xA8); oledCmd(0x1F)     // 32 rows, not 64
+    oledCmd(0xDA); oledCmd(0x02)     // COM pins for a 32-row panel
+    OLED.clear()
+}
+
+// What the app asked to display. Empty means "show the banner instead".
+let oledText = ""
+let oledShown = ""      // impossible first value, so the mirror always sends once
+let oledDirty = true
+
+// The text the screen is ACTUALLY showing, truncated exactly as drawn. The app
+// mirrors this rather than what was typed, so a message too long for the panel
+// looks cut off in the app as well instead of silently disagreeing with it.
+function oledCurrent(): string {
+    if (oledText.length > 0) return oledText.substr(0, OLED_COLS)
+    return btConnected ? "Rover " + FIRMWARE_VERSION : "Rover - connect me"
+}
+
+// Drawing is I2C and takes milliseconds, so it happens in the loop and only
+// when the text actually changed -- never from the receive callback.
+function oledRender() {
+    const line1 = oledCurrent()
+    const line2 = oledText.length > OLED_COLS
+        ? oledText.substr(OLED_COLS, OLED_COLS)
+        : "Workshop-DIY.org"
+    OLED.clear()
+    OLED.writeStringNewLine(line1)
+    OLED.writeString(line2)
+    oledDirty = false
+}
+
 // ── SWEEP HEAD (S3) ──────────────────────────────────────────────────
 // The sonar sits on a third servo so it can look around without turning the
 // whole rover. Unlike S1/S2 this is a POSITIONAL servo: the angle IS the
@@ -990,6 +1065,14 @@ function handleWidget(id: string, val: string) {
         dbg("jog: L=" + (jogL ? 1 : 0) + " R=" + (jogR ? 1 : 0))
     }
 
+    // Edit field: text for the little screen. Clearing it restores the banner.
+    if (id == "oled_text") {
+        oledText = val
+        oledDirty = true
+        dbg("screen -> " + oledCurrent())
+        return
+    }
+
     // Select: Level — which panel the robot serves.
     //
     // Switching pushes the new layout straight away rather than waiting for a
@@ -1001,6 +1084,7 @@ function handleWidget(id: string, val: string) {
         if (val == "Expert") want = LAYOUT_EXPERT
         else if (val == "Drive") want = LAYOUT_DRIVE
         else if (val == "Distance") want = LAYOUT_DIST
+        else if (val == "Screen") want = LAYOUT_SCREEN
         if (want != layoutLevel) {
             wheelsStop()          // never change panel with the wheels turning
             lastDriveL = 0
@@ -1187,6 +1271,8 @@ function sendValue(id: string, val: string) {
 // Safety: stop any leftover motion and centre the sweep head on boot.
 wheelsStop()
 headWrite()
+oledInit()
+oledRender()
 basic.showString(FIRMWARE_VERSION)
 // Idle indicator: a hollow ring, held until BLE connects. Deliberately
 // not a filled shape — ■ already means "STOP pressed" and the centre dot
@@ -1470,6 +1556,11 @@ basic.forever(function () {
         }
     }
 
+    // Redraw the screen when the text changed. I2C, so never from the receive
+    // callback, and only on change -- redrawing every tick would fight the
+    // wheels and the sweep head for the same bus.
+    if (oledDirty) oledRender()
+
     // Write the angle the rate guard above had to defer, so the head always
     // ends up where the finger left it rather than a few degrees short.
     if (headPending && now - headWrittenAt >= HEAD_MIN_INTERVAL_MS) headWrite()
@@ -1549,7 +1640,8 @@ basic.forever(function () {
                 bluetooth.uartWriteLine("UPD level " +
                     (layoutLevel == LAYOUT_EXPERT ? "Expert"
                      : layoutLevel == LAYOUT_DRIVE ? "Drive"
-                     : layoutLevel == LAYOUT_DIST ? "Distance" : "Beginner"))
+                     : layoutLevel == LAYOUT_DIST ? "Distance"
+                     : layoutLevel == LAYOUT_SCREEN ? "Screen" : "Beginner"))
                 scheduleInitialUiSync()
                 requestGlyph(GLYPH_CONNECTED)
                 dbg("layout sent, cfgSent = true")
@@ -1597,6 +1689,11 @@ basic.forever(function () {
             if (uiGaugeSpdDirty) {
                 sendUiValue("gauge_spd", "" + driveSpeed)
                 uiGaugeSpdDirty = false
+                uiSent = true
+            } else if (oledCurrent() != oledShown) {
+                // Mirror what is really on the glass, including truncation.
+                oledShown = oledCurrent()
+                sendUiValue("lbl_oled", oledShown)
                 uiSent = true
             } else if (uiGaugeHeadDirty) {
                 sendUiValue("gauge_head", "" + headAngle)
