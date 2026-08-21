@@ -359,8 +359,6 @@ let updLevel = UPD_ALL
 // receives the same IDs, positions, ranges, labels and model.
 //
 // Control/gauge pairs:
-//   slider_srv1 -> gauge_srv1   0..180°
-//   slider_srv2 -> gauge_srv2   0..180°
 //   spd         -> gauge_spd    60..255
 //
 // Each gauge also carries `source:"<slider id>"`. Newer clients can mirror
@@ -500,10 +498,6 @@ let driveSpeed = 200
 // Do NOT transmit their UPD messages from the BLE RX callback: v46 showed
 // that callback-side TX can destabilize reconnects. Handlers only mark the
 // latest value dirty; the forever loop coalesces and publishes it later.
-let uiServo1 = 90
-let uiServo2 = 90
-let uiGaugeSrv1Dirty = false
-let uiGaugeSrv2Dirty = false
 let uiGaugeSpdDirty = false
 let uiGaugeLastInputAt = 0
 let uiGaugeTxNextAt = 0
@@ -654,7 +648,6 @@ const DRIVE_WATCHDOG_MS = 2500
 // blocking waits — so the radio, watchdog and display keep running.
 // ═══════════════════════════════════════════════════════════════
 const MODE_MANUAL = 0
-const MODE_LINE = 1
 const MODE_AVOID = 2
 let driveMode = MODE_MANUAL
 
@@ -664,9 +657,6 @@ let driveMode = MODE_MANUAL
 // ("0 (on black line) or 1 (on white floor)"). The LED widgets are fed
 // the inverted value so that a LIT led means "this side is on the line",
 // which is what anyone watching would expect.
-let lastLineL = -1
-let lastLineR = -1
-const LINE_INTERVAL_MS = 100
 
 // Obstacle-avoid + alert thresholds.
 const AVOID_STOP_CM = 20        // back away closer than this
@@ -687,9 +677,65 @@ let avoidPhase = 0              // 0 = cruising, 1 = reversing, 2 = turning
 // earlier in the file — static TypeScript rejects use-before-declaration.
 let heartbeat = 0
 
+// ═══════════════════════════════════════════════════════════════
+// 🔌 HARDWARE SEAM — everything board-specific lives here
+// Extensions needed in MakeCode: DFRobot/pxt-motor  (paste the URL; searching
+// for "motor" offers several look-alikes and the wrong one compiles cleanly
+// and moves nothing).
+//
+// The rest of this file — BLE, CFG chunking, the GETCFGVER cache, telemetry,
+// the drive watchdog, the D-pad mask — is unchanged from maqueen-rxy and
+// should stay diffable against it. Swapping to another driver board means
+// rewriting these functions and nothing else.
+// ═══════════════════════════════════════════════════════════════
+
+const PIN_TRIG = DigitalPin.P13
+const PIN_ECHO = DigitalPin.P14
+
+// Continuous-rotation servos: 90 is stop, 0 and 180 are full speed each way.
+const WHEEL_STOP = 90
+
+// Straight-line trim, one per wheel, in degrees of pulse. Positive = that
+// wheel drives MORE forward. Two 360-degree servos never run at matched
+// speeds out of the box, so without this a rover always curves.
+let trimL = 0
+let trimR = 0
+
+// The mirror matters: the right servo faces the opposite way on the chassis,
+// so forward is DOWN from 90 on that side and UP on the left. Trim therefore
+// has to be subtracted on the right to mean "more forward" on both wheels --
+// adding it to both is what made the ESP32 rover curve right (S2-v3).
+function wheels(l: number, r: number) {
+    let pl = WHEEL_STOP + Math.idiv(l * 90, DRIVE_SPEED_MAX) + trimL
+    let pr = WHEEL_STOP - Math.idiv(r * 90, DRIVE_SPEED_MAX) - trimR
+    motor.servo(motor.Servos.S1, Math.constrain(pl, 0, 180))
+    motor.servo(motor.Servos.S2, Math.constrain(pr, 0, 180))
+}
+
+function wheelsStop() {
+    motor.servo(motor.Servos.S1, WHEEL_STOP + trimL)
+    motor.servo(motor.Servos.S2, WHEEL_STOP - trimR)
+}
+
+// HC-SR04P on P13/P14, read directly rather than through a board library.
+// Returns 0 for "no echo", which the caller already treats as a failed read.
+// 30000us caps the wait at roughly 5 m so a missing sensor cannot stall the
+// loop; 58 is the standard microseconds-per-centimetre round-trip constant.
+function pingCm(): number {
+    pins.setPull(PIN_ECHO, PinPullMode.PullNone)
+    pins.digitalWritePin(PIN_TRIG, 0)
+    control.waitMicros(2)
+    pins.digitalWritePin(PIN_TRIG, 1)
+    control.waitMicros(10)
+    pins.digitalWritePin(PIN_TRIG, 0)
+    const echo = pins.pulseIn(PIN_ECHO, PulseValue.High, 30000)
+    if (echo == 0) return 0
+    return Math.idiv(echo, 58)
+}
+
 function driveMix(nx: number, ny: number) {
     if (Math.abs(nx) < DEAD_ZONE && Math.abs(ny) < DEAD_ZONE) {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         dbg("drive: STOP (nx=" + nx + " ny=" + ny + ")")
         requestDriveDebug(0, 0)
         lastDriveL = 0
@@ -711,8 +757,7 @@ function driveMix(nx: number, ny: number) {
     // handleMotor(): two motorRun() calls and nothing that can block.
     // dbg() only pushes to a queue; requestDriveDebug() only sets a
     // flag. No basic.show* here — see showDriveDebug()'s comment.
-    maqueen.motorRun(maqueen.Motors.M1, l >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(l))
-    maqueen.motorRun(maqueen.Motors.M2, r >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(r))
+    wheels(l, r)
     dbg("drive: nx=" + nx + " ny=" + ny + " -> L=" + l + " R=" + r)
     requestDriveDebug(l, r)
     lastDriveL = l
@@ -720,23 +765,6 @@ function driveMix(nx: number, ny: number) {
     lastDriveAt = now
 }
 
-// Same rate-limit/change-detection guard as driveMix(), applied to the
-// servo sliders — see the comment at the slider_srv1/2 handlers above.
-let lastServo1 = -1, lastServo2 = -1
-let lastServo1At = 0, lastServo2At = 0
-function servoWriteAllowed(port: number, angle: number): boolean {
-    let now = input.runningTime()
-    let last = port == 1 ? lastServo1 : lastServo2
-    let lastAt = port == 1 ? lastServo1At : lastServo2At
-    let changedEnough = Math.abs(angle - last) >= DRIVE_CHANGE_THRESHOLD
-    let dueForRefresh = (now - lastAt) >= MIN_DRIVE_INTERVAL_MS
-    if (!changedEnough && !dueForRefresh) {
-        return false
-    }
-    if (port == 1) { lastServo1 = angle; lastServo1At = now }
-    else { lastServo2 = angle; lastServo2At = now }
-    return true
-}
 
 // D-pad direction state, driven by the dpad_move handler in
 // handleWidget() below. More than one can be true at once (e.g. up+
@@ -770,7 +798,7 @@ function handleDpadMask(mask: number) {
     if (btnRight) nx += 1
 
     if (nx == 0 && ny == 0) {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         lastDriveL = 0
         lastDriveR = 0
         lastDriveAt = lastDriveCmdAt
@@ -779,8 +807,7 @@ function handleDpadMask(mask: number) {
 
     let l = Math.constrain((ny + nx) * driveSpeed, -driveSpeed, driveSpeed)
     let r = Math.constrain((ny - nx) * driveSpeed, -driveSpeed, driveSpeed)
-    maqueen.motorRun(maqueen.Motors.M1, l >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(l))
-    maqueen.motorRun(maqueen.Motors.M2, r >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(r))
+    wheels(l, r)
     lastDriveL = l
     lastDriveR = r
     lastDriveAt = lastDriveCmdAt
@@ -807,7 +834,7 @@ function applyJog() {
     let r = jogR ? driveSpeed : 0
     lastDriveCmdAt = input.runningTime()
     if (l == 0 && r == 0) {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         lastDriveL = 0
         lastDriveR = 0
         lastDriveAt = lastDriveCmdAt
@@ -815,8 +842,7 @@ function applyJog() {
         return
     }
     // Always forward — these are "does this wheel work" buttons, not steering.
-    maqueen.motorRun(maqueen.Motors.M1, maqueen.Dir.CW, l)
-    maqueen.motorRun(maqueen.Motors.M2, maqueen.Dir.CW, r)
+    wheels(l, r)
     lastDriveL = l
     lastDriveR = r
     lastDriveAt = lastDriveCmdAt
@@ -843,7 +869,7 @@ function driveAuto(nx: number, ny: number) {
     if (driveMode == MODE_MANUAL) return
     let now = input.runningTime()
     if (Math.abs(nx) < DEAD_ZONE && Math.abs(ny) < DEAD_ZONE) {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         lastDriveL = 0
         lastDriveR = 0
         lastDriveAt = now
@@ -853,8 +879,7 @@ function driveAuto(nx: number, ny: number) {
     }
     let l = Math.constrain(Math.round((ny + nx) * driveSpeed), -driveSpeed, driveSpeed)
     let r = Math.constrain(Math.round((ny - nx) * driveSpeed), -driveSpeed, driveSpeed)
-    maqueen.motorRun(maqueen.Motors.M1, l >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(l))
-    maqueen.motorRun(maqueen.Motors.M2, r >= 0 ? maqueen.Dir.CW : maqueen.Dir.CCW, Math.abs(r))
+    wheels(l, r)
     lastDriveL = l
     lastDriveR = r
     lastDriveAt = now
@@ -870,7 +895,7 @@ function handleWidget(id: string, val: string) {
 
     // Button: STOP — kill both motors immediately.
     if (id == "btn_stop" && val == "1") {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         // Was basic.showIcon(IconNames.No) — blocking, and this runs
         // inside the BLE receive handler. Still shows the ✗, but via
         // the deferred renderer so nothing blocks here.
@@ -932,7 +957,7 @@ function handleWidget(id: string, val: string) {
     if (id == "mode") {
         // Always stop first. Switching mode while the wheels are turning
         // would otherwise carry the old command into the new mode.
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         lastDriveL = 0
         lastDriveR = 0
         btnFwd = false
@@ -944,8 +969,10 @@ function handleWidget(id: string, val: string) {
         clearJog()
         avoidPhase = 0
         avoidUntil = 0
-        if (val == "Line") driveMode = MODE_LINE
-        else if (val == "Avoid") driveMode = MODE_AVOID
+        // No "Line" here: this chassis has no line sensors, and a follower
+        // reading floating pins drives straight off the table. The Mode
+        // selector in the layout offers Manual and Avoid only.
+        if (val == "Avoid") driveMode = MODE_AVOID
         else driveMode = MODE_MANUAL
         // Reset ownership timing at the mode boundary. The age of the last
         // Manual D-pad packet must never decide whether autonomous motors run.
@@ -960,49 +987,13 @@ function handleWidget(id: string, val: string) {
         music.playTone(440, music.beat(BeatFraction.Quarter))
     }
 
-    // Slider: Servo 1 / Servo 2 — widget's min/max (0-180) already match
-    // maqueen.servoRun's angle range, so val is a direct degree value.
-    // Same rate-limit/change-detection guard as driveMix(): dragging a
-    // slider fires many rapid SET messages, and unthrottled servoRun()
-    // calls at that frequency can lock up the I2C bus hard enough to
-    // freeze the WHOLE firmware (confirmed: the heartbeat, which never
-    // touches I2C, stopped incrementing the moment Servo 1 was dragged).
-    if (id == "slider_srv1") {
-        let angle1 = Math.constrain(parseInt(val), 0, 180)
-        uiServo1 = angle1
-        uiGaugeSrv1Dirty = true
-        uiGaugeLastInputAt = input.runningTime()
-        // Glyph updates on EVERY message, outside the rate-limit gate:
-        // the guard exists to protect the I2C bus, not the display, and
-        // suppressing feedback while dragging would look like a dropped
-        // command. Drawing is deferred to the loop, so it is cheap.
-        requestGlyphValue(GLYPH_SERVO, angle1)
-        if (servoWriteAllowed(1, angle1)) {
-            maqueen.servoRun(maqueen.Servos.S1, angle1)
-            dbg("servo S1 -> " + angle1)
-        }
-    }
-    if (id == "slider_srv2") {
-        let angle2 = Math.constrain(parseInt(val), 0, 180)
-        uiServo2 = angle2
-        uiGaugeSrv2Dirty = true
-        uiGaugeLastInputAt = input.runningTime()
-        requestGlyphValue(GLYPH_SERVO, angle2)
-        if (servoWriteAllowed(2, angle2)) {
-            maqueen.servoRun(maqueen.Servos.S2, angle2)
-            dbg("servo S2 -> " + angle2)
-        }
-    }
+    // maqueen-rxy drives two auxiliary servos from slider_srv1/slider_srv2.
+    // Here S1 and S2 ARE the wheels, so those sliders are gone -- a slider
+    // that jerked the drive servos to an absolute angle would fight the
+    // D-pad for control of the same hardware.
 
-    // Toggle: LED L / LED R
-    if (id == "toggle_led_l") {
-        requestGlyphValue(GLYPH_LED_L, val == "1" ? 1 : 0)
-        maqueen.writeLED(maqueen.LED.LEDLeft, val == "1" ? maqueen.LEDswitch.turnOn : maqueen.LEDswitch.turnOff)
-    }
-    if (id == "toggle_led_r") {
-        requestGlyphValue(GLYPH_LED_R, val == "1" ? 1 : 0)
-        maqueen.writeLED(maqueen.LED.LEDRight, val == "1" ? maqueen.LEDswitch.turnOn : maqueen.LEDswitch.turnOff)
-    }
+    // The Maqueen's two board LEDs are gone; this rover lights an 8-pixel
+    // NeoPixel strip instead, handled with the other strip widgets.
 
     // D-pad: Drive (val = "<dir> <1|0>", dir = up/down/left/right).
     // All 4 directions share this ONE widget id — see the header
@@ -1053,9 +1044,7 @@ function sendValue(id: string, val: string) {
 // ═══════════════════════════════════════════════════════════════
 
 // Safety: stop any leftover motion and center servos on boot.
-maqueen.motorStop(maqueen.Motors.All)
-maqueen.servoRun(maqueen.Servos.S1, 90)
-maqueen.servoRun(maqueen.Servos.S2, 90)
+wheelsStop()
 basic.showString(FIRMWARE_VERSION)
 // Idle indicator: a hollow ring, held until BLE connects. Deliberately
 // not a filled shape — ■ already means "STOP pressed" and the centre dot
@@ -1104,8 +1093,6 @@ function handleLinkLost() {
     cfgVerPending = false
     cfgVerReplyAt = 0
     uiInitialSyncStage = 0
-    uiGaugeSrv1Dirty = false
-    uiGaugeSrv2Dirty = false
     uiGaugeSpdDirty = false
     uiGaugeTxNextAt = 0
     logQueue = []
@@ -1113,7 +1100,7 @@ function handleLinkLost() {
     // automatic replacement for the physical RESET that was previously
     // required before GETCFG would work after a disconnect.
     bleStackResetAt = input.runningTime() + BLE_STACK_RESET_DELAY_MS
-    maqueen.motorStop(maqueen.Motors.All)
+    wheelsStop()
     // Clear the drive state too, not just the motors. Otherwise, if the
     // link dropped mid-drive, lastDriveL/R stay non-zero and the loop's
     // watchdog fires ~700ms later, calling requestDriveDebug(0,0) and
@@ -1138,8 +1125,6 @@ function handleLinkLost() {
     // the last ones from the previous session — otherwise the line LEDs
     // sit blank until something happens to change. (The graph is not
     // deduped at all, so it needs no reset.)
-    lastLineL = -1
-    lastLineR = -1
     alertActive = false
     // Re-announce the version on the next connect; the app rebuilds its
     // widgets from scratch each session, so the label would be blank.
@@ -1212,7 +1197,7 @@ function uptimeString(totalSec: number): string {
 }
 // Ultrasonic polling cadence.
 //
-// maqueen.Ultrasonic() is the most expensive call in this firmware, and
+// The ultrasonic read is the most expensive call in this firmware, and
 // its cost depends entirely on whether an echo comes back. From the
 // library source, one readUlt() is basic.pause(1) + basic.pause(20) +
 // pins.pulseIn(..., 500*58) — a 29ms timeout. An echo returns almost at
@@ -1235,7 +1220,6 @@ let distInterval = DIST_INTERVAL_MS
 const DIST_MAX_CM = 200          // matches the gauge's max in CFG
 let nextDistAt = 0
 let forceDistanceOnce = false   // v49: selector-triggered one-shot in ANY mode
-let nextLineAt = 0
 basic.forever(function () {
     let now = input.runningTime()
 
@@ -1263,7 +1247,7 @@ basic.forever(function () {
     }
 
     if (driveMode == MODE_MANUAL && (lastDriveL != 0 || lastDriveR != 0) && now - lastDriveCmdAt > DRIVE_WATCHDOG_MS) {
-        maqueen.motorStop(maqueen.Motors.All)
+        wheelsStop()
         dbg("watchdog: no drive update for " + DRIVE_WATCHDOG_MS + "ms, auto-stop")
         requestDriveDebug(0, 0)
         lastDriveL = 0
@@ -1438,26 +1422,16 @@ basic.forever(function () {
     if (cfgSent && now >= uiGaugeTxNextAt) {
         let uiSent = false
         if (uiInitialSyncStage > 0) {
-            if (uiInitialSyncStage == 1) sendUiValue("slider_srv1", "" + uiServo1)
-            else if (uiInitialSyncStage == 2) sendUiValue("gauge_srv1", "" + uiServo1)
-            else if (uiInitialSyncStage == 3) sendUiValue("slider_srv2", "" + uiServo2)
-            else if (uiInitialSyncStage == 4) sendUiValue("gauge_srv2", "" + uiServo2)
-            else if (uiInitialSyncStage == 5) sendUiValue("spd", "" + driveSpeed)
-            else if (uiInitialSyncStage == 6) sendUiValue("gauge_spd", "" + driveSpeed)
+            // Only the speed pair survives: slider_srv1/2 and their gauges
+            // addressed the auxiliary servos, which are the wheels here.
+            if (uiInitialSyncStage == 1) sendUiValue("spd", "" + driveSpeed)
+            else if (uiInitialSyncStage == 2) sendUiValue("gauge_spd", "" + driveSpeed)
             uiInitialSyncStage += 1
-            if (uiInitialSyncStage > 6) uiInitialSyncStage = 0
+            if (uiInitialSyncStage > 2) uiInitialSyncStage = 0
             uiGaugeTxNextAt = now + UI_GAUGE_TX_GAP_MS
             uiSent = true
         } else if (now - uiGaugeLastInputAt >= UI_GAUGE_SETTLE_MS) {
-            if (uiGaugeSrv1Dirty) {
-                sendUiValue("gauge_srv1", "" + uiServo1)
-                uiGaugeSrv1Dirty = false
-                uiSent = true
-            } else if (uiGaugeSrv2Dirty) {
-                sendUiValue("gauge_srv2", "" + uiServo2)
-                uiGaugeSrv2Dirty = false
-                uiSent = true
-            } else if (uiGaugeSpdDirty) {
+            if (uiGaugeSpdDirty) {
                 sendUiValue("gauge_spd", "" + driveSpeed)
                 uiGaugeSpdDirty = false
                 uiSent = true
@@ -1500,43 +1474,10 @@ basic.forever(function () {
         if ((lastDriveL == 0 && lastDriveR == 0) || now - lastDriveCmdAt > 500) sendValue("lbl_ver", FIRMWARE_VERSION)
     }
 
-    // ── Line sensors ─────────────────────────────────────────────
-    // Polled every 100ms and pushed to the two LED widgets on CHANGE
-    // only. readPatrol is a plain digital pin read — no echo wait, so
-    // unlike the ultrasonic it costs nothing to poll often.
-    if (driveMode != MODE_MANUAL && now >= nextLineAt) {
-        nextLineAt = now + LINE_INTERVAL_MS
-        let rawL = maqueen.readPatrol(maqueen.Patrol.PatrolLeft)
-        let rawR = maqueen.readPatrol(maqueen.Patrol.PatrolRight)
-        // Invert: 0 from the sensor means ON the black line, and a lit
-        // LED should mean "on the line". See the comment at lastLineL.
-        let onL = rawL == 0 ? 1 : 0
-        let onR = rawR == 0 ? 1 : 0
-        if (cfgSent && onL != lastLineL) {
-            lastLineL = onL
-            if ((lastDriveL == 0 && lastDriveR == 0) || driveMode != MODE_MANUAL) sendValue("ln_l", "" + onL)
-        }
-        if (cfgSent && onR != lastLineR) {
-            lastLineR = onR
-            if ((lastDriveL == 0 && lastDriveR == 0) || driveMode != MODE_MANUAL) sendValue("ln_r", "" + onR)
-        }
-
-        // Line-following: steer toward whichever side has left the line.
-        if (driveMode == MODE_LINE) {
-            if (onL == 1 && onR == 1) {
-                driveAuto(0, 1)          // both on the line -> straight
-            } else if (onL == 1 && onR == 0) {
-                driveAuto(-0.6, 0.4)     // drifted right -> bear left
-            } else if (onL == 0 && onR == 1) {
-                driveAuto(0.6, 0.4)      // drifted left -> bear right
-            } else {
-                // Both off the line. Pivot in place to hunt for it again
-                // rather than driving on blind.
-                driveAuto(0.8, 0)
-            }
-            lastDriveCmdAt = now        // keep the watchdog satisfied
-        }
-    }
+    // maqueen-rxy polls two line sensors here and runs a line-following
+    // mode from them. This chassis has neither, so the block is gone rather
+    // than left reading pins that float -- a follower with no sensors would
+    // just drive off. Avoid mode below still works: it needs only the sonar.
 
     // ── Ultrasonic (HC-SR04) — AVOID MODE ONLY ───────────────────
     //
@@ -1599,7 +1540,7 @@ basic.forever(function () {
         // the interval exists to prevent.
         nextDistAt = now + distInterval
         {
-            let cm = maqueen.Ultrasonic()
+            let cm = pingCm()
             // Adapt the next interval to what we just got back. 500 is
             // the "no echo" sentinel and is the reading that costs the
             // full ~250ms retry stall, so keep backing off while it
