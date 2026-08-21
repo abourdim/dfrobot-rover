@@ -117,7 +117,7 @@
    "w": 170,
    "h": 70,
    "label": "Level",
-   "options": "Beginner,Expert,Drive,Distance,Screen"
+   "options": "Beginner,Expert,Drive,Distance,Screen,Lights"
   }
  ],
  "canvas": {

@@ -23,7 +23,7 @@ to configure in the browser, and no special build of the app for this robot.
 | little screen | **I²C port** | SSD1306 128×32 at address `0x3C` |
 | distance sensor | **P13** trig · **P14** echo | HC-SR04**P**, the 3.3 V version |
 | sensor head servo | **S3** | turns the eyes left and right |
-| light strip | **P15** | 8 NeoPixels *(not driven yet)* |
+| light strip | **P15** | 8 NeoPixels |
 | battery pack | **DC socket** | 4×AA, 3.5–5.5 V |
 
 Still free for whatever you add next: **P0 P1 P2 P8 P12 P16**.
@@ -51,17 +51,19 @@ and paste this URL into the search box:
 https://github.com/DFRobot/pxt-motor
 ```
 
-**Two** extensions are needed. Paste both URLs:
+**Three** extensions are needed. Paste each URL in turn:
 
 ```
 https://github.com/DFRobot/pxt-motor
 https://github.com/tinkertanker/pxt-oled-ssd1306
+https://github.com/microsoft/pxt-neopixel
 ```
 
 | | appears as | provides |
 |---|---|---|
 | [DFRobot/pxt-motor](https://github.com/DFRobot/pxt-motor) | `motor` | `motor.servo()`, `motor.MotorRun()`, `motor.motorStop()` |
 | [tinkertanker/pxt-oled-ssd1306](https://github.com/tinkertanker/pxt-oled-ssd1306) | `OLED` | `OLED.init()`, `OLED.clear()`, `OLED.writeString()` |
+| [microsoft/pxt-neopixel](https://github.com/microsoft/pxt-neopixel) | `neopixel` | `neopixel.create()`, `strip.setPixelColor()`, `strip.show()` |
 
 **Paste the URL — do not search by name.** DFRobot published this as plain
 `motor`, the most generic name on the platform, so a search returns a pile of
@@ -206,7 +208,7 @@ the rover is switched off.
 | distance sensor, sweep head | working on hardware |
 | screen | written — the 128x32 correction is untested on glass |
 | five control panels | working on hardware |
-| light strip | **not driven yet** |
+| light strip | working on hardware |
 
 ## Planned
 
@@ -215,9 +217,6 @@ microphone and a motion sensor.
 
 - **A face on the screen** — two big eyes that blink, look worried as something
   gets close, go dizzy when spinning, and fall asleep when idle.
-- **The strip as a distance meter** — pixels light green → amber → red as
-  something approaches, and the number lit shows how close. It makes an
-  invisible sensor visible.
 - **Ouch** — the motion sensor feels a bump, the rover flinches and backs off.
 - **Reversing beeper**, like a truck, only when going backwards.
 - **Clap to go** — one clap starts, two stops.

@@ -21,7 +21,7 @@ MIN_SIZE = {"button": (100, 100), "label": (80, 60), "select": (120, 60),
             "gauge": (120, 120), "slider": (80, 150), "led": (60, 60),
             "editfield": (180, 70)}
 
-LEVELS = "Beginner,Expert,Drive,Distance,Screen"
+LEVELS = "Beginner,Expert,Drive,Distance,Screen,Lights"
 
 
 def W(wid, t, x, y, w, h, **kw):
@@ -131,6 +131,14 @@ expert = build("Rover — Expert", [
         W("lbl_oled", "label", 1000, 1180, 300, 70, label="On the screen",
           model="card"),
     ]),
+    ("grp_light", "LIGHTS", "#22c55e", [
+        W("np_mode", "select", 80, 1200, 180, 70, label="Lights",
+          options="Distance,Colour,Rainbow,Off"),
+        W("np_colour", "select", 290, 1200, 170, 70, label="Colour",
+          options="Red,Orange,Yellow,Green,Blue,Purple,White"),
+        W("np_bright", "slider", 500, 1190, 100, 180, label="Bright",
+          min=0, max=255, step=5, value=60),
+    ]),
 ])
 
 # ── DRIVE TEST ──────────────────────────────────────────────────────────────
@@ -188,8 +196,26 @@ screen_test = build("Rover — Screen test", [
     ]),
 ])
 
-PANELS = [("BEGINNER", beginner), ("EXPERT", expert),
-          ("DRIVE", drive_test), ("DIST", dist_test), ("SCREEN", screen_test)]
+# ── LIGHTS TEST ─────────────────────────────────────────────────────────────
+# Distance is the default mode on purpose: it is the one that teaches. The
+# strip becomes a picture of what the sensor sees, which is otherwise a number
+# on a phone.
+lights_test = build("Rover — Lights test", [
+    ("grp_test", "LIGHTS", "#22c55e", [
+        W("np_mode", "select", 80, 100, 180, 70, label="Lights",
+          options="Distance,Colour,Rainbow,Off"),
+        W("np_colour", "select", 290, 100, 170, 70, label="Colour",
+          options="Red,Orange,Yellow,Green,Blue,Purple,White"),
+        W("np_bright", "slider", 500, 100, 100, 190, label="Bright",
+          min=0, max=255, step=5, value=60),
+        W("gauge_dist", "gauge", 80, 220, 200, 190, label="Distance",
+          min=0, max=200, units="cm", decimals=0, model="classic"),
+        LEVEL(310, 250),
+    ]),
+])
+
+PANELS = [("BEGINNER", beginner), ("EXPERT", expert), ("DRIVE", drive_test),
+          ("DIST", dist_test), ("SCREEN", screen_test), ("LIGHTS", lights_test)]
 
 # ── checks ──────────────────────────────────────────────────────────────────
 src = open(SRC, encoding="utf-8").read()

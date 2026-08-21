@@ -98,7 +98,7 @@
     <h2>Get it running</h2>
     <ol class="steps" style="margin-top:12px">
       <li>Wire it up as above, batteries last, switch <strong>off</strong>.</li>
-      <li>Open <a href="https://makecode.microbit.org">makecode.microbit.org</a> &rarr; <em>Extensions</em>, and paste <strong>both</strong> URLs, one at a time: <code>https://github.com/DFRobot/pxt-motor</code> for the wheels and <code>https://github.com/tinkertanker/pxt-oled-ssd1306</code> for the screen. Paste the URLs &mdash; don't search, the first is named just <code>motor</code> and has many look-alikes.</li>
+      <li>Open <a href="https://makecode.microbit.org">makecode.microbit.org</a> &rarr; <em>Extensions</em>, and paste <strong>both</strong> URLs, one at a time: <code>https://github.com/DFRobot/pxt-motor</code> for the wheels and <code>https://github.com/tinkertanker/pxt-oled-ssd1306</code> for the screen and <code>https://github.com/microsoft/pxt-neopixel</code> for the lights. Paste the URLs &mdash; don't search, the first is named just <code>motor</code> and has many look-alikes.</li>
       <li>Open the <strong>gear icon &rarr; Project Settings</strong> and turn on <strong>No Pairing Required</strong> and the <strong>Bluetooth UART service</strong>; leave the other Bluetooth services off. Without the first one, nothing will connect.</li>
       <li>Switch to the JavaScript view, paste <a href="firmware/rover-remote.ts">rover-remote.ts</a>, download to the micro:bit.</li>
       <li>Switch the rover on, press <strong>Launch the remote</strong> above, then <strong>Connect</strong>.</li>
@@ -152,7 +152,7 @@
         <tr><td>Sensor head</td><td>A third servo on <code>S3</code> — aim it by hand, or set Head to <strong>Sweep</strong> and it pans the room on its own</td></tr>
         <tr><td>Screen</td><td>128×32 OLED on the I²C port, address <code>0x3C</code></td></tr>
         <tr><td>Distance</td><td>HC-SR04<strong>P</strong> — trig <code>P13</code>, echo <code>P14</code>, powered at 3.3 V</td></tr>
-        <tr><td>Lights</td><td>8 NeoPixels on <code>P15</code></td></tr>
+        <tr><td>Lights</td><td>8 NeoPixels on <code>P15</code> — they show the distance as a bar, closer meaning more lit and redder</td></tr>
         <tr><td>Power</td><td>4×AA to the DC socket, 3.5–5.5 V — never run the servos from USB</td></tr>
         <tr><td>Free pins</td><td><code>P0 P1 P2 P8 P12 P16</code></td></tr>
       </table>

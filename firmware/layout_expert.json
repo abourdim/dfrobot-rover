@@ -46,6 +46,17 @@
    "children": "oled_text,lbl_oled"
   },
   {
+   "id": "grp_light",
+   "t": "group",
+   "label": "LIGHTS",
+   "color": "#22c55e",
+   "x": 56,
+   "y": 1132,
+   "w": 568,
+   "h": 262,
+   "children": "np_mode,np_colour,np_bright"
+  },
+  {
    "id": "dpad_move",
    "t": "dpad",
    "x": 80,
@@ -263,7 +274,7 @@
    "w": 170,
    "h": 70,
    "label": "Level",
-   "options": "Beginner,Expert,Drive,Distance,Screen"
+   "options": "Beginner,Expert,Drive,Distance,Screen,Lights"
   },
   {
    "id": "lbl_ver",
@@ -312,10 +323,43 @@
    "h": 70,
    "label": "On the screen",
    "model": "card"
+  },
+  {
+   "id": "np_mode",
+   "t": "select",
+   "x": 80,
+   "y": 1200,
+   "w": 180,
+   "h": 70,
+   "label": "Lights",
+   "options": "Distance,Colour,Rainbow,Off"
+  },
+  {
+   "id": "np_colour",
+   "t": "select",
+   "x": 290,
+   "y": 1200,
+   "w": 170,
+   "h": 70,
+   "label": "Colour",
+   "options": "Red,Orange,Yellow,Green,Blue,Purple,White"
+  },
+  {
+   "id": "np_bright",
+   "t": "slider",
+   "x": 500,
+   "y": 1190,
+   "w": 100,
+   "h": 180,
+   "label": "Bright",
+   "min": 0,
+   "max": 255,
+   "step": 5,
+   "value": 60
   }
  ],
  "canvas": {
   "w": 1570,
-  "h": 1330
+  "h": 1450
  }
 }

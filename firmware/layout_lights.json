@@ -1,0 +1,77 @@
+{
+ "title": "Rover — Lights test",
+ "widgets": [
+  {
+   "id": "grp_test",
+   "t": "group",
+   "label": "LIGHTS",
+   "color": "#22c55e",
+   "x": 56,
+   "y": 42,
+   "w": 568,
+   "h": 392,
+   "children": "np_mode,np_colour,np_bright,gauge_dist,level"
+  },
+  {
+   "id": "np_mode",
+   "t": "select",
+   "x": 80,
+   "y": 100,
+   "w": 180,
+   "h": 70,
+   "label": "Lights",
+   "options": "Distance,Colour,Rainbow,Off"
+  },
+  {
+   "id": "np_colour",
+   "t": "select",
+   "x": 290,
+   "y": 100,
+   "w": 170,
+   "h": 70,
+   "label": "Colour",
+   "options": "Red,Orange,Yellow,Green,Blue,Purple,White"
+  },
+  {
+   "id": "np_bright",
+   "t": "slider",
+   "x": 500,
+   "y": 100,
+   "w": 100,
+   "h": 190,
+   "label": "Bright",
+   "min": 0,
+   "max": 255,
+   "step": 5,
+   "value": 60
+  },
+  {
+   "id": "gauge_dist",
+   "t": "gauge",
+   "x": 80,
+   "y": 220,
+   "w": 200,
+   "h": 190,
+   "label": "Distance",
+   "min": 0,
+   "max": 200,
+   "units": "cm",
+   "decimals": 0,
+   "model": "classic"
+  },
+  {
+   "id": "level",
+   "t": "select",
+   "x": 310,
+   "y": 250,
+   "w": 170,
+   "h": 70,
+   "label": "Level",
+   "options": "Beginner,Expert,Drive,Distance,Screen,Lights"
+  }
+ ],
+ "canvas": {
+  "w": 680,
+  "h": 490
+ }
+}
