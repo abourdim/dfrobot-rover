@@ -91,7 +91,9 @@
   <section>
     <h2>Where everything plugs in</h2>
     <p class="note" style="margin-bottom:14px">Match the colour of the wire to the colour of the port &mdash; no pin numbers to read.</p>
-    <a href="assets/pinout.svg"><img class="pinout" src="assets/pinout.svg" alt="Wiring: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P13 and P14, light strip to P15"></a>
+    <a href="assets/pinout.svg"><img class="pinout" src="assets/pinout.svg" alt="Wiring: battery to the DC socket, wheels to S1 and S2, screen to the I2C port, distance sensor to P0 and P1, light strip to P15"></a>
+    <p class="note" style="margin:18px 0 12px">And where those sockets actually sit on the board:</p>
+    <a href="assets/board.svg"><img class="pinout" src="assets/board.svg" alt="The board from above: IIC header top-left, the GPIO column with P0 and P1 for the sensor and P15 for the strip, the servo column S1 to S8"></a>
   </section>
 
   <section>
@@ -151,13 +153,13 @@
         <tr><td>Wheels</td><td>Two 360° servos on <code>S1</code> and <code>S2</code>, driven over I²C — they use no pins</td></tr>
         <tr><td>Sensor head</td><td>A third servo on <code>S3</code> — aim it by hand, or set Head to <strong>Sweep</strong> and it pans the room on its own</td></tr>
         <tr><td>Screen</td><td>128×32 OLED on the I²C port, address <code>0x3C</code></td></tr>
-        <tr><td>Distance</td><td>HC-SR04<strong>P</strong> — trig <code>P13</code>, echo <code>P14</code>, powered at 3.3 V</td></tr>
+        <tr><td>Distance</td><td>HC-SR04<strong>P</strong> — trig <code>P0</code>, echo <code>P1</code>, VCC from <code>3V3</code></td></tr>
         <tr><td>Lights</td><td>8 NeoPixels on <code>P15</code> — they show the distance as a bar, closer meaning more lit and redder</td></tr>
         <tr><td>Power</td><td>4×AA to the DC socket, 3.5–5.5 V — never run the servos from USB</td></tr>
-        <tr><td>Free pins</td><td><code>P0 P1 P2 P8 P12 P16</code></td></tr>
+        <tr><td>Free pins</td><td><code>P2 P12 P13 P14 P16</code> — P8 carries the tone output, moved off P0 because P0 is the sonar trigger</td></tr>
       </table>
     </div>
-    <p class="note"><strong>Before the first power-on:</strong> measure the <code>V</code> pin on the P13 or P14 socket. It should read about 3.3&nbsp;V — the distance sensor's echo copies whatever voltage you feed it, and 5&nbsp;V would go straight onto a 3.3&nbsp;V pin.</p>
+    <p class="note"><strong>Worth checking first:</strong> the servo headers take power from the <code>3V3</code> column. Two 360° servos driving a chassis on 3.3&nbsp;V will be weak and stall easily — they normally want 4.8–6&nbsp;V. If the rover struggles to move, check that before suspecting the code.</p>
   </section>
 
   <footer>

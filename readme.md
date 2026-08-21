@@ -13,7 +13,11 @@ to configure in the browser, and no special build of the app for this robot.
 
 ## Where everything plugs in
 
-![Pinout — battery to DC, wheels to S1 and S2, screen to I2C, distance sensor to P13 and P14, light strip to P15](assets/pinout.svg)
+![Wiring — battery to DC, wheels to S1 and S2, sensor head to S3, screen to I2C, distance sensor to P0 and P1, light strip to P15](assets/pinout.svg)
+
+And where those sockets actually are on the board:
+
+![The board from above — IIC header top-left, the GPIO column with P0 and P1 for the sensor and P15 for the strip, the servo column S1 to S8](assets/board.svg)
 
 | part | plugs into | notes |
 |---|---|---|
@@ -21,12 +25,13 @@ to configure in the browser, and no special build of the app for this robot.
 | left wheel servo | **S1** | 360° continuous rotation; `90` means stop |
 | right wheel servo | **S2** | mounted mirrored — see *Straight-line trim* below |
 | little screen | **I²C port** | SSD1306 128×32 at address `0x3C` |
-| distance sensor | **P13** trig · **P14** echo | HC-SR04**P**, the 3.3 V version |
+| distance sensor | **P0** trig · **P1** echo | HC-SR04**P**; take VCC from **3V3** |
 | sensor head servo | **S3** | turns the eyes left and right |
 | light strip | **P15** | 8 NeoPixels |
 | battery pack | **DC socket** | 4×AA, 3.5–5.5 V |
 
-Still free for whatever you add next: **P0 P1 P2 P8 P12 P16**.
+Still free for whatever you add next: **P2 P12 P13 P14 P16**. P8 is spoken
+for — see *the tone pin* below.
 
 ### Two things share one cable
 
@@ -34,13 +39,21 @@ The screen and the motor driver both live on the I²C port and don't argue —
 the driver answers to `0x40`, the screen to `0x3C`. The wheels therefore cost
 **no pins at all**; they're driven over that same cable.
 
-### Check this before the first power-on
+### The tone pin
 
-Measure the **`V` pin** on the P13 or P14 socket with the battery connected.
-It should read about **3.3 V**. The distance sensor's echo output copies
-whatever voltage you feed it, so if that socket supplies 5 V instead, echo puts
-5 V onto a 3.3 V pin. If it does read 5 V: take the sensor's red wire from a
-3.3 V point, or fit a divider (4.7 kΩ from echo, 10 kΩ to ground).
+micro:bit drives **P0** whenever it plays a note — and P0 is the sonar trigger
+here. Left alone, every beep would fire spurious pings. The firmware moves the
+tone output to P8 at boot, before anything can sound; a V2 still beeps through
+its built-in speaker, so nothing is lost. That is why P8 is not in the free
+list.
+
+### Servo power is worth a look
+
+The servo headers on this board take their power from the **3V3** column. Two
+360° servos driving a chassis on 3.3 V will be weak and stall easily —
+they normally want 4.8–6 V. If the rover struggles to move, that is the first
+thing to check, not the code. Feed the servos from the battery rail if the
+board offers it.
 
 ## Programming it
 
@@ -132,7 +145,7 @@ Everything specific to this board sits in one short seam at the top of
 ```
 wheels(l, r)     drive mix → two servo pulses, with the mirror and the trim
 wheelsStop()     both wheels to neutral
-pingCm()         distance sensor on P13/P14; 0 means nothing came back
+pingCm()         distance sensor on P0/P1; 500 means nothing came back
 ```
 
 Everything below that seam is the shared rxy stack — Bluetooth, the chunked

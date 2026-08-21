@@ -19,10 +19,10 @@
  *   left wheel servo   S1        360 degree, 90 = stop
  *   right wheel servo  S2        mounted mirrored -- see wheels()
  *   OLED 128x32        I2C       0x3C, shares the bus with the driver at 0x40
- *   HC-SR04P           P13 trig / P14 echo, powered at 3.3V
+ *   HC-SR04P           P0 trig / P1 echo, powered at 3.3V
  *   NeoPixel x8        P15
  *   battery 4xAA       DC socket, 3.5-5.5V
- *   free               P0 P1 P2 P8 P12 P16
+ *   free               P2 P12 P13 P14 P16   (P8 carries the tone pin, below)
  *
  * ── EXTENSIONS REQUIRED (three) ─────────────────────────────────────
  *   https://github.com/microsoft/pxt-neopixel          <- the light strip
@@ -70,7 +70,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v8"
+const FIRMWARE_VERSION = "R1-v9"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -765,8 +765,8 @@ let heartbeat = 0
 // rewriting these functions and nothing else.
 // ═══════════════════════════════════════════════════════════════
 
-const PIN_TRIG = DigitalPin.P13
-const PIN_ECHO = DigitalPin.P14
+const PIN_TRIG = DigitalPin.P0
+const PIN_ECHO = DigitalPin.P1
 
 // Continuous-rotation servos: 90 is stop, 0 and 180 are full speed each way.
 const WHEEL_STOP = 90
@@ -976,7 +976,7 @@ let headTxAt = 0
 // return it rather than 0 -- see the comment inside.
 const NO_ECHO_CM = 500
 
-// HC-SR04P on P13/P14, read directly rather than through a board library.
+// HC-SR04P on P0/P1, read directly rather than through a board library.
 // 30000us caps the wait at roughly 5 m so a missing sensor cannot stall the
 // loop; 58 is the standard microseconds-per-centimetre round-trip constant.
 //
@@ -1438,6 +1438,13 @@ oledRender()
 // led.enable(false) is NOT needed: P15 is not one of the LED matrix pins
 // (those are P3, P4, P6, P7, P9, P10), so the strip and the 5x5 display can
 // both run.
+// Move the tone output off P0 BEFORE anything can beep. On micro:bit the
+// music blocks drive P0 by default, and P0 is the sonar trigger on this board:
+// a beep would fire spurious pings, and the 10us trigger pulses would click
+// faintly through whatever is on P0. V2 still sounds through its built-in
+// speaker, so nothing is lost by parking the pitch pin on an unused GPIO.
+pins.analogSetPitchPin(AnalogPin.P8)
+
 strip = neopixel.create(NP_PIN, NP_COUNT, NeoPixelMode.RGB)
 strip.setBrightness(npBright)
 npRender()

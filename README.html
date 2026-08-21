@@ -31,13 +31,17 @@
 <p>You drive it from a web page over Bluetooth — nothing to install, no account, no WiFi. Open <a href="https://github.com/abourdim/rxy_web">rxy_web</a> in Chrome or Edge, press <strong>Connect</strong>, and the rover&#x27;s own control panel appears.</p>
 <p><strong>The robot owns the layout.</strong> The app is a plain renderer: it connects, asks the rover what controls it has, and draws whatever comes back. There is nothing to configure in the browser, and no special build of the app for this robot.</p>
 <h2>Where everything plugs in</h2>
-<p><img src="assets/pinout.svg" alt="Pinout — battery to DC, wheels to S1 and S2, screen to I2C, distance sensor to P13 and P14, light strip to P15"></p>
-<div class="tw"><table><thead><tr><th>part</th><th>plugs into</th><th>notes</th></tr></thead><tbody><tr><td>micro:bit <strong>V2</strong></td><td>the edge slot</td><td>V2 only — V1 hasn&#x27;t enough memory for Bluetooth plus the strip and screen</td></tr><tr><td>left wheel servo</td><td><strong>S1</strong></td><td>360° continuous rotation; <code>90</code> means stop</td></tr><tr><td>right wheel servo</td><td><strong>S2</strong></td><td>mounted mirrored — see <em>Straight-line trim</em> below</td></tr><tr><td>little screen</td><td><strong>I²C port</strong></td><td>SSD1306 128×32 at address <code>0x3C</code></td></tr><tr><td>distance sensor</td><td><strong>P13</strong> trig · <strong>P14</strong> echo</td><td>HC-SR04<strong>P</strong>, the 3.3 V version</td></tr><tr><td>sensor head servo</td><td><strong>S3</strong></td><td>turns the eyes left and right</td></tr><tr><td>light strip</td><td><strong>P15</strong></td><td>8 NeoPixels</td></tr><tr><td>battery pack</td><td><strong>DC socket</strong></td><td>4×AA, 3.5–5.5 V</td></tr></tbody></table></div>
-<p>Still free for whatever you add next: <strong>P0 P1 P2 P8 P12 P16</strong>.</p>
+<p><img src="assets/pinout.svg" alt="Wiring — battery to DC, wheels to S1 and S2, sensor head to S3, screen to I2C, distance sensor to P0 and P1, light strip to P15"></p>
+<p>And where those sockets actually are on the board:</p>
+<p><img src="assets/board.svg" alt="The board from above — IIC header top-left, the GPIO column with P0 and P1 for the sensor and P15 for the strip, the servo column S1 to S8"></p>
+<div class="tw"><table><thead><tr><th>part</th><th>plugs into</th><th>notes</th></tr></thead><tbody><tr><td>micro:bit <strong>V2</strong></td><td>the edge slot</td><td>V2 only — V1 hasn&#x27;t enough memory for Bluetooth plus the strip and screen</td></tr><tr><td>left wheel servo</td><td><strong>S1</strong></td><td>360° continuous rotation; <code>90</code> means stop</td></tr><tr><td>right wheel servo</td><td><strong>S2</strong></td><td>mounted mirrored — see <em>Straight-line trim</em> below</td></tr><tr><td>little screen</td><td><strong>I²C port</strong></td><td>SSD1306 128×32 at address <code>0x3C</code></td></tr><tr><td>distance sensor</td><td><strong>P0</strong> trig · <strong>P1</strong> echo</td><td>HC-SR04<strong>P</strong>; take VCC from <strong>3V3</strong></td></tr><tr><td>sensor head servo</td><td><strong>S3</strong></td><td>turns the eyes left and right</td></tr><tr><td>light strip</td><td><strong>P15</strong></td><td>8 NeoPixels</td></tr><tr><td>battery pack</td><td><strong>DC socket</strong></td><td>4×AA, 3.5–5.5 V</td></tr></tbody></table></div>
+<p>Still free for whatever you add next: <strong>P2 P12 P13 P14 P16</strong>. P8 is spoken for — see <em>the tone pin</em> below.</p>
 <h3>Two things share one cable</h3>
 <p>The screen and the motor driver both live on the I²C port and don&#x27;t argue — the driver answers to <code>0x40</code>, the screen to <code>0x3C</code>. The wheels therefore cost <strong>no pins at all</strong>; they&#x27;re driven over that same cable.</p>
-<h3>Check this before the first power-on</h3>
-<p>Measure the <strong><code>V</code> pin</strong> on the P13 or P14 socket with the battery connected. It should read about <strong>3.3 V</strong>. The distance sensor&#x27;s echo output copies whatever voltage you feed it, so if that socket supplies 5 V instead, echo puts 5 V onto a 3.3 V pin. If it does read 5 V: take the sensor&#x27;s red wire from a 3.3 V point, or fit a divider (4.7 kΩ from echo, 10 kΩ to ground).</p>
+<h3>The tone pin</h3>
+<p>micro:bit drives <strong>P0</strong> whenever it plays a note — and P0 is the sonar trigger here. Left alone, every beep would fire spurious pings. The firmware moves the tone output to P8 at boot, before anything can sound; a V2 still beeps through its built-in speaker, so nothing is lost. That is why P8 is not in the free list.</p>
+<h3>Servo power is worth a look</h3>
+<p>The servo headers on this board take their power from the <strong>3V3</strong> column. Two 360° servos driving a chassis on 3.3 V will be weak and stall easily — they normally want 4.8–6 V. If the rover struggles to move, that is the first thing to check, not the code. Feed the servos from the battery rail if the board offers it.</p>
 <h2>Programming it</h2>
 <p>Open <strong><a href="https://makecode.microbit.org">makecode.microbit.org</a></strong> → <em>Extensions</em>, and paste this URL into the search box:</p>
 <pre><code>https://github.com/DFRobot/pxt-motor</code></pre>
@@ -63,7 +67,7 @@ https://github.com/microsoft/pxt-neopixel</code></pre>
 <p>Everything specific to this board sits in one short seam at the top of <a href="firmware/rover-remote.ts"><code>firmware/rover-remote.ts</code></a>:</p>
 <pre><code>wheels(l, r)     drive mix → two servo pulses, with the mirror and the trim
 wheelsStop()     both wheels to neutral
-pingCm()         distance sensor on P13/P14; 0 means nothing came back</code></pre>
+pingCm()         distance sensor on P0/P1; 500 means nothing came back</code></pre>
 <p>Everything below that seam is the shared rxy stack — Bluetooth, the chunked layout transfer, the layout cache, telemetry, the drive watchdog, the D-pad handling. Changing to a different driver board means rewriting those three functions and nothing else.</p>
 <h3>How the app and the robot talk</h3>
 <pre><code>app   → robot   GETCFGVER          what layout do you have?

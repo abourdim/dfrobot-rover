@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 700" width="1040" height="700" role="img" aria-label="The micro:Driver board seen from above, with the IIC header top-left for the OLED, the GPIO column carrying P0 for trig and P1 for echo, the servo column S1 to S8 with GND, 3V3 and signal pins, the motor terminals along the top, and the micro:bit edge connector along the bottom.">
+  <title>Where things sit on the board</title>
+  <rect width="1040" height="700" rx="18" fill="#F5F8F6"/>
+
+  <!-- ════ the board itself ════ -->
+  <rect x="330" y="52" width="400" height="560" rx="12" fill="#14201A"/>
+  <text x="530" y="596" text-anchor="middle" font-family="Verdana,sans-serif" font-size="12" fill="#7FA292">Micro:bit Driver Expansion Board (V1.0)</text>
+
+  <!-- mounting holes -->
+  <g fill="#3C4E44">
+    <circle cx="352" cy="74" r="9"/><circle cx="708" cy="74" r="9"/>
+    <circle cx="352" cy="590" r="9"/><circle cx="708" cy="590" r="9"/>
+  </g>
+
+  <!-- ── motor terminals along the top ── -->
+  <rect x="374" y="60" width="300" height="34" rx="4" fill="#3F9B4F"/>
+  <g fill="#D8E6DA">
+    <circle cx="392" cy="77" r="7"/><circle cx="429" cy="77" r="7"/>
+    <circle cx="466" cy="77" r="7"/><circle cx="503" cy="77" r="7"/>
+    <circle cx="540" cy="77" r="7"/><circle cx="577" cy="77" r="7"/>
+    <circle cx="614" cy="77" r="7"/><circle cx="651" cy="77" r="7"/>
+  </g>
+  <g font-family="Verdana,sans-serif" font-size="9" fill="#9DBBAC" text-anchor="middle">
+    <text x="410" y="108">M4</text><text x="484" y="108">M3</text>
+    <text x="558" y="108">M2</text><text x="632" y="108">M1</text>
+  </g>
+  <text x="524" y="124" text-anchor="middle" font-family="Verdana,sans-serif" font-size="9" fill="#5E7A6C">motor terminals — not used on this rover</text>
+
+  <!-- ── IIC header, top left ── -->
+  <rect x="344" y="140" width="34" height="88" rx="5" fill="#0C1310" stroke="#7A4FD1" stroke-width="2.5"/>
+  <g font-family="Verdana,sans-serif" font-size="10" font-weight="bold" fill="#C9B6F5" text-anchor="middle">
+    <text x="361" y="158">D</text><text x="361" y="179">C</text>
+    <text x="361" y="200">G</text><text x="361" y="221">V</text>
+  </g>
+  <text x="361" y="136" text-anchor="middle" font-family="Verdana,sans-serif" font-size="10" font-weight="bold" fill="#B79BF0">IIC</text>
+
+  <!-- ── GPIO column ── -->
+  <rect x="344" y="250" width="52" height="272" rx="5" fill="#0C1310" stroke="#2C3A32" stroke-width="1.5"/>
+  <g font-family="Verdana,sans-serif" font-size="10" fill="#8FA79A" text-anchor="end">
+    <text x="340" y="268">P16</text><text x="340" y="296">P15</text>
+    <text x="340" y="324">P14</text><text x="340" y="352">P13</text>
+    <text x="340" y="380">P12</text><text x="340" y="408">P8</text>
+    <text x="340" y="436">P2</text><text x="340" y="464">P1</text>
+    <text x="340" y="492">P0</text>
+  </g>
+  <!-- the two rows this rover uses, plus the strip row -->
+  <rect x="346" y="452" width="48" height="26" rx="4" fill="#1E6FD9" opacity=".85"/>
+  <rect x="346" y="480" width="48" height="26" rx="4" fill="#1E6FD9" opacity=".85"/>
+  <rect x="346" y="284" width="48" height="26" rx="4" fill="#159E5C" opacity=".85"/>
+  <g font-family="Verdana,sans-serif" font-size="8" fill="#7FA292" text-anchor="middle">
+    <text x="354" y="534">GND</text><text x="370" y="534">3V3</text><text x="388" y="534">S</text>
+  </g>
+
+  <!-- ── servo column ── -->
+  <rect x="424" y="250" width="52" height="272" rx="5" fill="#0C1310" stroke="#2C3A32" stroke-width="1.5"/>
+  <g font-family="Verdana,sans-serif" font-size="10" fill="#8FA79A" text-anchor="start">
+    <text x="482" y="268">S8</text><text x="482" y="296">S7</text>
+    <text x="482" y="324">S6</text><text x="482" y="352">S5</text>
+    <text x="482" y="380">S4</text><text x="482" y="408">S3</text>
+    <text x="482" y="436">S2</text><text x="482" y="464">S1</text>
+  </g>
+  <rect x="426" y="452" width="48" height="26" rx="4" fill="#E0801E" opacity=".9"/>
+  <rect x="426" y="424" width="48" height="26" rx="4" fill="#E0801E" opacity=".9"/>
+  <rect x="426" y="396" width="48" height="26" rx="4" fill="#C2410C" opacity=".9"/>
+  <g font-family="Verdana,sans-serif" font-size="8" fill="#7FA292" text-anchor="middle">
+    <text x="434" y="534">GND</text><text x="450" y="534">3V3</text><text x="468" y="534">S</text>
+  </g>
+
+  <!-- ── driver chips ── -->
+  <rect x="520" y="330" width="70" height="70" rx="4" fill="#22302A"/>
+  <rect x="536" y="150" width="46" height="26" rx="3" fill="#22302A"/>
+  <rect x="600" y="150" width="46" height="26" rx="3" fill="#22302A"/>
+
+  <!-- ── power in, jack and switch, right edge ── -->
+  <rect x="656" y="128" width="58" height="46" rx="4" fill="#3F9B4F"/>
+  <circle cx="670" cy="151" r="7" fill="#D8E6DA"/><circle cx="700" cy="151" r="7" fill="#D8E6DA"/>
+  <text x="685" y="120" text-anchor="middle" font-family="Verdana,sans-serif" font-size="9" fill="#9DBBAC">3.5–5.5 V</text>
+  <rect x="652" y="228" width="66" height="60" rx="5" fill="#05080A"/>
+  <text x="685" y="304" text-anchor="middle" font-family="Verdana,sans-serif" font-size="9" fill="#9DBBAC">DC jack</text>
+  <rect x="660" y="330" width="50" height="76" rx="5" fill="#C8CDD2"/>
+  <rect x="668" y="340" width="34" height="30" rx="4" fill="#5B646C"/>
+  <g font-family="Verdana,sans-serif" font-size="9" fill="#9DBBAC" text-anchor="middle">
+    <text x="644" y="346">ON</text><text x="644" y="402">OFF</text>
+  </g>
+
+  <!-- ── micro:bit edge connector ── -->
+  <rect x="352" y="540" width="356" height="34" rx="5" fill="#05080A"/>
+  <g fill="#B8862F">
+    <rect x="378" y="546" width="12" height="22"/><rect x="446" y="546" width="12" height="22"/>
+    <rect x="514" y="546" width="12" height="22"/><rect x="582" y="546" width="12" height="22"/>
+    <rect x="650" y="546" width="12" height="22"/>
+  </g>
+  <text x="530" y="534" text-anchor="middle" font-family="Verdana,sans-serif" font-size="9" fill="#7FA292">micro:bit slides in here, gold edge first</text>
+
+  <!-- ════ callouts ════ -->
+  <g font-family="Verdana,sans-serif">
+    <!-- OLED / IIC -->
+    <rect x="24" y="52" width="270" height="120" rx="10" fill="#fff" stroke="#7A4FD1" stroke-width="2.5"/>
+    <text x="40" y="76" font-size="13" font-weight="bold" fill="#16241D">Screen → IIC header</text>
+    <g font-size="11.5" fill="#3F4F47">
+      <text x="40" y="99">SDA → <tspan font-weight="bold">D</tspan>   (P20)</text>
+      <text x="40" y="119">SCL → <tspan font-weight="bold">C</tspan>   (P19)</text>
+      <text x="40" y="139">GND → <tspan font-weight="bold">G</tspan></text>
+      <text x="40" y="159">VCC → <tspan font-weight="bold">V</tspan>   use 3.3 V</text>
+    </g>
+    <path d="M294 100 L336 168" stroke="#7A4FD1" stroke-width="2.5" fill="none"/>
+    <polygon points="330,158 342,174 324,172" fill="#7A4FD1"/>
+
+    <!-- SR04 -->
+    <rect x="24" y="196" width="270" height="124" rx="10" fill="#fff" stroke="#1E6FD9" stroke-width="2.5"/>
+    <text x="40" y="220" font-size="13" font-weight="bold" fill="#16241D">Distance sensor (3.3 V)</text>
+    <g font-size="11.5" fill="#3F4F47">
+      <text x="40" y="243">TRIG → <tspan font-weight="bold">P0</tspan>   (bottom row)</text>
+      <text x="40" y="263">ECHO → <tspan font-weight="bold">P1</tspan>   (one above)</text>
+      <text x="40" y="283">VCC  → <tspan font-weight="bold">3V3</tspan>  (middle pin)</text>
+      <text x="40" y="303">GND  → <tspan font-weight="bold">GND</tspan></text>
+    </g>
+    <path d="M294 280 L340 470" stroke="#1E6FD9" stroke-width="2.5" fill="none"/>
+    <polygon points="330,456 344,476 324,472" fill="#1E6FD9"/>
+
+    <!-- strip -->
+    <rect x="24" y="344" width="270" height="88" rx="10" fill="#fff" stroke="#159E5C" stroke-width="2.5"/>
+    <text x="40" y="368" font-size="13" font-weight="bold" fill="#16241D">Light strip → P15</text>
+    <g font-size="11.5" fill="#3F4F47">
+      <text x="40" y="391">DIN  → <tspan font-weight="bold">S</tspan>    (signal pin)</text>
+      <text x="40" y="411">+ and − → <tspan font-weight="bold">3V3</tspan> and <tspan font-weight="bold">GND</tspan></text>
+    </g>
+    <path d="M294 380 L340 300" stroke="#159E5C" stroke-width="2.5" fill="none"/>
+    <polygon points="330,310 344,294 336,312" fill="#159E5C"/>
+
+    <!-- servos -->
+    <rect x="762" y="330" width="256" height="150" rx="10" fill="#fff" stroke="#E0801E" stroke-width="2.5"/>
+    <text x="778" y="354" font-size="13" font-weight="bold" fill="#16241D">The three servos</text>
+    <g font-size="11.5" fill="#3F4F47">
+      <text x="778" y="378"><tspan font-weight="bold">S1</tspan> → left wheel</text>
+      <text x="778" y="398"><tspan font-weight="bold">S2</tspan> → right wheel</text>
+      <text x="778" y="418"><tspan font-weight="bold">S3</tspan> → sensor head</text>
+      <text x="778" y="444">each plug: <tspan font-weight="bold">GND · 3V3 · S</tspan></text>
+      <text x="778" y="464">brown wire to the GND pin</text>
+    </g>
+    <path d="M762 400 L482 424" stroke="#E0801E" stroke-width="2.5" fill="none"/>
+    <polygon points="496,414 476,426 496,434" fill="#E0801E"/>
+
+    <!-- note -->
+    <rect x="762" y="128" width="256" height="164" rx="10" fill="#FDF6E7" stroke="#D9A441" stroke-width="2"/>
+    <text x="778" y="152" font-size="13" font-weight="bold" fill="#6B4E12">Worth knowing</text>
+    <g font-size="11" fill="#6B4E12">
+      <text x="778" y="176">The screen and the motor driver</text>
+      <text x="778" y="194">share one I²C bus. That is normal —</text>
+      <text x="778" y="212">they answer to different addresses.</text>
+      <text x="778" y="238">The servos take power from the</text>
+      <text x="778" y="256">3V3 column. If the rover is weak,</text>
+      <text x="778" y="274">check that before blaming the code.</text>
+    </g>
+  </g>
+</svg>

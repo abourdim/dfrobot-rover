@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 546" width="920" height="546" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, the two wheels to S1 and S2, the sensor head servo to S3, the screen to the I2C port, the distance sensor to P13 and P14, and the light strip to P15.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 546" width="920" height="546" role="img" aria-label="Where every part of the rover plugs in: battery to the DC socket, the two wheels to S1 and S2, the sensor head servo to S3, the screen to the I2C port, the distance sensor to P0 and P1, and the light strip to P15.">
   <title>Where everything plugs in</title>
 
   <!-- Fixed light card. Deliberately not theme-reactive: this renders as an
@@ -20,8 +20,8 @@
     <rect x="222" y="224" width="74" height="28" rx="7" fill="#E0801E"/><text x="259" y="243" fill="#fff">S2</text>
     <rect x="222" y="266" width="74" height="28" rx="7" fill="#C2410C"/><text x="259" y="285" fill="#fff">S3</text>
     <rect x="222" y="308" width="74" height="28" rx="7" fill="#7A4FD1"/><text x="259" y="327" fill="#fff">I2C</text>
-    <rect x="222" y="350" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="369" fill="#fff">P13</text>
-    <rect x="222" y="386" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="405" fill="#fff">P14</text>
+    <rect x="222" y="350" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="369" fill="#fff">P0</text>
+    <rect x="222" y="386" width="74" height="28" rx="7" fill="#1E6FD9"/><text x="259" y="405" fill="#fff">P1</text>
     <rect x="222" y="428" width="74" height="28" rx="7" fill="#159E5C"/><text x="259" y="447" fill="#fff">P15</text>
   </g>
 
@@ -71,8 +71,8 @@
     <g>
       <rect x="556" y="376" width="318" height="66" rx="11" fill="#fff" stroke="#1E6FD9" stroke-width="2.5"/>
       <text x="576" y="398" font-size="15" font-weight="bold" fill="#16241D">Distance sensor</text>
-      <text x="576" y="416" font-size="12" fill="#5B6E64">the two round eyes · trig → P13</text>
-      <text x="576" y="433" font-size="12" fill="#5B6E64">echo → P14 · power it at 3.3 V</text>
+      <text x="576" y="416" font-size="12" fill="#5B6E64">the two round eyes · trig → P0</text>
+      <text x="576" y="433" font-size="12" fill="#5B6E64">echo → P1 · power it at 3.3 V</text>
     </g>
     <g>
       <rect x="556" y="464" width="318" height="52" rx="11" fill="#fff" stroke="#159E5C" stroke-width="2.5"/>
