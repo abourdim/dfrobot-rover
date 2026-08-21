@@ -61,7 +61,37 @@ https://github.com/DFRobot/pxt-motor
 look-alikes with this one somewhere among them. Pick the wrong one and it
 **compiles cleanly and moves nothing**, which is a miserable thing to debug.
 
-Then switch to the JavaScript view, paste
+### Bluetooth project settings
+
+These live behind the **gear icon → Project Settings**, and getting them wrong
+looks like a broken app rather than a wrong setting — so set them before you
+wonder why nothing connects.
+
+| setting | set it to | why |
+|---|---|---|
+| **No Pairing Required** | **on** | The browser can then advertise-and-connect straight away. The other two modes — *JustWorks* (copy a pattern) and *Passkey* (verify a number) — make every child pair the micro:bit first, and after pairing you must reset it and re-enter pairing mode just to flash again. |
+| **Bluetooth UART service** | **on** | This is the only service the rover uses. The whole protocol is lines of text over it. |
+| accelerometer, button, LED, magnetometer, temperature, IO pin, event services | **off** | Each one costs memory and advertising space for nothing. The firmware never calls them. |
+
+**Radio and Bluetooth cannot both exist.** Adding the Bluetooth extension
+*removes* the radio package, and MakeCode asks you to accept that. It's a
+hardware limitation, not a setting — so if a project uses `radio.sendNumber`
+anywhere, it cannot also be a Bluetooth robot. This firmware uses no radio
+blocks.
+
+**Transmit power** is set in code (`bluetooth.setTransmitPower`), not in the
+settings — the firmware turns it down while the layout is transferring, which
+is the cheapest way to keep the link stable through a long burst.
+
+One code rule worth repeating, because it cost real debugging: **never write to
+the UART from inside the receive callback.** Sending a reply from within
+`onUartDataReceived` starves the Bluetooth stack's buffers and wedges the whole
+firmware. Every reply in this file is queued and sent from the main loop
+instead.
+
+### Then paste it
+
+Switch to the JavaScript view, paste
 [`firmware/rover-remote.ts`](firmware/rover-remote.ts), and download to the
 micro:bit.
 

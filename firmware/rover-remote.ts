@@ -34,7 +34,15 @@
  *   2. Extensions -> paste the URL above
  *   3. Switch to the JavaScript view
  *   4. Paste this whole file, replacing what is there
- *   5. Download to the micro:bit
+ *   5. Gear icon -> Project Settings:
+ *        No Pairing Required .......... ON   (else nothing can connect)
+ *        Bluetooth UART service ....... ON   (the only service used here)
+ *        every other Bluetooth service  OFF  (memory and advertising space)
+ *   6. Download to the micro:bit
+ *
+ *   Radio and Bluetooth are mutually exclusive on this hardware: adding the
+ *   Bluetooth extension REMOVES the radio package, and MakeCode asks you to
+ *   accept that. No radio blocks are used in this file.
  *
  *   There is no local build. MakeCode compiles in the browser, so a clean
  *   paste IS the build step -- it is what proves this file, not a formality.
