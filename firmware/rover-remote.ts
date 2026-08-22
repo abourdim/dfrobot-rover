@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v21"
+const FIRMWARE_VERSION = "R1-v22"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -1174,7 +1174,48 @@ const FACE_ALARM = 4             // picked up or tipped over
 const PUP_SMALL = 6
 // Well past anything a rover meets on a floor, so driving over a book does
 // not make it panic. Only hands do this.
-const TILT_DEG = 45
+// cos 45 degrees. Comparing the gravity vector against its RESTING direction
+// beats comparing pitch and roll against zero, twice over: it needs no idea
+// which way the board is mounted, and it does not go unstable near vertical,
+// where roll stops meaning anything at all.
+const TILT_COS = 0.707
+
+// LEARNED at power-up, never assumed. This micro:bit stands UPRIGHT in the
+// driver board's edge connector, so it rests at about 90 degrees of pitch --
+// and R1-v19 tested tilt against FLAT. The rover therefore believed it was
+// being held in the air permanently, wore the alarmed face forever, and hid
+// every other expression behind it.
+let restX = 0
+let restY = 0
+let restZ = 0
+
+function attitudeCalibrate() {
+    // Four samples: the accelerometer is noisy and this baseline is compared
+    // against for the rest of the session.
+    restX = 0; restY = 0; restZ = 0
+    for (let i = 0; i < 4; i++) {
+        restX += input.acceleration(Dimension.X)
+        restY += input.acceleration(Dimension.Y)
+        restZ += input.acceleration(Dimension.Z)
+        basic.pause(20)
+    }
+    restX = Math.idiv(restX, 4)
+    restY = Math.idiv(restY, 4)
+    restZ = Math.idiv(restZ, 4)
+    dbg("attitude: x=" + restX + " y=" + restY + " z=" + restZ)
+}
+
+// The angle between where gravity points NOW and where it pointed at boot.
+function tilted(): boolean {
+    const x = input.acceleration(Dimension.X)
+    const y = input.acceleration(Dimension.Y)
+    const z = input.acceleration(Dimension.Z)
+    const magNow = Math.sqrt(x * x + y * y + z * z)
+    const magRest = Math.sqrt(restX * restX + restY * restY + restZ * restZ)
+    // In free fall, or before calibration, there is no direction to compare.
+    if (magNow < 200 || magRest < 200) return false
+    return (x * restX + y * restY + z * restZ) / (magNow * magRest) < TILT_COS
+}
 const FACE_SLEEP_MS = 20000
 const FACE_BLINK_SHUT_MS = 140
 const FACE_DIZZY_MS = 2000
@@ -1237,8 +1278,7 @@ function faceRender(now: number) {
     let dy = 0
     // Being picked up outranks everything: it is the only one of these the
     // rover is having done TO it.
-    if (Math.abs(input.rotation(Rotation.Pitch)) > TILT_DEG
-        || Math.abs(input.rotation(Rotation.Roll)) > TILT_DEG) {
+    if (tilted()) {
         mode = FACE_ALARM
         dy = 5                   // eyes down, at the floor going away
     } else if (now < faceDizzyUntil) {
@@ -1905,6 +1945,9 @@ function sendValue(id: string, val: string) {
 // untrimmed stop until the first command arrived, which on a badly trimmed
 // rover is a slow crawl across the table.
 prefsLoad()
+
+// However the board is mounted, the rover takes that as its own idea of level.
+attitudeCalibrate()
 
 // Safety: stop any leftover motion and centre the sweep head on boot.
 wheelsStop()
