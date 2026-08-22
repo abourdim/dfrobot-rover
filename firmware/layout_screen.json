@@ -8,9 +8,9 @@
    "color": "#c084fc",
    "x": 56,
    "y": 42,
-   "w": 588,
+   "w": 668,
    "h": 392,
-   "children": "oled_text,lbl_oled,btn_buzz,level"
+   "children": "oled_text,lbl_oled,btn_buzz,screen_mode,level"
   },
   {
    "id": "oled_text",
@@ -41,6 +41,16 @@
    "label": "Beep"
   },
   {
+   "id": "screen_mode",
+   "t": "select",
+   "x": 500,
+   "y": 250,
+   "w": 200,
+   "h": 70,
+   "label": "Screen",
+   "options": "Face,Status,Auto"
+  },
+  {
    "id": "level",
    "t": "select",
    "x": 80,
@@ -52,7 +62,7 @@
   }
  ],
  "canvas": {
-  "w": 700,
+  "w": 780,
   "h": 490
  }
 }

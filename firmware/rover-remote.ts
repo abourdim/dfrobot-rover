@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v15"
+const FIRMWARE_VERSION = "R1-v17"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -307,55 +307,56 @@ const CFG_EXPERT =
     "In0seyJpZCI6ImdycF9zeXMiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IlNZU1RFTSIsImNvbG9yIjoiIzg4OTJiMCIs" +
     "IngiOjU2LCJ5IjoxMDAyLCJ3Ijo4NjQsImgiOjI4NywiY2hpbGRyZW4iOiJtb2RlLHVwZCxsZXZlbCxsYmxfdmVy" +
     "LGxibF9oZWFydGJlYXQsYnRuX2J1enoifSx7ImlkIjoiZ3JwX3NjcmVlbiIsInQiOiJncm91cCIsImxhYmVsIjoi" +
-    "U0NSRUVOIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6MTA2MywieSI6MTAwOCwidyI6MzQ4LCJoIjoyNjIsImNoaWxk" +
-    "cmVuIjoib2xlZF90ZXh0LGxibF9vbGVkIn0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFkIiwieCI6ODAsInki" +
-    "OjYzLCJ3Ijo0MjAsImgiOjQyMCwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9LHsiaWQiOiJzcGQi" +
-    "LCJ0Ijoic2xpZGVyIiwieCI6NTMyLCJ5IjoxNDIsInciOjEyMCwiaCI6MjYwLCJsYWJlbCI6IlNwZWVkIiwibWlu" +
-    "Ijo2MCwibWF4IjoyNTUsInN0ZXAiOjUsInZhbHVlIjoyMDAsInJlc3RvcmUiOjF9LHsiaWQiOiJidG5fc3RvcCIs" +
-    "InQiOiJidXR0b24iLCJ4IjoyMjgsInkiOjIwOCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoiU1RPUCJ9LHsiaWQi" +
-    "OiJnYXVnZV9zcGQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo2NjIsInkiOjE2MCwidyI6MjM5LCJoIjoyMzMsImxhYmVsIjoi" +
-    "U3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwic291cmNlIjoic3Bk" +
-    "IiwidmFsdWUiOjIwMH0seyJpZCI6ImJ0bl9tbCIsInQiOiJidXR0b24iLCJ4IjoxOTcsInkiOjUxMCwidyI6MTkw" +
-    "LCJoIjoxMjAsImxhYmVsIjoiTGVmdCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjotMSwiY29sb3IiOiIj" +
-    "MGU3NDkwIn0seyJpZCI6ImJ0bl9tciIsInQiOiJidXR0b24iLCJ4Ijo2MDEsInkiOjUwOSwidyI6MTkwLCJoIjox" +
-    "MjAsImxhYmVsIjoiUmlnaHQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29sb3IiOiIjMGU3NDkw" +
-    "In0seyJpZCI6InRyaW1fbCIsInQiOiJzbGlkZXIiLCJ4IjoyMTgsInkiOjY0MCwidyI6MTI3LCJoIjoyNDQsImxh" +
-    "YmVsIjoiVHJpbSBMIiwibWluIjotMjAsIm1heCI6MjAsInZhbHVlIjowfSx7ImlkIjoidHJpbV9yIiwidCI6InNs" +
-    "aWRlciIsIngiOjY0OCwieSI6NjM5LCJ3IjoxMDIsImgiOjIzNywibGFiZWwiOiJUcmltIFIiLCJtaW4iOi0yMCwi" +
-    "bWF4IjoyMCwidmFsdWUiOjB9LHsiaWQiOiJ0cmltX2xfZG4iLCJ0IjoiYnV0dG9uIiwieCI6MTA4LCJ5Ijo3MTks" +
-    "InciOjEwMCwiaCI6MTAwLCJsYWJlbCI6Ikwg4oiSIDEifSx7ImlkIjoidHJpbV9sX251bSIsInQiOiJlZGl0Zmll" +
-    "bGQiLCJ4IjoyMDksInkiOjg4OCwidyI6MTQxLCJoIjo5MiwibGFiZWwiOiJMID0ifSx7ImlkIjoidHJpbV9sX3Vw" +
-    "IiwidCI6ImJ1dHRvbiIsIngiOjM1MywieSI6NzE3LCJ3IjoxMDcsImgiOjEwNCwibGFiZWwiOiJMICsgMSJ9LHsi" +
-    "aWQiOiJ0cmltX3JfZG4iLCJ0IjoiYnV0dG9uIiwieCI6NTM4LCJ5Ijo3MTMsInciOjEwMCwiaCI6MTAwLCJsYWJl" +
-    "bCI6IlIg4oiSIDEifSx7ImlkIjoidHJpbV9yX251bSIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo2MjUsInkiOjg4Nywi" +
-    "dyI6MTQwLCJoIjo5NSwibGFiZWwiOiJSID0ifSx7ImlkIjoidHJpbV9yX3VwIiwidCI6ImJ1dHRvbiIsIngiOjc1" +
-    "OCwieSI6NzEyLCJ3IjoxMDAsImgiOjEwMCwibGFiZWwiOiJSICsgMSJ9LHsiaWQiOiJnYXVnZV9kaXN0IiwidCI6" +
-    "ImdhdWdlIiwieCI6MTAwMCwieSI6MTAzLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0YW5jZSIsIm1heCI6" +
-    "MjAwLCJ1bml0cyI6ImNtIiwiZGVjaW1hbHMiOjB9LHsiaWQiOiJhbGVydCIsInQiOiJub3RpZmljYXRpb24iLCJ4" +
-    "IjoxMjg3LCJ5IjoyMjYsInciOjEwOCwiaCI6ODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoiZGlzdF9yZWFkIiwi" +
-    "dCI6InNlbGVjdCIsIngiOjEyMzUsInkiOjExMywidyI6MjAzLCJoIjoxMDUsImxhYmVsIjoiRGlzdGFuY2UgcmVh" +
-    "ZCIsIm9wdGlvbnMiOiJBdXRvLFJlYWQgbm93In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0IjoiZ3JhcGgiLCJ4Ijox" +
-    "MDAzLCJ5IjozMzEsInciOjQ3NCwiaCI6MzcxLCJsYWJlbCI6IkRpc3RhbmNlIGNtIn0seyJpZCI6InNydl9oZWFk" +
-    "IiwidCI6InNsaWRlciIsIngiOjEwMDAsInkiOjczMywidyI6OTgsImgiOjIyOSwibGFiZWwiOiJMb29rIiwibWF4" +
-    "IjoxODAsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX2hlYWQiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMTIwLCJ5Ijo3MzMs" +
-    "InciOjE4MSwiaCI6MjI1LCJsYWJlbCI6IkFuZ2xlIiwibWF4IjoxODAsInVuaXRzIjoiwrAiLCJkZWNpbWFscyI6" +
-    "MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6ImJ0bl9oZWFkX2Nl" +
-    "bnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzQzLCJ5Ijo4NDIsInciOjExNSwiaCI6MTE3LCJsYWJlbCI6IkFoZWFk" +
-    "In0seyJpZCI6ImhlYWRfbW9kZSIsInQiOiJzZWxlY3QiLCJ4IjoxMzE1LCJ5Ijo3MjksInciOjE3MiwiaCI6ODks" +
-    "ImxhYmVsIjoiSGVhZCIsIm9wdGlvbnMiOiJNYW51YWwsU3dlZXAifSx7ImlkIjoibW9kZSIsInQiOiJzZWxlY3Qi" +
-    "LCJ4Ijo4MCwieSI6MTA2MCwidyI6MjAwLCJoIjo4MSwibGFiZWwiOiJNb2RlIiwib3B0aW9ucyI6Ik1hbnVhbCxB" +
-    "dm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6MzYxLCJ5IjoxMDYxLCJ3IjoyMzgsImgiOjg3LCJs" +
-    "YWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn0seyJpZCI6ImxldmVsIiwidCI6InNl" +
-    "bGVjdCIsIngiOjY4MiwieSI6MTA1MywidyI6MjEwLCJoIjo5MCwibGFiZWwiOiJMZXZlbCIsIm9wdGlvbnMiOiJC" +
-    "ZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn0seyJpZCI6ImxibF92ZXIiLCJ0IjoibGFiZWwi" +
-    "LCJ4Ijo4MCwieSI6MTE3MCwidyI6MjAwLCJoIjo4NywibGFiZWwiOiJGaXJtd2FyZSIsIm1vZGVsIjoiY2FyZCJ9" +
-    "LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6MzY1LCJ5IjoxMTc1LCJ3IjoyMzksImgiOjc5" +
-    "LCJsYWJlbCI6IlVwdGltZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJidG5fYnV6eiIsInQiOiJidXR0b24iLCJ4" +
-    "Ijo3MDksInkiOjExNjAsInciOjE0NCwiaCI6OTgsImxhYmVsIjoiQmVlcCJ9LHsiaWQiOiJvbGVkX3RleHQiLCJ0" +
-    "IjoiZWRpdGZpZWxkIiwieCI6MTA4NywieSI6MTA2NiwidyI6MzAwLCJoIjo4MCwibGFiZWwiOiJTYXkgc29tZXRo" +
-    "aW5nIn0seyJpZCI6ImxibF9vbGVkIiwidCI6ImxhYmVsIiwieCI6MTA4NywieSI6MTE3NiwidyI6MzAwLCJoIjo3" +
-    "MCwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn1dLCJjYW52YXMiOnsidyI6MTU3MCwiaCI6" +
-    "MTM2MH19"
+    "U0NSRUVOIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6MTA2MywieSI6MTAwOCwidyI6MzQ4LCJoIjozNTIsImNoaWxk" +
+    "cmVuIjoib2xlZF90ZXh0LGxibF9vbGVkLHNjcmVlbl9tb2RlIn0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFk" +
+    "IiwieCI6ODAsInkiOjYzLCJ3Ijo0MjAsImgiOjQyMCwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9" +
+    "LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NTMyLCJ5IjoxNDIsInciOjEyMCwiaCI6MjYwLCJsYWJlbCI6" +
+    "IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsInN0ZXAiOjUsInZhbHVlIjoyMDAsInJlc3RvcmUiOjF9LHsiaWQi" +
+    "OiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4IjoyMjgsInkiOjIwOCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoi" +
+    "U1RPUCJ9LHsiaWQiOiJnYXVnZV9zcGQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo2NjIsInkiOjE2MCwidyI6MjM5LCJoIjoy" +
+    "MzMsImxhYmVsIjoiU3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwi" +
+    "c291cmNlIjoic3BkIiwidmFsdWUiOjIwMH0seyJpZCI6ImJ0bl9tbCIsInQiOiJidXR0b24iLCJ4IjoxOTcsInki" +
+    "OjUxMCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVmdCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjot" +
+    "MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9tciIsInQiOiJidXR0b24iLCJ4Ijo2MDEsInkiOjUwOSwi" +
+    "dyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29s" +
+    "b3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQiOiJzbGlkZXIiLCJ4IjoyMTgsInkiOjY0MCwidyI6MTI3" +
+    "LCJoIjoyNDQsImxhYmVsIjoiVHJpbSBMIiwibWluIjotMjAsIm1heCI6MjAsInZhbHVlIjowfSx7ImlkIjoidHJp" +
+    "bV9yIiwidCI6InNsaWRlciIsIngiOjY0OCwieSI6NjM5LCJ3IjoxMDIsImgiOjIzNywibGFiZWwiOiJUcmltIFIi" +
+    "LCJtaW4iOi0yMCwibWF4IjoyMCwidmFsdWUiOjB9LHsiaWQiOiJ0cmltX2xfZG4iLCJ0IjoiYnV0dG9uIiwieCI6" +
+    "MTA4LCJ5Ijo3MTksInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6Ikwg4oiSIDEifSx7ImlkIjoidHJpbV9sX251bSIs" +
+    "InQiOiJlZGl0ZmllbGQiLCJ4IjoyMDksInkiOjg4OCwidyI6MTQxLCJoIjo5MiwibGFiZWwiOiJMID0ifSx7Imlk" +
+    "IjoidHJpbV9sX3VwIiwidCI6ImJ1dHRvbiIsIngiOjM1MywieSI6NzE3LCJ3IjoxMDcsImgiOjEwNCwibGFiZWwi" +
+    "OiJMICsgMSJ9LHsiaWQiOiJ0cmltX3JfZG4iLCJ0IjoiYnV0dG9uIiwieCI6NTM4LCJ5Ijo3MTMsInciOjEwMCwi" +
+    "aCI6MTAwLCJsYWJlbCI6IlIg4oiSIDEifSx7ImlkIjoidHJpbV9yX251bSIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo2" +
+    "MjUsInkiOjg4NywidyI6MTQwLCJoIjo5NSwibGFiZWwiOiJSID0ifSx7ImlkIjoidHJpbV9yX3VwIiwidCI6ImJ1" +
+    "dHRvbiIsIngiOjc1OCwieSI6NzEyLCJ3IjoxMDAsImgiOjEwMCwibGFiZWwiOiJSICsgMSJ9LHsiaWQiOiJnYXVn" +
+    "ZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAzLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0" +
+    "YW5jZSIsIm1heCI6MjAwLCJ1bml0cyI6ImNtIiwiZGVjaW1hbHMiOjB9LHsiaWQiOiJhbGVydCIsInQiOiJub3Rp" +
+    "ZmljYXRpb24iLCJ4IjoxMjg3LCJ5IjoyMjYsInciOjEwOCwiaCI6ODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoi" +
+    "ZGlzdF9yZWFkIiwidCI6InNlbGVjdCIsIngiOjEyMzUsInkiOjExMywidyI6MjAzLCJoIjoxMDUsImxhYmVsIjoi" +
+    "RGlzdGFuY2UgcmVhZCIsIm9wdGlvbnMiOiJBdXRvLFJlYWQgbm93In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0Ijoi" +
+    "Z3JhcGgiLCJ4IjoxMDAzLCJ5IjozMzEsInciOjQ3NCwiaCI6MzcxLCJsYWJlbCI6IkRpc3RhbmNlIGNtIn0seyJp" +
+    "ZCI6InNydl9oZWFkIiwidCI6InNsaWRlciIsIngiOjEwMDAsInkiOjczMywidyI6OTgsImgiOjIyOSwibGFiZWwi" +
+    "OiJMb29rIiwibWF4IjoxODAsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX2hlYWQiLCJ0IjoiZ2F1Z2UiLCJ4Ijox" +
+    "MTIwLCJ5Ijo3MzMsInciOjE4MSwiaCI6MjI1LCJsYWJlbCI6IkFuZ2xlIiwibWF4IjoxODAsInVuaXRzIjoiwrAi" +
+    "LCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6" +
+    "ImJ0bl9oZWFkX2NlbnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzQzLCJ5Ijo4NDIsInciOjExNSwiaCI6MTE3LCJs" +
+    "YWJlbCI6IkFoZWFkIn0seyJpZCI6ImhlYWRfbW9kZSIsInQiOiJzZWxlY3QiLCJ4IjoxMzE1LCJ5Ijo3MjksInci" +
+    "OjE3MiwiaCI6ODksImxhYmVsIjoiSGVhZCIsIm9wdGlvbnMiOiJNYW51YWwsU3dlZXAifSx7ImlkIjoibW9kZSIs" +
+    "InQiOiJzZWxlY3QiLCJ4Ijo4MCwieSI6MTA2MCwidyI6MjAwLCJoIjo4MSwibGFiZWwiOiJNb2RlIiwib3B0aW9u" +
+    "cyI6Ik1hbnVhbCxBdm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6MzYxLCJ5IjoxMDYxLCJ3Ijoy" +
+    "MzgsImgiOjg3LCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn0seyJpZCI6Imxl" +
+    "dmVsIiwidCI6InNlbGVjdCIsIngiOjY4MiwieSI6MTA1MywidyI6MjEwLCJoIjo5MCwibGFiZWwiOiJMZXZlbCIs" +
+    "Im9wdGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn0seyJpZCI6ImxibF92ZXIi" +
+    "LCJ0IjoibGFiZWwiLCJ4Ijo4MCwieSI6MTE3MCwidyI6MjAwLCJoIjo4NywibGFiZWwiOiJGaXJtd2FyZSIsIm1v" +
+    "ZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6MzY1LCJ5IjoxMTc1LCJ3" +
+    "IjoyMzksImgiOjc5LCJsYWJlbCI6IlVwdGltZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJidG5fYnV6eiIsInQi" +
+    "OiJidXR0b24iLCJ4Ijo3MDksInkiOjExNjAsInciOjE0NCwiaCI6OTgsImxhYmVsIjoiQmVlcCJ9LHsiaWQiOiJv" +
+    "bGVkX3RleHQiLCJ0IjoiZWRpdGZpZWxkIiwieCI6MTA4NywieSI6MTA2NiwidyI6MzAwLCJoIjo4MCwibGFiZWwi" +
+    "OiJTYXkgc29tZXRoaW5nIn0seyJpZCI6ImxibF9vbGVkIiwidCI6ImxhYmVsIiwieCI6MTA4NywieSI6MTE3Niwi" +
+    "dyI6MzAwLCJoIjo3MCwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6InNjcmVl" +
+    "bl9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEwODcsInkiOjEyNjYsInciOjIwMCwiaCI6NzAsImxhYmVsIjoiU2Ny" +
+    "ZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8ifV0sImNhbnZhcyI6eyJ3IjoxNTcwLCJoIjoxNDE2fX0="
 const CFG_DRIVE =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEcml2ZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQiOiJn" +
     "cm91cCIsImxhYmVsIjoiV0hFRUxTIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo3NjgsImgi" +
@@ -409,20 +410,22 @@ const CFG_DIST =
     "dyI6ODAwLCJoIjo4NTB9fQ=="
 const CFG_SCREEN =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBTY3JlZW4gdGVzdCIsIndpZGdldHMiOlt7ImlkIjoiZ3JwX3Rlc3QiLCJ0Ijoi" +
-    "Z3JvdXAiLCJsYWJlbCI6IlNDUkVFTiIsImNvbG9yIjoiI2MwODRmYyIsIngiOjU2LCJ5Ijo0MiwidyI6NTg4LCJo" +
-    "IjozOTIsImNoaWxkcmVuIjoib2xlZF90ZXh0LGxibF9vbGVkLGJ0bl9idXp6LGxldmVsIn0seyJpZCI6Im9sZWRf" +
-    "dGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo4MCwieSI6MTAwLCJ3IjozODAsImgiOjkwLCJsYWJlbCI6IlNheSBz" +
-    "b21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4Ijo4MCwieSI6MjIwLCJ3IjozODAsImgi" +
-    "OjgwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifSx7ImlkIjoiYnRuX2J1enoiLCJ0Ijoi" +
-    "YnV0dG9uIiwieCI6NTAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IkJlZXAifSx7ImlkIjoibGV2" +
-    "ZWwiLCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjM0MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9w" +
-    "dGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzAw" +
-    "LCJoIjo0OTB9fQ=="
+    "Z3JvdXAiLCJsYWJlbCI6IlNDUkVFTiIsImNvbG9yIjoiI2MwODRmYyIsIngiOjU2LCJ5Ijo0MiwidyI6NjY4LCJo" +
+    "IjozOTIsImNoaWxkcmVuIjoib2xlZF90ZXh0LGxibF9vbGVkLGJ0bl9idXp6LHNjcmVlbl9tb2RlLGxldmVsIn0s" +
+    "eyJpZCI6Im9sZWRfdGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo4MCwieSI6MTAwLCJ3IjozODAsImgiOjkwLCJs" +
+    "YWJlbCI6IlNheSBzb21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4Ijo4MCwieSI6MjIw" +
+    "LCJ3IjozODAsImgiOjgwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifSx7ImlkIjoiYnRu" +
+    "X2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6NTAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IkJlZXAi" +
+    "fSx7ImlkIjoic2NyZWVuX21vZGUiLCJ0Ijoic2VsZWN0IiwieCI6NTAwLCJ5IjoyNTAsInciOjIwMCwiaCI6NzAs" +
+    "ImxhYmVsIjoiU2NyZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8ifSx7ImlkIjoibGV2ZWwiLCJ0Ijoi" +
+    "c2VsZWN0IiwieCI6ODAsInkiOjM0MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9wdGlvbnMiOiJC" +
+    "ZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzgwLCJoIjo0OTB9" +
+    "fQ=="
 const IDS_BEGINNER = ",dpad_move,btn_stop,gauge_dist,alert,level,lbl_ver,"
-const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,"
+const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,screen_mode,"
 const IDS_DRIVE = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,level,"
 const IDS_DIST = ",gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,level,"
-const IDS_SCREEN = ",oled_text,lbl_oled,btn_buzz,level,"
+const IDS_SCREEN = ",oled_text,lbl_oled,btn_buzz,screen_mode,level,"
 // <<< LAYOUTS
 
 // Which panel the rover serves. All four are compiled in; the Level selector
@@ -796,6 +799,25 @@ let trimR = 0
 // already V2-only for Bluetooth plus the screen.
 const TRIM_KEY_L = "trimL"
 const TRIM_KEY_R = "trimR"
+const FACE_KEY = "face"
+
+// Declared here, beside the other stored prefs, because prefsLoad() and
+// prefsSaveTick() sit above the face code and read them.
+//
+// AUTO is the interesting one: the status text before a connection, when the
+// only thing you need from the glass is WHICH micro:bit this is, and the face
+// afterwards, when the app is already showing you every number. Status stays
+// the default so a rover that has never been asked behaves as it always did.
+const SCREEN_STATUS = 0
+const SCREEN_FACE = 1
+const SCREEN_AUTO = 2
+let screenMode = SCREEN_STATUS
+
+function faceWanted(): boolean {
+    if (screenMode == SCREEN_FACE) return true
+    if (screenMode == SCREEN_AUTO) return btConnected
+    return false
+}
 
 // Written on settle, never per event. A slider drag is a stream of values and
 // flash has a finite number of erase cycles, so a write per event would spend
@@ -805,7 +827,7 @@ const TRIM_SAVE_SETTLE_MS = 2000
 let trimSaveAt = 0
 let trimSaveDue = false
 
-function trimTouched() {
+function prefsTouched() {
     trimSaveDue = true
     trimSaveAt = input.runningTime() + TRIM_SAVE_SETTLE_MS
 }
@@ -813,22 +835,28 @@ function trimTouched() {
 // exists() first: readNumber() returns `undefined` for a key that was never
 // written, and a number variable holding undefined is not something to find
 // out about while the wheels are turning.
-function trimLoad() {
+function prefsLoad() {
     if (settings.exists(TRIM_KEY_L)) {
         trimL = Math.constrain(settings.readNumber(TRIM_KEY_L), -20, 20)
     }
     if (settings.exists(TRIM_KEY_R)) {
         trimR = Math.constrain(settings.readNumber(TRIM_KEY_R), -20, 20)
     }
-    dbg("trim loaded: L=" + trimL + " R=" + trimR)
+    if (settings.exists(FACE_KEY)) {
+        // 0/1 from R1-v16 still land on Status/Face, so an already-flashed
+        // rover keeps whatever it was set to.
+        screenMode = Math.constrain(settings.readNumber(FACE_KEY), 0, 2)
+    }
+    dbg("prefs loaded: L=" + trimL + " R=" + trimR + " screen=" + screenMode)
 }
 
-function trimSaveTick(now: number) {
+function prefsSaveTick(now: number) {
     if (!trimSaveDue || now < trimSaveAt) return
     trimSaveDue = false
     settings.writeNumber(TRIM_KEY_L, trimL)
     settings.writeNumber(TRIM_KEY_R, trimR)
-    dbg("trim saved: L=" + trimL + " R=" + trimR)
+    settings.writeNumber(FACE_KEY, screenMode)
+    dbg("prefs saved: L=" + trimL + " R=" + trimR + " screen=" + screenMode)
 }
 
 // The mirror matters: the right servo faces the opposite way on the chassis,
@@ -900,7 +928,7 @@ let lastDistCm = -1
 // deliberately no clock -- a ticking second would force a full repaint every
 // second forever. A parked rover costs no I2C at all.
 const OLED_ROWS = 4
-const OLED_REFRESH_MS = 500
+const OLED_REFRESH_MS = 120
 let oledCheckAt = 0
 let oledOnGlass: string[] = ["", "", "", ""]
 
@@ -960,11 +988,167 @@ function oledCurrent(): string {
     return "(showing status)"
 }
 
+
+// -- THE FACE --------------------------------------------------------
+// Two eyes instead of the status text -- an OPTION, chosen with the Screen
+// selector and remembered in flash beside the trim, not something that
+// happens to you.
+//
+// It cannot be drawn with the OLED extension. drawFilledCircle() calls
+// drawLine() once per column, every drawLine() ends in drawShape(), and
+// drawShape() spends six command writes plus a data write for EACH
+// column-page it touches: one filled circle is several hundred I2C
+// transactions. So the face keeps its own framebuffer and pushes whole
+// frames -- eight writes of 65 bytes for the entire screen, against ten
+// transactions per character on the text path.
+const FB_W = 128
+const FB_PAGES = 4
+const FB_SIZE = FB_W * FB_PAGES
+let fb: Buffer = null
+let fbTx: Buffer = null          // reused, so drawing a frame allocates nothing
+
+function fbInit() {
+    fb = pins.createBuffer(FB_SIZE)
+    fbTx = pins.createBuffer(65)
+    fbTx[0] = 0x40               // "data follows", once, for every chunk
+}
+
+// Bytes are VERTICAL: bit b of page p is row p*8+b. Filling by column-page
+// with a mask keeps this to at most 128x4 writes rather than one per pixel,
+// which matters because this runs in the MakeCode interpreter, not in C.
+function fbRect(x: number, y: number, w: number, h: number, on: boolean) {
+    const y0 = Math.max(0, y)
+    const y1 = Math.min(FB_PAGES * 8 - 1, y + h - 1)
+    const x0 = Math.max(0, x)
+    const x1 = Math.min(FB_W - 1, x + w - 1)
+    if (y1 < y0 || x1 < x0) return
+    for (let page = y0 >> 3; page <= (y1 >> 3); page++) {
+        const top = Math.max(y0, page * 8)
+        const bot = Math.min(y1, page * 8 + 7)
+        let mask = 0
+        for (let b = top; b <= bot; b++) mask = mask | (1 << (b & 7))
+        for (let px = x0; px <= x1; px++) {
+            const i = page * FB_W + px
+            fb[i] = on ? (fb[i] | mask) : (fb[i] & (~mask & 0xFF))
+        }
+    }
+}
+
+function fbFlush() {
+    oledCmd(0x21); oledCmd(0); oledCmd(FB_W - 1)        // column window
+    oledCmd(0x22); oledCmd(0); oledCmd(FB_PAGES - 1)    // page window
+    for (let off = 0; off < FB_SIZE; off += 64) {
+        for (let i = 0; i < 64; i++) fbTx[i + 1] = fb[off + i]
+        pins.i2cWriteBuffer(OLED_ADDR, fbTx, false)
+    }
+}
+
+const EYE_W = 42, EYE_H = 26, EYE_Y = 3, EYE_LX = 12, EYE_RX = 74
+const PUP = 12
+const BROW = 11                  // how deep the worried wedge cuts
+const FACE_OPEN = 0, FACE_SHUT = 1, FACE_WORRIED = 2, FACE_DIZZY = 3
+const FACE_SLEEP_MS = 20000
+const FACE_BLINK_SHUT_MS = 140
+const FACE_DIZZY_MS = 2000
+
+let faceNextBlinkAt = 0
+let faceShutUntil = 0
+let faceDizzyUntil = 0
+let faceSpun = false
+let faceSig = ""                 // last frame drawn, so a still face costs nothing
+
+// cutRight says which side the brow wedge bites into: the OUTER edge of each
+// eye, so the two are mirror images rather than parallel.
+function drawEye(x: number, mode: number, dx: number, dy: number, cutRight: boolean) {
+    if (mode == FACE_SHUT) {
+        // A bar, not a short rectangle: anything taller reads as a squint.
+        fbRect(x, EYE_Y + (EYE_H >> 1) - 2, EYE_W, 4, true)
+        return
+    }
+    const y = EYE_Y
+    // Rounded with two crossed rectangles. Cheaper than a circle, and the
+    // corners are the only part anyone notices at this size.
+    fbRect(x + 2, y, EYE_W - 4, EYE_H, true)
+    fbRect(x, y + 2, EYE_W, EYE_H - 4, true)
+    // The pupil is a HOLE punched in the white of the eye.
+    fbRect(x + ((EYE_W - PUP) >> 1) + dx, y + ((EYE_H - PUP) >> 1) + dy,
+           PUP, PUP, false)
+    if (mode == FACE_WORRIED) {
+        // Brows, as a wedge cleared off the top: deepest at the OUTER edge so
+        // the inner ends ride UP. Cut them the other way and the same shape
+        // reads as angry instead of worried. Just shortening the eye, which is
+        // what this did first, only ever read as a squint.
+        for (let c = 0; c < EYE_W; c++) {
+            const t = cutRight ? c : (EYE_W - 1 - c)
+            const d = Math.idiv(t * BROW, EYE_W - 1)
+            if (d > 0) fbRect(x + c, y, 1, d, false)
+        }
+    }
+}
+
+function faceRender(now: number) {
+    // Frozen while the wheels turn. A frame is 512 bytes on the same bus as
+    // the servo driver, inside the loop that feeds the drive watchdog -- and
+    // nobody is watching the robot's eyes while it drives away from them.
+    if (lastDriveL != 0 || lastDriveR != 0) {
+        if ((lastDriveL > 0 && lastDriveR < 0) || (lastDriveL < 0 && lastDriveR > 0)) {
+            faceSpun = true      // remember it, so the dizziness can land after
+        }
+        return
+    }
+    if (faceSpun) {
+        faceSpun = false
+        faceDizzyUntil = now + FACE_DIZZY_MS
+    }
+
+    let mode = FACE_OPEN
+    let dx = 0
+    let dy = 0
+    if (now < faceDizzyUntil) {
+        mode = FACE_DIZZY
+        const phase = Math.idiv(now, 120) % 4
+        dx = phase == 0 ? -8 : (phase == 2 ? 8 : 0)
+        dy = phase == 1 ? -5 : (phase == 3 ? 5 : 0)
+    } else if (lastDistCm >= 0 && lastDistCm < ALERT_CM) {
+        mode = FACE_WORRIED
+        dy = 2                   // pupils drop a little under the brows
+    } else if (now - lastDriveCmdAt > FACE_SLEEP_MS) {
+        mode = FACE_SHUT
+    } else if (now >= faceNextBlinkAt) {
+        faceShutUntil = now + FACE_BLINK_SHUT_MS
+        faceNextBlinkAt = now + 2500 + Math.randomRange(0, 3500)
+    }
+    if (mode == FACE_OPEN) {
+        if (now < faceShutUntil) mode = FACE_SHUT
+        // Awake, the eyes follow the sensor head. It is the one thing the
+        // rover is actually looking at.
+        else dx = Math.idiv((headAngle - 90) * 8, 90)
+    }
+
+    const sig = "" + mode + "," + dx + "," + dy
+    if (sig == faceSig) return
+    faceSig = sig
+    fb.fill(0)
+    drawEye(EYE_LX, mode, dx, dy, false)
+    drawEye(EYE_RX, mode, dx, dy, true)
+    const t0 = input.runningTime()
+    fbFlush()
+    dbg("face frame " + (input.runningTime() - t0) + "ms mode=" + mode)
+}
+
 // Drawing is I2C and takes milliseconds, so it happens in the loop and only
 // when the text actually changed -- never from the receive callback.
 function oledRender() {
-    const want = oledLines()
     oledDirty = false
+    if (faceWanted() && oledText.length == 0) {
+        // Text must repaint when we come back, or half the old status would
+        // survive underneath the next frame.
+        oledOnGlass = ["", "", "", ""]
+        faceRender(input.runningTime())
+        return
+    }
+    faceSig = ""                 // and the face likewise, on the way back
+    const want = oledLines()
     let changed = false
     for (let i = 0; i < OLED_ROWS; i++) {
         if (want[i] != oledOnGlass[i]) changed = true
@@ -1251,6 +1435,21 @@ function handleWidget(id: string, val: string) {
         dbg("jog: L=" + (jogL ? 1 : 0) + " R=" + (jogR ? 1 : 0))
     }
 
+    // Select: what the little screen shows. The face is opt-in -- a robot
+    // that stares at you instead of reporting its trim is a surprise, not a
+    // feature, so Status stays the default.
+    if (id == "screen_mode") {
+        if (val == "Face") screenMode = SCREEN_FACE
+        else if (val == "Auto") screenMode = SCREEN_AUTO
+        else screenMode = SCREEN_STATUS
+        faceSig = ""
+        oledOnGlass = ["", "", "", ""]
+        oledDirty = true
+        prefsTouched()
+        dbg("screen -> " + val)
+        return
+    }
+
     // Select: how the head behaves — aimed by hand, or panning on its own.
     if (id == "head_mode") {
         headSweep = (val == "Sweep")
@@ -1320,7 +1519,7 @@ function handleWidget(id: string, val: string) {
     // 360-degree servos never run at matched speeds, so the rover always
     // curved. Kept in the rover's own flash from R1-v12, so the calibration
     // belongs to the ROBOT: it survives the battery, and it does not follow
-    // whichever browser happened to set it. See trimLoad()/trimSaveTick().
+    // whichever browser happened to set it. See prefsLoad()/prefsSaveTick().
     // Trim arrives from the slider, the edit field, or the +/- buttons below.
     // All of them write the same value and all are echoed back, so whichever
     // you did not touch follows along instead of showing a stale number.
@@ -1330,7 +1529,7 @@ function handleWidget(id: string, val: string) {
         if (left) trimL = t
         else trimR = t
         trimEchoDue = true
-        trimTouched()
+        prefsTouched()
         dbg("trim: L=" + trimL + " R=" + trimR)
         return
     }
@@ -1355,7 +1554,7 @@ function handleWidget(id: string, val: string) {
         // Same echo as the slider and the field: whichever control you did
         // not touch follows along instead of showing a stale number.
         trimEchoDue = true
-        trimTouched()
+        prefsTouched()
         dbg("trim step: L=" + trimL + " R=" + trimR)
         return
     }
@@ -1503,12 +1702,13 @@ function sendValue(id: string, val: string) {
 // WHEEL_STOP plus the trim: loading afterwards would hold the wheels at an
 // untrimmed stop until the first command arrived, which on a badly trimmed
 // rover is a slow crawl across the table.
-trimLoad()
+prefsLoad()
 
 // Safety: stop any leftover motion and centre the sweep head on boot.
 wheelsStop()
 headWrite()
 oledInit()
+fbInit()
 oledRender()
 // Move the tone output off P0 BEFORE anything can beep. On micro:bit the
 // music blocks drive P0 by default, and P0 is the sonar trigger on this board:
@@ -1842,11 +2042,11 @@ basic.forever(function () {
         })
     }
 
-    // Commit trim to flash once it has settled. Deliberately here in the
+    // Commit trim and the screen choice to flash once they have settled. Deliberately here in the
     // loop rather than in the widget handler: a flash write is not free, and
     // the BLE receive callback is the one place on this board where doing
     // anything slow has repeatedly broken reconnects.
-    trimSaveTick(now)
+    prefsSaveTick(now)
 
     // ── LINK LOSS BY SILENCE ─────────────────────────────────────
     // The real disconnect detector on this board, since the BLE event
@@ -1970,6 +2170,10 @@ basic.forever(function () {
                 sendUiValue("trim_r", "" + trimR)
                 sendUiValue("trim_l_num", "" + trimL)
                 sendUiValue("trim_r_num", "" + trimR)
+                // Same reason: the selector would otherwise render on its
+                // first option over a robot already showing the face.
+                sendUiValue("screen_mode", screenMode == SCREEN_FACE ? "Face"
+                    : screenMode == SCREEN_AUTO ? "Auto" : "Status")
                 uiSent = true
             } else if (oledCurrent() != oledShown) {
                 // Mirror what is really on the glass, including truncation.

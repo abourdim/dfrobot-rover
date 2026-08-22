@@ -318,6 +318,54 @@ This needs a micro:bit **V2**: the `settings` API is excluded from the V1
 build. No loss here, since the rover already needs V2 for Bluetooth plus the
 screen.
 
+## The face
+
+The screen can show two eyes instead of the status text. The **Screen**
+selector, in the SCREEN group on Expert and on the Screen panel, picks
+between three settings:
+
+| | |
+|---|---|
+| **Face** | always the eyes |
+| **Status** | always the text *(the default)* |
+| **Auto** | text until the app connects, eyes afterwards |
+
+**Auto** is the one worth choosing. Before a connection the only thing you
+need from the glass is *which* micro:bit this is; after it, the app is already
+showing you every number, so the robot may as well have a face. The choice is
+kept in flash beside the trim, so a rover comes back the way you left it.
+
+What the eyes do:
+
+| | when |
+|---|---|
+| follow the sensor head | always — the pupils track **Look** |
+| blink | every 2.5–6 s |
+| worried, brows up | something closer than 25 cm |
+| dizzy | for 2 s after a spin |
+| asleep | 20 s with no driving |
+
+Two things that look like bugs and are not. **Dizziness arrives after the
+spin, not during it** — the face is frozen while the wheels turn, deliberately
+(see below). And **worried needs Telemetry set to All**, because otherwise the
+rover only measures distance in Avoid mode and has nothing to be worried
+about.
+
+### Why the face has its own framebuffer
+
+The screen extension cannot draw this. `drawFilledCircle()` calls
+`drawLine()` once per column, every `drawLine()` ends in `drawShape()`, and
+`drawShape()` spends six command writes plus a data write for *each*
+column-page it touches — one filled circle is several hundred I²C
+transactions.
+
+So the face keeps its own 512-byte buffer and pushes whole frames: **eight
+writes of 65 bytes for the entire screen**, against ten transactions per
+character on the text path. It redraws only when the picture actually
+changes, so a sleeping or worried face costs nothing at all, and it holds
+still while the wheels turn — a frame is 512 bytes on the same I²C bus as the
+servo driver, inside the loop that feeds the drive watchdog.
+
 ## Driving modes
 
 | mode | what it does |
@@ -333,6 +381,7 @@ screen.
 | trim stored on the robot | working on hardware |
 | distance sensor, sweep head | working on hardware |
 | screen | status display — working on hardware |
+| the face | written — needs a flash to confirm on glass |
 | five control panels | working on hardware |
 | light strip | **removed in R1-v11** — clashes with Bluetooth |
 
@@ -341,8 +390,6 @@ screen.
 Three of these need no extra parts — a micro:bit V2 already has a speaker, a
 microphone and a motion sensor.
 
-- **A face on the screen** — two big eyes that blink, look worried as something
-  gets close, go dizzy when spinning, and fall asleep when idle.
 - **Ouch** — the motion sensor feels a bump, the rover flinches and backs off.
 - **Reversing beeper**, like a truck, only when going backwards.
 - **Clap to go** — one clap starts, two stops.

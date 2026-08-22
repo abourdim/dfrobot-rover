@@ -42,8 +42,8 @@
    "x": 1063,
    "y": 1008,
    "w": 348,
-   "h": 262,
-   "children": "oled_text,lbl_oled"
+   "h": 352,
+   "children": "oled_text,lbl_oled,screen_mode"
   },
   {
    "id": "dpad_move",
@@ -357,10 +357,20 @@
    "h": 70,
    "label": "On the screen",
    "model": "card"
+  },
+  {
+   "id": "screen_mode",
+   "t": "select",
+   "x": 1087,
+   "y": 1266,
+   "w": 200,
+   "h": 70,
+   "label": "Screen",
+   "options": "Face,Status,Auto"
   }
  ],
  "canvas": {
   "w": 1570,
-  "h": 1360
+  "h": 1416
  }
 }

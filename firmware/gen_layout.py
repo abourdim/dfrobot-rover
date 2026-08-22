@@ -235,6 +235,11 @@ screen_test = build("Rover — Screen test", [
         W("lbl_oled", "label", 80, 220, 380, 80, label="On the screen",
           model="card"),
         W("btn_buzz", "button", 500, 100, 120, 120, label="Beep"),
+        # Status or the face. It lives on the SCREEN panel because that is
+        # where the other screen controls are -- and because Expert is
+        # hand-tuned now, so adding a widget there means a re-export.
+        W("screen_mode", "select", 500, 250, 200, 70, label="Screen",
+          options="Face,Status,Auto"),
         LEVEL(80, 340),
     ]),
 ])
