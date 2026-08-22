@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v22"
+const FIRMWARE_VERSION = "R1-v23"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -746,7 +746,7 @@ const MODE_AVOID = 2
 let driveMode = MODE_MANUAL
 
 // Obstacle-avoid + alert thresholds.
-const AVOID_STOP_CM = 20        // back away closer than this
+const AVOID_STOP_CM = 35        // back away closer than this
 const ALERT_CM = 25             // notify the app below this
 const ALERT_CLEAR_CM = 40       // ...and only re-arm once well clear again
 let alertActive = false
