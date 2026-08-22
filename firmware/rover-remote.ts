@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v14"
+const FIRMWARE_VERSION = "R1-v15"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -946,11 +946,18 @@ function oledLines(): string[] {
     return out
 }
 
-// The text the screen is ACTUALLY showing, truncated exactly as drawn. The app
-// mirrors this rather than what was typed, so a message too long for the panel
-// looks cut off in the app as well instead of silently disagreeing with it.
+// What the app's "On the screen" card mirrors. Deliberately the MESSAGE,
+// truncated exactly as drawn, and NOT line 1 of the status: that card sits
+// beside "Say something" and exists so a message too long for the panel is
+// seen getting cut off, rather than the app and the glass quietly disagreeing.
+//
+// R1-v14 pointed this at oledLines()[0], which was faithful and useless -- with
+// nothing typed the glass shows the version and the mode, so the card printed
+// the firmware version a second time, immediately beside the card that already
+// shows it.
 function oledCurrent(): string {
-    return oledLines()[0]
+    if (oledText.length > 0) return oledText.substr(0, OLED_COLS)
+    return "(showing status)"
 }
 
 // Drawing is I2C and takes milliseconds, so it happens in the loop and only

@@ -330,9 +330,9 @@ screen.
 | | |
 |---|---|
 | drive, trim | working on hardware |
-| trim stored on the robot | written — needs a flash to confirm on hardware |
+| trim stored on the robot | working on hardware |
 | distance sensor, sweep head | working on hardware |
-| screen | status display — written, untested on glass |
+| screen | status display — working on hardware |
 | five control panels | working on hardware |
 | light strip | **removed in R1-v11** — clashes with Bluetooth |
 
