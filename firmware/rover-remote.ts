@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v19"
+const FIRMWARE_VERSION = "R1-v21"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -307,57 +307,57 @@ const CFG_EXPERT =
     "In0seyJpZCI6ImdycF9zeXMiLCJ0IjoiZ3JvdXAiLCJsYWJlbCI6IlNZU1RFTSIsImNvbG9yIjoiIzg4OTJiMCIs" +
     "IngiOjU2LCJ5IjoxMDAyLCJ3Ijo4NjQsImgiOjI4NywiY2hpbGRyZW4iOiJtb2RlLHVwZCxsZXZlbCxsYmxfdmVy" +
     "LGxibF9oZWFydGJlYXQsYnRuX2J1enoifSx7ImlkIjoiZ3JwX3NjcmVlbiIsInQiOiJncm91cCIsImxhYmVsIjoi" +
-    "U0NSRUVOIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6MTA2MywieSI6MTAwOCwidyI6MzQ4LCJoIjozNTIsImNoaWxk" +
-    "cmVuIjoib2xlZF90ZXh0LGxibF9vbGVkLHNjcmVlbl9tb2RlIn0seyJpZCI6ImRwYWRfbW92ZSIsInQiOiJkcGFk" +
-    "IiwieCI6ODAsInkiOjYzLCJ3Ijo0MjAsImgiOjQyMCwibGFiZWwiOiJEcml2ZSIsIm1vZGVsIjoiY2xhc3NpYyJ9" +
-    "LHsiaWQiOiJzcGQiLCJ0Ijoic2xpZGVyIiwieCI6NTMyLCJ5IjoxNDIsInciOjEyMCwiaCI6MjYwLCJsYWJlbCI6" +
-    "IlNwZWVkIiwibWluIjo2MCwibWF4IjoyNTUsInN0ZXAiOjUsInZhbHVlIjoyMDAsInJlc3RvcmUiOjF9LHsiaWQi" +
-    "OiJidG5fc3RvcCIsInQiOiJidXR0b24iLCJ4IjoyMjgsInkiOjIwOCwidyI6MTIwLCJoIjoxMjAsImxhYmVsIjoi" +
-    "U1RPUCJ9LHsiaWQiOiJnYXVnZV9zcGQiLCJ0IjoiZ2F1Z2UiLCJ4Ijo2NjIsInkiOjE2MCwidyI6MjM5LCJoIjoy" +
-    "MzMsImxhYmVsIjoiU3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwiZGVjaW1hbHMiOjAsIm1vZGVsIjoibWluIiwi" +
-    "c291cmNlIjoic3BkIiwidmFsdWUiOjIwMH0seyJpZCI6ImJ0bl9tbCIsInQiOiJidXR0b24iLCJ4IjoxOTcsInki" +
-    "OjUxMCwidyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiTGVmdCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjot" +
-    "MSwiY29sb3IiOiIjMGU3NDkwIn0seyJpZCI6ImJ0bl9tciIsInQiOiJidXR0b24iLCJ4Ijo2MDEsInkiOjUwOSwi" +
-    "dyI6MTkwLCJoIjoxMjAsImxhYmVsIjoiUmlnaHQgd2hlZWwiLCJpY29uIjoi4pqZ77iPIiwic3BpbiI6MSwiY29s" +
-    "b3IiOiIjMGU3NDkwIn0seyJpZCI6InRyaW1fbCIsInQiOiJzbGlkZXIiLCJ4IjoyMTgsInkiOjY0MCwidyI6MTI3" +
-    "LCJoIjoyNDQsImxhYmVsIjoiVHJpbSBMIiwibWluIjotMjAsIm1heCI6MjAsInZhbHVlIjowfSx7ImlkIjoidHJp" +
-    "bV9yIiwidCI6InNsaWRlciIsIngiOjY0OCwieSI6NjM5LCJ3IjoxMDIsImgiOjIzNywibGFiZWwiOiJUcmltIFIi" +
-    "LCJtaW4iOi0yMCwibWF4IjoyMCwidmFsdWUiOjB9LHsiaWQiOiJ0cmltX2xfZG4iLCJ0IjoiYnV0dG9uIiwieCI6" +
-    "MTA4LCJ5Ijo3MTksInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6Ikwg4oiSIDEifSx7ImlkIjoidHJpbV9sX251bSIs" +
-    "InQiOiJlZGl0ZmllbGQiLCJ4IjoyMDksInkiOjg4OCwidyI6MTQxLCJoIjo5MiwibGFiZWwiOiJMID0ifSx7Imlk" +
-    "IjoidHJpbV9sX3VwIiwidCI6ImJ1dHRvbiIsIngiOjM1MywieSI6NzE3LCJ3IjoxMDcsImgiOjEwNCwibGFiZWwi" +
-    "OiJMICsgMSJ9LHsiaWQiOiJ0cmltX3JfZG4iLCJ0IjoiYnV0dG9uIiwieCI6NTM4LCJ5Ijo3MTMsInciOjEwMCwi" +
-    "aCI6MTAwLCJsYWJlbCI6IlIg4oiSIDEifSx7ImlkIjoidHJpbV9yX251bSIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo2" +
-    "MjUsInkiOjg4NywidyI6MTQwLCJoIjo5NSwibGFiZWwiOiJSID0ifSx7ImlkIjoidHJpbV9yX3VwIiwidCI6ImJ1" +
-    "dHRvbiIsIngiOjc1OCwieSI6NzEyLCJ3IjoxMDAsImgiOjEwMCwibGFiZWwiOiJSICsgMSJ9LHsiaWQiOiJnYXVn" +
-    "ZV9kaXN0IiwidCI6ImdhdWdlIiwieCI6MTAwMCwieSI6MTAzLCJ3IjoyMjAsImgiOjIwMCwibGFiZWwiOiJEaXN0" +
-    "YW5jZSIsIm1heCI6MjAwLCJ1bml0cyI6ImNtIiwiZGVjaW1hbHMiOjB9LHsiaWQiOiJhbGVydCIsInQiOiJub3Rp" +
-    "ZmljYXRpb24iLCJ4IjoxMjg3LCJ5IjoyMjYsInciOjEwOCwiaCI6ODAsImxhYmVsIjoiQWxlcnQifSx7ImlkIjoi" +
-    "ZGlzdF9yZWFkIiwidCI6InNlbGVjdCIsIngiOjEyMzUsInkiOjExMywidyI6MjAzLCJoIjoxMDUsImxhYmVsIjoi" +
-    "RGlzdGFuY2UgcmVhZCIsIm9wdGlvbnMiOiJBdXRvLFJlYWQgbm93In0seyJpZCI6ImdyYXBoX2Rpc3QiLCJ0Ijoi" +
-    "Z3JhcGgiLCJ4IjoxMDAzLCJ5IjozMzEsInciOjQ3NCwiaCI6MzcxLCJsYWJlbCI6IkRpc3RhbmNlIGNtIn0seyJp" +
-    "ZCI6InNydl9oZWFkIiwidCI6InNsaWRlciIsIngiOjEwMDAsInkiOjczMywidyI6OTgsImgiOjIyOSwibGFiZWwi" +
-    "OiJMb29rIiwibWF4IjoxODAsInZhbHVlIjo5MH0seyJpZCI6ImdhdWdlX2hlYWQiLCJ0IjoiZ2F1Z2UiLCJ4Ijox" +
-    "MTIwLCJ5Ijo3MzMsInciOjE4MSwiaCI6MjI1LCJsYWJlbCI6IkFuZ2xlIiwibWF4IjoxODAsInVuaXRzIjoiwrAi" +
-    "LCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJzb3VyY2UiOiJzcnZfaGVhZCIsInZhbHVlIjo5MH0seyJpZCI6" +
-    "ImJ0bl9oZWFkX2NlbnRlciIsInQiOiJidXR0b24iLCJ4IjoxMzQzLCJ5Ijo4NDIsInciOjExNSwiaCI6MTE3LCJs" +
-    "YWJlbCI6IkFoZWFkIn0seyJpZCI6ImhlYWRfbW9kZSIsInQiOiJzZWxlY3QiLCJ4IjoxMzE1LCJ5Ijo3MjksInci" +
-    "OjE3MiwiaCI6ODksImxhYmVsIjoiSGVhZCIsIm9wdGlvbnMiOiJNYW51YWwsU3dlZXAifSx7ImlkIjoibW9kZSIs" +
-    "InQiOiJzZWxlY3QiLCJ4Ijo4MCwieSI6MTA2MCwidyI6MjAwLCJoIjo4MSwibGFiZWwiOiJNb2RlIiwib3B0aW9u" +
-    "cyI6Ik1hbnVhbCxBdm9pZCJ9LHsiaWQiOiJ1cGQiLCJ0Ijoic2VsZWN0IiwieCI6MzYxLCJ5IjoxMDYxLCJ3Ijoy" +
-    "MzgsImgiOjg3LCJsYWJlbCI6IlRlbGVtZXRyeSIsIm9wdGlvbnMiOiJBbGwsQmFzaWMsT2ZmIn0seyJpZCI6Imxl" +
-    "dmVsIiwidCI6InNlbGVjdCIsIngiOjY4MiwieSI6MTA1MywidyI6MjEwLCJoIjo5MCwibGFiZWwiOiJMZXZlbCIs" +
-    "Im9wdGlvbnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn0seyJpZCI6ImxibF92ZXIi" +
-    "LCJ0IjoibGFiZWwiLCJ4Ijo4MCwieSI6MTE3MCwidyI6MjAwLCJoIjo4NywibGFiZWwiOiJGaXJtd2FyZSIsIm1v" +
-    "ZGVsIjoiY2FyZCJ9LHsiaWQiOiJsYmxfaGVhcnRiZWF0IiwidCI6ImxhYmVsIiwieCI6MzY1LCJ5IjoxMTc1LCJ3" +
-    "IjoyMzksImgiOjc5LCJsYWJlbCI6IlVwdGltZSIsIm1vZGVsIjoiY2FyZCJ9LHsiaWQiOiJidG5fYnV6eiIsInQi" +
-    "OiJidXR0b24iLCJ4Ijo3MDksInkiOjExNjAsInciOjE0NCwiaCI6OTgsImxhYmVsIjoiQmVlcCJ9LHsiaWQiOiJv" +
-    "bGVkX3RleHQiLCJ0IjoiZWRpdGZpZWxkIiwieCI6MTA4NywieSI6MTA2NiwidyI6MzAwLCJoIjo4MCwibGFiZWwi" +
-    "OiJTYXkgc29tZXRoaW5nIn0seyJpZCI6ImxibF9vbGVkIiwidCI6ImxhYmVsIiwieCI6MTA4NywieSI6MTE3Niwi" +
-    "dyI6MzAwLCJoIjo3MCwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6InNjcmVl" +
-    "bl9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEwODcsInkiOjEyNjYsInciOjIwMCwiaCI6NzAsImxhYmVsIjoiU2Ny" +
-    "ZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8sUmFkYXIifV0sImNhbnZhcyI6eyJ3IjoxNTcwLCJoIjox" +
-    "NDE2fX0="
+    "U0NSRUVOIiwiY29sb3IiOiIjYzA4NGZjIiwieCI6OTc5LCJ5IjoxMDA2LCJ3Ijo1NTAsImgiOjI3NywiY2hpbGRy" +
+    "ZW4iOiJvbGVkX3RleHQsbGJsX29sZWQsc2NyZWVuX21vZGUifSx7ImlkIjoiZHBhZF9tb3ZlIiwidCI6ImRwYWQi" +
+    "LCJ4Ijo4MCwieSI6NjMsInciOjQyMCwiaCI6NDIwLCJsYWJlbCI6IkRyaXZlIiwibW9kZWwiOiJjbGFzc2ljIn0s" +
+    "eyJpZCI6InNwZCIsInQiOiJzbGlkZXIiLCJ4Ijo1MzIsInkiOjE0MiwidyI6MTIwLCJoIjoyNjAsImxhYmVsIjoi" +
+    "U3BlZWQiLCJtaW4iOjYwLCJtYXgiOjI1NSwic3RlcCI6NSwidmFsdWUiOjIwMCwicmVzdG9yZSI6MX0seyJpZCI6" +
+    "ImJ0bl9zdG9wIiwidCI6ImJ1dHRvbiIsIngiOjIyOCwieSI6MjA4LCJ3IjoxMjAsImgiOjEyMCwibGFiZWwiOiJT" +
+    "VE9QIn0seyJpZCI6ImdhdWdlX3NwZCIsInQiOiJnYXVnZSIsIngiOjY2MiwieSI6MTYwLCJ3IjoyMzksImgiOjIz" +
+    "MywibGFiZWwiOiJTcGVlZCIsIm1pbiI6NjAsIm1heCI6MjU1LCJkZWNpbWFscyI6MCwibW9kZWwiOiJtaW4iLCJz" +
+    "b3VyY2UiOiJzcGQiLCJ2YWx1ZSI6MjAwfSx7ImlkIjoiYnRuX21sIiwidCI6ImJ1dHRvbiIsIngiOjE5NywieSI6" +
+    "NTEwLCJ3IjoxOTAsImgiOjEyMCwibGFiZWwiOiJMZWZ0IHdoZWVsIiwiaWNvbiI6IuKame+4jyIsInNwaW4iOi0x" +
+    "LCJjb2xvciI6IiMwZTc0OTAifSx7ImlkIjoiYnRuX21yIiwidCI6ImJ1dHRvbiIsIngiOjYwMSwieSI6NTA5LCJ3" +
+    "IjoxOTAsImgiOjEyMCwibGFiZWwiOiJSaWdodCB3aGVlbCIsImljb24iOiLimpnvuI8iLCJzcGluIjoxLCJjb2xv" +
+    "ciI6IiMwZTc0OTAifSx7ImlkIjoidHJpbV9sIiwidCI6InNsaWRlciIsIngiOjIxOCwieSI6NjQwLCJ3IjoxMjcs" +
+    "ImgiOjI0NCwibGFiZWwiOiJUcmltIEwiLCJtaW4iOi0yMCwibWF4IjoyMCwidmFsdWUiOjB9LHsiaWQiOiJ0cmlt" +
+    "X3IiLCJ0Ijoic2xpZGVyIiwieCI6NjQ4LCJ5Ijo2MzksInciOjEwMiwiaCI6MjM3LCJsYWJlbCI6IlRyaW0gUiIs" +
+    "Im1pbiI6LTIwLCJtYXgiOjIwLCJ2YWx1ZSI6MH0seyJpZCI6InRyaW1fbF9kbiIsInQiOiJidXR0b24iLCJ4Ijox" +
+    "MDgsInkiOjcxOSwidyI6MTAwLCJoIjoxMDAsImxhYmVsIjoiTCDiiJIgMSJ9LHsiaWQiOiJ0cmltX2xfbnVtIiwi" +
+    "dCI6ImVkaXRmaWVsZCIsIngiOjIwOSwieSI6ODg4LCJ3IjoxNDEsImgiOjkyLCJsYWJlbCI6IkwgPSJ9LHsiaWQi" +
+    "OiJ0cmltX2xfdXAiLCJ0IjoiYnV0dG9uIiwieCI6MzUzLCJ5Ijo3MTcsInciOjEwNywiaCI6MTA0LCJsYWJlbCI6" +
+    "IkwgKyAxIn0seyJpZCI6InRyaW1fcl9kbiIsInQiOiJidXR0b24iLCJ4Ijo1MzgsInkiOjcxMywidyI6MTAwLCJo" +
+    "IjoxMDAsImxhYmVsIjoiUiDiiJIgMSJ9LHsiaWQiOiJ0cmltX3JfbnVtIiwidCI6ImVkaXRmaWVsZCIsIngiOjYy" +
+    "NSwieSI6ODg3LCJ3IjoxNDAsImgiOjk1LCJsYWJlbCI6IlIgPSJ9LHsiaWQiOiJ0cmltX3JfdXAiLCJ0IjoiYnV0" +
+    "dG9uIiwieCI6NzU4LCJ5Ijo3MTIsInciOjEwMCwiaCI6MTAwLCJsYWJlbCI6IlIgKyAxIn0seyJpZCI6ImdhdWdl" +
+    "X2Rpc3QiLCJ0IjoiZ2F1Z2UiLCJ4IjoxMDAwLCJ5IjoxMDMsInciOjIyMCwiaCI6MjAwLCJsYWJlbCI6IkRpc3Rh" +
+    "bmNlIiwibWF4IjoyMDAsInVuaXRzIjoiY20iLCJkZWNpbWFscyI6MH0seyJpZCI6ImFsZXJ0IiwidCI6Im5vdGlm" +
+    "aWNhdGlvbiIsIngiOjEyODcsInkiOjIyNiwidyI6MTA4LCJoIjo4MCwibGFiZWwiOiJBbGVydCJ9LHsiaWQiOiJk" +
+    "aXN0X3JlYWQiLCJ0Ijoic2VsZWN0IiwieCI6MTIzNSwieSI6MTEzLCJ3IjoyMDMsImgiOjEwNSwibGFiZWwiOiJE" +
+    "aXN0YW5jZSByZWFkIiwib3B0aW9ucyI6IkF1dG8sUmVhZCBub3cifSx7ImlkIjoiZ3JhcGhfZGlzdCIsInQiOiJn" +
+    "cmFwaCIsIngiOjEwMDMsInkiOjMzMSwidyI6NDc0LCJoIjozNzEsImxhYmVsIjoiRGlzdGFuY2UgY20ifSx7Imlk" +
+    "Ijoic3J2X2hlYWQiLCJ0Ijoic2xpZGVyIiwieCI6MTAwMCwieSI6NzMzLCJ3Ijo5OCwiaCI6MjI5LCJsYWJlbCI6" +
+    "Ikxvb2siLCJtYXgiOjE4MCwidmFsdWUiOjkwfSx7ImlkIjoiZ2F1Z2VfaGVhZCIsInQiOiJnYXVnZSIsIngiOjEx" +
+    "MjAsInkiOjczMywidyI6MTgxLCJoIjoyMjUsImxhYmVsIjoiQW5nbGUiLCJtYXgiOjE4MCwidW5pdHMiOiLCsCIs" +
+    "ImRlY2ltYWxzIjowLCJtb2RlbCI6Im1pbiIsInNvdXJjZSI6InNydl9oZWFkIiwidmFsdWUiOjkwfSx7ImlkIjoi" +
+    "YnRuX2hlYWRfY2VudGVyIiwidCI6ImJ1dHRvbiIsIngiOjEzNDMsInkiOjg0MiwidyI6MTE1LCJoIjoxMTcsImxh" +
+    "YmVsIjoiQWhlYWQifSx7ImlkIjoiaGVhZF9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEzMTUsInkiOjcyOSwidyI6" +
+    "MTcyLCJoIjo4OSwibGFiZWwiOiJIZWFkIiwib3B0aW9ucyI6Ik1hbnVhbCxTd2VlcCJ9LHsiaWQiOiJtb2RlIiwi" +
+    "dCI6InNlbGVjdCIsIngiOjgwLCJ5IjoxMDYwLCJ3IjoyMDAsImgiOjgxLCJsYWJlbCI6Ik1vZGUiLCJvcHRpb25z" +
+    "IjoiTWFudWFsLEF2b2lkIn0seyJpZCI6InVwZCIsInQiOiJzZWxlY3QiLCJ4IjozNjEsInkiOjEwNjEsInciOjIz" +
+    "OCwiaCI6ODcsImxhYmVsIjoiVGVsZW1ldHJ5Iiwib3B0aW9ucyI6IkFsbCxCYXNpYyxPZmYifSx7ImlkIjoibGV2" +
+    "ZWwiLCJ0Ijoic2VsZWN0IiwieCI6NjgyLCJ5IjoxMDUzLCJ3IjoyMTAsImgiOjkwLCJsYWJlbCI6IkxldmVsIiwi" +
+    "b3B0aW9ucyI6IkJlZ2lubmVyLEV4cGVydCxEcml2ZSxEaXN0YW5jZSxTY3JlZW4ifSx7ImlkIjoibGJsX3ZlciIs" +
+    "InQiOiJsYWJlbCIsIngiOjgwLCJ5IjoxMTcwLCJ3IjoyMDAsImgiOjg3LCJsYWJlbCI6IkZpcm13YXJlIiwibW9k" +
+    "ZWwiOiJjYXJkIn0seyJpZCI6ImxibF9oZWFydGJlYXQiLCJ0IjoibGFiZWwiLCJ4IjozNjUsInkiOjExNzUsInci" +
+    "OjIzOSwiaCI6NzksImxhYmVsIjoiVXB0aW1lIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6ImJ0bl9idXp6IiwidCI6" +
+    "ImJ1dHRvbiIsIngiOjcwOSwieSI6MTE2MCwidyI6MTQ0LCJoIjo5OCwibGFiZWwiOiJCZWVwIn0seyJpZCI6Im9s" +
+    "ZWRfdGV4dCIsInQiOiJlZGl0ZmllbGQiLCJ4Ijo5OTksInkiOjEwNDksInciOjMwOCwiaCI6MTE1LCJsYWJlbCI6" +
+    "IlNheSBzb21ldGhpbmcifSx7ImlkIjoibGJsX29sZWQiLCJ0IjoibGFiZWwiLCJ4IjoxMDAxLCJ5IjoxMTcxLCJ3" +
+    "Ijo1MTgsImgiOjEwMSwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6InNjcmVl" +
+    "bl9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEzMTUsInkiOjEwNTIsInciOjIwNCwiaCI6MTEyLCJsYWJlbCI6IlNj" +
+    "cmVlbiIsIm9wdGlvbnMiOiJGYWNlLFN0YXR1cyxBdXRvLFJhZGFyIn1dLCJjYW52YXMiOnsidyI6MTU3MCwiaCI6" +
+    "MTQxNn19"
 const CFG_DRIVE =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEcml2ZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQiOiJn" +
     "cm91cCIsImxhYmVsIjoiV0hFRUxTIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo3NjgsImgi" +
@@ -815,10 +815,14 @@ const SCREEN_AUTO = 2
 const SCREEN_RADAR = 3
 let screenMode = SCREEN_STATUS
 
+// Disconnected, the glass ALWAYS shows the status text, whatever the setting.
+// The only question worth answering before a link exists is WHICH micro:bit
+// this is -- the browser's chooser lists these names and they all look alike,
+// so a rover showing eyes or a radar sweep is withholding the one fact you
+// need. Face and Radar are therefore about what happens once connected.
 function faceWanted(): boolean {
-    if (screenMode == SCREEN_FACE) return true
-    if (screenMode == SCREEN_AUTO) return btConnected
-    return false
+    if (!btConnected) return false
+    return screenMode == SCREEN_FACE || screenMode == SCREEN_AUTO
 }
 
 // Written on settle, never per event. A slider drag is a stream of values and
@@ -1319,7 +1323,7 @@ function oledRender() {
     oledDirty = false
     // The self-test owns the glass until it has been readable for a moment.
     if (input.runningTime() < screenHoldUntil) return
-    if (screenMode == SCREEN_RADAR && oledText.length == 0) {
+    if (screenMode == SCREEN_RADAR && btConnected && oledText.length == 0) {
         oledOnGlass = ["", "", "", ""]
         faceSig = ""
         // Redraw when the beam has actually moved, or when a blip has aged
@@ -2563,7 +2567,10 @@ basic.forever(function () {
             // sensor from an empty room.
             if (reported >= 0) {
                 lastDistCm = reported
-                if (screenMode == SCREEN_RADAR && oledText.length == 0
+                // btConnected as well: without it the scope would paint its
+                // columns straight over the name the disconnected screen is
+                // showing, from the sensor path, behind the renderer's back.
+                if (screenMode == SCREEN_RADAR && btConnected && oledText.length == 0
                     && input.runningTime() >= screenHoldUntil) {
                     radarPaint(headAngle, reported)
                 }

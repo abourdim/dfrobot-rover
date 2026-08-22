@@ -39,10 +39,10 @@
    "t": "group",
    "label": "SCREEN",
    "color": "#c084fc",
-   "x": 1063,
-   "y": 1008,
-   "w": 348,
-   "h": 352,
+   "x": 979,
+   "y": 1006,
+   "w": 550,
+   "h": 277,
    "children": "oled_text,lbl_oled,screen_mode"
   },
   {
@@ -342,29 +342,29 @@
   {
    "id": "oled_text",
    "t": "editfield",
-   "x": 1087,
-   "y": 1066,
-   "w": 300,
-   "h": 80,
+   "x": 999,
+   "y": 1049,
+   "w": 308,
+   "h": 115,
    "label": "Say something"
   },
   {
    "id": "lbl_oled",
    "t": "label",
-   "x": 1087,
-   "y": 1176,
-   "w": 300,
-   "h": 70,
+   "x": 1001,
+   "y": 1171,
+   "w": 518,
+   "h": 101,
    "label": "On the screen",
    "model": "card"
   },
   {
    "id": "screen_mode",
    "t": "select",
-   "x": 1087,
-   "y": 1266,
-   "w": 200,
-   "h": 70,
+   "x": 1315,
+   "y": 1052,
+   "w": 204,
+   "h": 112,
    "label": "Screen",
    "options": "Face,Status,Auto,Radar"
   }
