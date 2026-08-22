@@ -511,7 +511,7 @@
       "w": 200,
       "h": 70,
       "label": "Screen",
-      "options": "Face,Status,Auto",
+      "options": "Face,Status,Auto,Radar",
       "groupId": "grp_screen",
       "props": {}
     }

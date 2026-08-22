@@ -118,18 +118,35 @@ Speed 200  Head  90</code></pre>
 <p>This needs a micro:bit <strong>V2</strong>: the <code>settings</code> API is excluded from the V1 build. No loss here, since the rover already needs V2 for Bluetooth plus the screen.</p>
 <h2>The face</h2>
 <p>The screen can show two eyes instead of the status text. The <strong>Screen</strong> selector, in the SCREEN group on Expert and on the Screen panel, picks between three settings:</p>
-<div class="tw"><table><tbody><tr><td><strong>Face</strong></td><td>always the eyes</td></tr><tr><td><strong>Status</strong></td><td>always the text <em>(the default)</em></td></tr><tr><td><strong>Auto</strong></td><td>text until the app connects, eyes afterwards</td></tr></tbody></table></div>
+<div class="tw"><table><tbody><tr><td><strong>Face</strong></td><td>always the eyes</td></tr><tr><td><strong>Status</strong></td><td>always the text <em>(the default)</em></td></tr><tr><td><strong>Auto</strong></td><td>text until the app connects, eyes afterwards</td></tr><tr><td><strong>Radar</strong></td><td>the sonar map — see below</td></tr></tbody></table></div>
 <p><strong>Auto</strong> is the one worth choosing. Before a connection the only thing you need from the glass is <em>which</em> micro:bit this is; after it, the app is already showing you every number, so the robot may as well have a face. The choice is kept in flash beside the trim, so a rover comes back the way you left it.</p>
 <p>What the eyes do:</p>
-<div class="tw"><table><tbody><tr><td>follow the sensor head</td><td>always — the pupils track <strong>Look</strong></td></tr><tr><td>blink</td><td>every 2.5–6 s</td></tr><tr><td>worried, brows up</td><td>something closer than 25 cm</td></tr><tr><td>dizzy</td><td>for 2 s after a spin</td></tr><tr><td>asleep</td><td>20 s with no driving</td></tr></tbody></table></div>
+<div class="tw"><table><tbody><tr><td>follow the sensor head</td><td>always — the pupils track <strong>Look</strong></td></tr><tr><td>blink</td><td>every 2.5–6 s</td></tr><tr><td>worried, brows up</td><td>something closer than 25 cm</td></tr><tr><td>dizzy</td><td>for 2 s after a spin</td></tr><tr><td>asleep</td><td>20 s with no driving</td></tr><tr><td>alarmed, eyes wide and small-pupilled</td><td>picked up or tipped past 45°</td></tr></tbody></table></div>
 <p>Two things that look like bugs and are not. <strong>Dizziness arrives after the spin, not during it</strong> — the face is frozen while the wheels turn, deliberately (see below). And <strong>worried needs Telemetry set to All</strong>, because otherwise the rover only measures distance in Avoid mode and has nothing to be worried about.</p>
 <h3>Why the face has its own framebuffer</h3>
 <p>The screen extension cannot draw this. <code>drawFilledCircle()</code> calls <code>drawLine()</code> once per column, every <code>drawLine()</code> ends in <code>drawShape()</code>, and <code>drawShape()</code> spends six command writes plus a data write for <em>each</em> column-page it touches — one filled circle is several hundred I²C transactions.</p>
 <p>So the face keeps its own 512-byte buffer and pushes whole frames: <strong>eight writes of 65 bytes for the entire screen</strong>, against ten transactions per character on the text path. It redraws only when the picture actually changes, so a sleeping or worried face costs nothing at all, and it holds still while the wheels turn — a frame is 512 bytes on the same I²C bus as the servo driver, inside the loop that feeds the drive watchdog.</p>
+<h2>The sonar map</h2>
+<p>Set the <strong>Screen</strong> selector to <strong>Radar</strong>, and <strong>Head</strong> to <strong>Sweep</strong>. The head turns, and the glass fills with what it finds: one column per heading, and the closer a thing is the taller its bar.</p>
+<pre><code>##########.....................................##########.##########
+##########.....................................##########.##########
+##########.......................##########....##########.##########
+##########....##########.........##########....##########.##########
+   wall            box              chair          table leg</code></pre>
+<p>This is the point of the sweep head. Until now it fed a graph on somebody else&#x27;s phone, and a graph plots distance against <em>time</em> — the one axis that cannot tell you where the table leg is.</p>
+<p>It is also the cheapest thing on the screen. The head moves one step at a time, so only one slice of the picture can have changed: each reading repaints about six columns and leaves the rest alone. A whole frame is 512 bytes; a radar update is twenty-four.</p>
+<h2>The self-test</h2>
+<p>Every power-up, before anything connects, for two and a half seconds:</p>
+<pre><code>Rover R1-v18
+Driver 0x40  ok
+Sonar  42 cm
+Trim  L +7  R -7</code></pre>
+<p>A rover fails in three ways — sonar lead off, driver board not seen, flat pack — and the answer used to be a teacher crouching over it with a phone. <code>Driver 0x40 MISSING</code> means the ribbon or the board; <code>Sonar NO ECHO</code> means the sensor lead, usually the 3V3 one. Both are readable from across a table with nothing connected.</p>
+<p>The screen is deliberately not on the list. If you can read the list, the screen works.</p>
 <h2>Driving modes</h2>
 <div class="tw"><table><thead><tr><th>mode</th><th>what it does</th></tr></thead><tbody><tr><td><strong>Manual</strong></td><td>you drive with the pad</td></tr><tr><td><strong>Avoid</strong></td><td>the rover drives itself and backs away from obstacles</td></tr></tbody></table></div>
 <h2>Status</h2>
-<div class="tw"><table><tbody><tr><td>drive, trim</td><td>working on hardware</td></tr><tr><td>trim stored on the robot</td><td>working on hardware</td></tr><tr><td>distance sensor, sweep head</td><td>working on hardware</td></tr><tr><td>screen</td><td>status display — working on hardware</td></tr><tr><td>the face</td><td>written — needs a flash to confirm on glass</td></tr><tr><td>five control panels</td><td>working on hardware</td></tr><tr><td>light strip</td><td><strong>removed in R1-v11</strong> — clashes with Bluetooth</td></tr></tbody></table></div>
+<div class="tw"><table><tbody><tr><td>drive, trim</td><td>working on hardware</td></tr><tr><td>trim stored on the robot</td><td>working on hardware</td></tr><tr><td>distance sensor, sweep head</td><td>working on hardware</td></tr><tr><td>screen</td><td>status display — working on hardware</td></tr><tr><td>the face, sonar map, self-test</td><td>written — needs a flash to confirm on glass</td></tr><tr><td>five control panels</td><td>working on hardware</td></tr><tr><td>light strip</td><td><strong>removed in R1-v11</strong> — clashes with Bluetooth</td></tr></tbody></table></div>
 <h2>Planned</h2>
 <p>Three of these need no extra parts — a micro:bit V2 already has a speaker, a microphone and a motion sensor.</p>
 <ul><li><strong>Ouch</strong> — the motion sensor feels a bump, the rover flinches and backs off.</li><li><strong>Reversing beeper</strong>, like a truck, only when going backwards.</li><li><strong>Clap to go</strong> — one clap starts, two stops.</li><li><strong>Follow my hand</strong> — holds a fixed distance from whatever is in front of it.</li><li><strong>Record &amp; replay</strong> — drive a path, play it back.</li><li><strong>Light shows</strong> — rainbow, chase, sparkle, Knight Rider. Blocked until the strip can share the board with Bluetooth; see <em>No light strip</em>.</li></ul>

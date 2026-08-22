@@ -329,6 +329,7 @@ between three settings:
 | **Face** | always the eyes |
 | **Status** | always the text *(the default)* |
 | **Auto** | text until the app connects, eyes afterwards |
+| **Radar** | the sonar map — see below |
 
 **Auto** is the one worth choosing. Before a connection the only thing you
 need from the glass is *which* micro:bit this is; after it, the app is already
@@ -344,6 +345,7 @@ What the eyes do:
 | worried, brows up | something closer than 25 cm |
 | dizzy | for 2 s after a spin |
 | asleep | 20 s with no driving |
+| alarmed, eyes wide and small-pupilled | picked up or tipped past 45° |
 
 Two things that look like bugs and are not. **Dizziness arrives after the
 spin, not during it** — the face is frozen while the wheels turn, deliberately
@@ -366,6 +368,49 @@ changes, so a sleeping or worried face costs nothing at all, and it holds
 still while the wheels turn — a frame is 512 bytes on the same I²C bus as the
 servo driver, inside the loop that feeds the drive watchdog.
 
+## The sonar map
+
+Set the **Screen** selector to **Radar**, and **Head** to **Sweep**. The head
+turns, and the glass fills with what it finds: one column per heading, and
+the closer a thing is the taller its bar.
+
+```
+##########.....................................##########.##########
+##########.....................................##########.##########
+##########.......................##########....##########.##########
+##########....##########.........##########....##########.##########
+   wall            box              chair          table leg
+```
+
+This is the point of the sweep head. Until now it fed a graph on somebody
+else's phone, and a graph plots distance against *time* — the one axis that
+cannot tell you where the table leg is.
+
+It is also the cheapest thing on the screen. The head moves one step at a
+time, so only one slice of the picture can have changed: each reading
+repaints about six columns and leaves the rest alone. A whole frame is 512
+bytes; a radar update is twenty-four.
+
+## The self-test
+
+Every power-up, before anything connects, for two and a half seconds:
+
+```
+Rover R1-v18
+Driver 0x40  ok
+Sonar  42 cm
+Trim  L +7  R -7
+```
+
+A rover fails in three ways — sonar lead off, driver board not seen, flat
+pack — and the answer used to be a teacher crouching over it with a phone.
+`Driver 0x40 MISSING` means the ribbon or the board; `Sonar NO ECHO` means
+the sensor lead, usually the 3V3 one. Both are readable from across a table
+with nothing connected.
+
+The screen is deliberately not on the list. If you can read the list, the
+screen works.
+
 ## Driving modes
 
 | mode | what it does |
@@ -381,7 +426,7 @@ servo driver, inside the loop that feeds the drive watchdog.
 | trim stored on the robot | working on hardware |
 | distance sensor, sweep head | working on hardware |
 | screen | status display — working on hardware |
-| the face | written — needs a flash to confirm on glass |
+| the face, sonar map, self-test | written — needs a flash to confirm on glass |
 | five control panels | working on hardware |
 | light strip | **removed in R1-v11** — clashes with Bluetooth |
 

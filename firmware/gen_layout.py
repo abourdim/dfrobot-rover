@@ -239,7 +239,7 @@ screen_test = build("Rover — Screen test", [
         # where the other screen controls are -- and because Expert is
         # hand-tuned now, so adding a widget there means a re-export.
         W("screen_mode", "select", 500, 250, 200, 70, label="Screen",
-          options="Face,Status,Auto"),
+          options="Face,Status,Auto,Radar"),
         LEVEL(80, 340),
     ]),
 ])

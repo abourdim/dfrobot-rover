@@ -83,7 +83,7 @@
 // Bump this on every real change and check it (serial log + LED scroll
 // at boot) to confirm what's actually flashed before debugging further —
 // no more guessing whether a fix was really re-flashed.
-const FIRMWARE_VERSION = "R1-v17"
+const FIRMWARE_VERSION = "R1-v19"
 
 // Debug helper — logs ONLY if debugEnabled is true (default false).
 // THIS IS THE ROOT CAUSE of "connected, but nothing happens": pxt-
@@ -356,7 +356,8 @@ const CFG_EXPERT =
     "OiJTYXkgc29tZXRoaW5nIn0seyJpZCI6ImxibF9vbGVkIiwidCI6ImxhYmVsIiwieCI6MTA4NywieSI6MTE3Niwi" +
     "dyI6MzAwLCJoIjo3MCwibGFiZWwiOiJPbiB0aGUgc2NyZWVuIiwibW9kZWwiOiJjYXJkIn0seyJpZCI6InNjcmVl" +
     "bl9tb2RlIiwidCI6InNlbGVjdCIsIngiOjEwODcsInkiOjEyNjYsInciOjIwMCwiaCI6NzAsImxhYmVsIjoiU2Ny" +
-    "ZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8ifV0sImNhbnZhcyI6eyJ3IjoxNTcwLCJoIjoxNDE2fX0="
+    "ZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8sUmFkYXIifV0sImNhbnZhcyI6eyJ3IjoxNTcwLCJoIjox" +
+    "NDE2fX0="
 const CFG_DRIVE =
     "eyJ0aXRsZSI6IlJvdmVyIOKAlCBEcml2ZSB0ZXN0Iiwid2lkZ2V0cyI6W3siaWQiOiJncnBfdGVzdCIsInQiOiJn" +
     "cm91cCIsImxhYmVsIjoiV0hFRUxTIiwiY29sb3IiOiIjMDBkNGZmIiwieCI6NTYsInkiOjQyLCJ3Ijo3NjgsImgi" +
@@ -417,10 +418,10 @@ const CFG_SCREEN =
     "LCJ3IjozODAsImgiOjgwLCJsYWJlbCI6Ik9uIHRoZSBzY3JlZW4iLCJtb2RlbCI6ImNhcmQifSx7ImlkIjoiYnRu" +
     "X2J1enoiLCJ0IjoiYnV0dG9uIiwieCI6NTAwLCJ5IjoxMDAsInciOjEyMCwiaCI6MTIwLCJsYWJlbCI6IkJlZXAi" +
     "fSx7ImlkIjoic2NyZWVuX21vZGUiLCJ0Ijoic2VsZWN0IiwieCI6NTAwLCJ5IjoyNTAsInciOjIwMCwiaCI6NzAs" +
-    "ImxhYmVsIjoiU2NyZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8ifSx7ImlkIjoibGV2ZWwiLCJ0Ijoi" +
-    "c2VsZWN0IiwieCI6ODAsInkiOjM0MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9wdGlvbnMiOiJC" +
-    "ZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzgwLCJoIjo0OTB9" +
-    "fQ=="
+    "ImxhYmVsIjoiU2NyZWVuIiwib3B0aW9ucyI6IkZhY2UsU3RhdHVzLEF1dG8sUmFkYXIifSx7ImlkIjoibGV2ZWwi" +
+    "LCJ0Ijoic2VsZWN0IiwieCI6ODAsInkiOjM0MCwidyI6MTcwLCJoIjo3MCwibGFiZWwiOiJMZXZlbCIsIm9wdGlv" +
+    "bnMiOiJCZWdpbm5lcixFeHBlcnQsRHJpdmUsRGlzdGFuY2UsU2NyZWVuIn1dLCJjYW52YXMiOnsidyI6NzgwLCJo" +
+    "Ijo0OTB9fQ=="
 const IDS_BEGINNER = ",dpad_move,btn_stop,gauge_dist,alert,level,lbl_ver,"
 const IDS_EXPERT = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,gauge_dist,alert,dist_read,graph_dist,srv_head,gauge_head,btn_head_center,head_mode,mode,upd,level,lbl_ver,lbl_heartbeat,btn_buzz,oled_text,lbl_oled,screen_mode,"
 const IDS_DRIVE = ",dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,level,"
@@ -811,6 +812,7 @@ const FACE_KEY = "face"
 const SCREEN_STATUS = 0
 const SCREEN_FACE = 1
 const SCREEN_AUTO = 2
+const SCREEN_RADAR = 3
 let screenMode = SCREEN_STATUS
 
 function faceWanted(): boolean {
@@ -845,7 +847,7 @@ function prefsLoad() {
     if (settings.exists(FACE_KEY)) {
         // 0/1 from R1-v16 still land on Status/Face, so an already-flashed
         // rover keeps whatever it was set to.
-        screenMode = Math.constrain(settings.readNumber(FACE_KEY), 0, 2)
+        screenMode = Math.constrain(settings.readNumber(FACE_KEY), 0, 3)
     }
     dbg("prefs loaded: L=" + trimL + " R=" + trimR + " screen=" + screenMode)
 }
@@ -1043,10 +1045,132 @@ function fbFlush() {
     }
 }
 
+
+// A SINGLE column, which is what makes the radar affordable: the sweep moves
+// one step at a time, so only one column of the picture can have changed.
+// Four bytes and six commands, against 512 bytes for a whole frame.
+function fbFlushCol(x: number) {
+    oledCmd(0x21); oledCmd(x); oledCmd(x)
+    oledCmd(0x22); oledCmd(0); oledCmd(FB_PAGES - 1)
+    const b = pins.createBuffer(1 + FB_PAGES)
+    b[0] = 0x40
+    for (let page = 0; page < FB_PAGES; page++) b[page + 1] = fb[page * FB_W + x]
+    pins.i2cWriteBuffer(OLED_ADDR, b, false)
+}
+
+// ── SONAR MAP ───────────────────────────────────────────────────────
+// The sweep head already turns; this draws what it finds. Each column is one
+// heading, each bar is how close the nearest thing at that heading is, so the
+// glass becomes a picture of the room drawn by the robot itself.
+//
+// This is the whole point of the sweep. Until now it fed a graph on somebody
+// else's phone, which shows distance against TIME -- the one axis that does
+// not tell you where the table leg is.
+let radarFresh = true            // true = redraw the whole scope next time
+
+// Origin at bottom centre. A half-disc that fits 32 rows can only have a
+// 31-pixel radius, which would leave two thirds of the width black -- so the
+// scope is STRETCHED sideways by two. It reads as a wide radar rather than a
+// small round one, and uses glass that would otherwise be wasted.
+const SCOPE_CX = 63
+const SCOPE_CY = 31
+const SCOPE_R = 30
+const SCOPE_XS = 2               // horizontal stretch
+
+// Blips persist so a sweep builds a picture instead of showing one reading.
+// Parallel arrays rather than objects: this runs in the MakeCode interpreter
+// and a fixed ring of numbers costs nothing to keep.
+const BLIP_MAX = 48
+const BLIP_LIFE_MS = 5000
+let blipAngle: number[] = []
+let blipCm: number[] = []
+let blipAt: number[] = []
+let scopeBeamAt = -1             // beam angle currently on the glass
+let scopeExpireAt = 0            // next sweep for blips that have aged out
+
+function fbPixel(x: number, y: number, on: boolean) {
+    if (x < 0 || x >= FB_W || y < 0 || y >= FB_PAGES * 8) return
+    const i = (y >> 3) * FB_W + x
+    const bit = 1 << (y & 7)
+    fb[i] = on ? (fb[i] | bit) : (fb[i] & (~bit & 0xFF))
+}
+
+// Deliberately NOT linear, copied from the app's scope so both agree: the
+// first 10cm gets a quarter of the radius. Close things are what matter, and
+// on a linear scale they all pile up in the middle.
+function scopeRadius(cm: number): number {
+    let r = 0
+    if (cm <= 0) r = 0
+    else if (cm < 10) r = Math.idiv(cm * 40, 10)
+    else if (cm < 30) r = 40 + Math.idiv((cm - 10) * 40, 20)
+    else if (cm < 100) r = 80 + Math.idiv((cm - 30) * 80, 70)
+    else r = 160
+    // that scale is 0..160; this glass is 0..SCOPE_R
+    return Math.idiv(r * SCOPE_R, 160)
+}
+
+function scopePlot(deg: number, r: number, on: boolean) {
+    const rad = deg * Math.PI / 180
+    fbPixel(SCOPE_CX + Math.round(r * SCOPE_XS * Math.cos(rad)),
+            SCOPE_CY - Math.round(r * Math.sin(rad)), on)
+}
+
+// Two range rings: 30cm and 100cm. The app draws a 10cm one too, but here it
+// lands at a 7-pixel radius and just thickens the origin.
+//
+// Drawn SOLID, one degree at a time. A dotted arc was the first attempt and
+// at this size it read as confetti -- indistinguishable from the blips it is
+// supposed to be a backdrop for. The inner ring is half the circumference so
+// two degrees is plenty there.
+function scopeRings() {
+    const rOut = scopeRadius(100)
+    for (let a = 0; a <= 180; a++) scopePlot(a, rOut, true)
+    const rMid = scopeRadius(30)
+    for (let a = 0; a <= 180; a += 2) scopePlot(a, rMid, true)
+    // The floor the rings stand on.
+    fbRect(0, SCOPE_CY, FB_W, 1, true)
+}
+
+function scopeDraw(now: number) {
+    fb.fill(0)
+    scopeRings()
+    // Live beam: solid, so it is obviously the thing that is moving.
+    for (let r = 0; r <= SCOPE_R; r++) scopePlot(headAngle, r, true)
+    // Everything the sweep has found lately.
+    for (let i = 0; i < blipAngle.length; i++) {
+        if (now - blipAt[i] > BLIP_LIFE_MS) continue
+        const r = scopeRadius(blipCm[i])
+        scopePlot(blipAngle[i], r, true)
+        // A single pixel is 0.15mm. Two, and it is a mark.
+        scopePlot(blipAngle[i], r - 1, true)
+    }
+    fbFlush()
+}
+
+function radarPaint(angle: number, cm: number) {
+    // Nothing bounced back is not a detection -- plotting it would draw a
+    // wall at maximum range all the way round an empty room.
+    if (cm > 0 && cm < DIST_MAX_CM) {
+        blipAngle.push(angle)
+        blipCm.push(cm)
+        blipAt.push(input.runningTime())
+        while (blipAngle.length > BLIP_MAX) {
+            blipAngle.shift(); blipCm.shift(); blipAt.shift()
+        }
+    }
+    radarFresh = false
+    scopeDraw(input.runningTime())
+}
+
 const EYE_W = 42, EYE_H = 26, EYE_Y = 3, EYE_LX = 12, EYE_RX = 74
 const PUP = 12
 const BROW = 11                  // how deep the worried wedge cuts
 const FACE_OPEN = 0, FACE_SHUT = 1, FACE_WORRIED = 2, FACE_DIZZY = 3
+const FACE_ALARM = 4             // picked up or tipped over
+const PUP_SMALL = 6
+// Well past anything a rover meets on a floor, so driving over a book does
+// not make it panic. Only hands do this.
+const TILT_DEG = 45
 const FACE_SLEEP_MS = 20000
 const FACE_BLINK_SHUT_MS = 140
 const FACE_DIZZY_MS = 2000
@@ -1070,9 +1194,12 @@ function drawEye(x: number, mode: number, dx: number, dy: number, cutRight: bool
     // corners are the only part anyone notices at this size.
     fbRect(x + 2, y, EYE_W - 4, EYE_H, true)
     fbRect(x, y + 2, EYE_W, EYE_H - 4, true)
-    // The pupil is a HOLE punched in the white of the eye.
-    fbRect(x + ((EYE_W - PUP) >> 1) + dx, y + ((EYE_H - PUP) >> 1) + dy,
-           PUP, PUP, false)
+    // The pupil is a HOLE punched in the white of the eye. It shrinks when
+    // the rover is lifted -- a small pupil in a wide eye is what alarm looks
+    // like, and it costs nothing but a smaller rectangle.
+    const pw = mode == FACE_ALARM ? PUP_SMALL : PUP
+    fbRect(x + ((EYE_W - pw) >> 1) + dx, y + ((EYE_H - pw) >> 1) + dy,
+           pw, pw, false)
     if (mode == FACE_WORRIED) {
         // Brows, as a wedge cleared off the top: deepest at the OUTER edge so
         // the inner ends ride UP. Cut them the other way and the same shape
@@ -1104,7 +1231,13 @@ function faceRender(now: number) {
     let mode = FACE_OPEN
     let dx = 0
     let dy = 0
-    if (now < faceDizzyUntil) {
+    // Being picked up outranks everything: it is the only one of these the
+    // rover is having done TO it.
+    if (Math.abs(input.rotation(Rotation.Pitch)) > TILT_DEG
+        || Math.abs(input.rotation(Rotation.Roll)) > TILT_DEG) {
+        mode = FACE_ALARM
+        dy = 5                   // eyes down, at the floor going away
+    } else if (now < faceDizzyUntil) {
         mode = FACE_DIZZY
         const phase = Math.idiv(now, 120) % 4
         dx = phase == 0 ? -8 : (phase == 2 ? 8 : 0)
@@ -1136,10 +1269,73 @@ function faceRender(now: number) {
     dbg("face frame " + (input.runningTime() - t0) + "ms mode=" + mode)
 }
 
+
+// ── SELF-TEST ───────────────────────────────────────────────────────
+// Shown for a few seconds at power-up, before anything connects. A rover in
+// a workshop fails in three ways -- sonar lead off, driver board not seen,
+// flat pack -- and the answer used to be a teacher crouching over it with a
+// phone. This answers it from across the table with no app at all.
+//
+// The screen is not on the list on purpose: if you can read the list, the
+// screen works. Testing it would be answering a question you already have.
+// The DFR0548 carries a PCA9685 here. The motor extension knows this address
+// but keeps it to itself, so the probe needs its own copy -- if the board ever
+// moves address, this is the line that has to follow it.
+const MOTOR_I2C_ADDR = 0x40
+const SELFTEST_MS = 2500
+let screenHoldUntil = 0
+
+// A zero-length payload is the standard way to ask "is anyone at this
+// address": the device either ACKs or it does not, and i2cWriteBuffer
+// returns non-zero when nobody did.
+function i2cPresent(addr: number): boolean {
+    const b = pins.createBuffer(1)
+    b[0] = 0x00
+    return pins.i2cWriteBuffer(addr, b, false) == 0
+}
+
+function bootSelfTest() {
+    const driver = i2cPresent(MOTOR_I2C_ADDR) ? "ok" : "MISSING"
+    const cm = pingCm()
+    const sonar = cm >= NO_ECHO_CM ? "clear"
+        : cm > 0 ? ("" + cm + " cm")
+        : "NO ECHO"
+    OLED.clear()
+    OLED.writeStringNewLine("Rover " + FIRMWARE_VERSION)
+    OLED.writeStringNewLine("Driver 0x40  " + driver)
+    OLED.writeStringNewLine("Sonar  " + sonar)
+    OLED.writeStringNewLine("Trim  L " + oledSigned(trimL) + "  R " + oledSigned(trimR))
+    dbg("selftest: driver=" + driver + " sonar=" + sonar)
+    screenHoldUntil = input.runningTime() + SELFTEST_MS
+    // Whatever the screen shows next must repaint over this.
+    oledOnGlass = ["", "", "", ""]
+    faceSig = ""
+    radarFresh = true
+}
+
 // Drawing is I2C and takes milliseconds, so it happens in the loop and only
 // when the text actually changed -- never from the receive callback.
 function oledRender() {
     oledDirty = false
+    // The self-test owns the glass until it has been readable for a moment.
+    if (input.runningTime() < screenHoldUntil) return
+    if (screenMode == SCREEN_RADAR && oledText.length == 0) {
+        oledOnGlass = ["", "", "", ""]
+        faceSig = ""
+        // Redraw when the beam has actually moved, or when a blip has aged
+        // out. In a still room that is nothing at all; mid-sweep it is one
+        // frame per step. Frozen while driving, like the face, and for the
+        // same reason -- 512 bytes on the servo driver's bus.
+        if (lastDriveL != 0 || lastDriveR != 0) return
+        const now = input.runningTime()
+        if (radarFresh || headAngle != scopeBeamAt || now >= scopeExpireAt) {
+            radarFresh = false
+            scopeBeamAt = headAngle
+            scopeExpireAt = now + 1000
+            scopeDraw(now)
+        }
+        return
+    }
     if (faceWanted() && oledText.length == 0) {
         // Text must repaint when we come back, or half the old status would
         // survive underneath the next frame.
@@ -1441,7 +1637,9 @@ function handleWidget(id: string, val: string) {
     if (id == "screen_mode") {
         if (val == "Face") screenMode = SCREEN_FACE
         else if (val == "Auto") screenMode = SCREEN_AUTO
+        else if (val == "Radar") screenMode = SCREEN_RADAR
         else screenMode = SCREEN_STATUS
+        radarFresh = true
         faceSig = ""
         oledOnGlass = ["", "", "", ""]
         oledDirty = true
@@ -1709,7 +1907,7 @@ wheelsStop()
 headWrite()
 oledInit()
 fbInit()
-oledRender()
+bootSelfTest()
 // Move the tone output off P0 BEFORE anything can beep. On micro:bit the
 // music blocks drive P0 by default, and P0 is the sonar trigger on this board:
 // a beep would fire spurious pings, and the 10us trigger pulses would click
@@ -2173,7 +2371,8 @@ basic.forever(function () {
                 // Same reason: the selector would otherwise render on its
                 // first option over a robot already showing the face.
                 sendUiValue("screen_mode", screenMode == SCREEN_FACE ? "Face"
-                    : screenMode == SCREEN_AUTO ? "Auto" : "Status")
+                    : screenMode == SCREEN_AUTO ? "Auto"
+                    : screenMode == SCREEN_RADAR ? "Radar" : "Status")
                 uiSent = true
             } else if (oledCurrent() != oledShown) {
                 // Mirror what is really on the glass, including truncation.
@@ -2364,6 +2563,10 @@ basic.forever(function () {
             // sensor from an empty room.
             if (reported >= 0) {
                 lastDistCm = reported
+                if (screenMode == SCREEN_RADAR && oledText.length == 0
+                    && input.runningTime() >= screenHoldUntil) {
+                    radarPaint(headAngle, reported)
+                }
                 if (forceDist) sendUiValue("gauge_dist", "" + reported)
                 else sendValue("gauge_dist", "" + reported)
             }
