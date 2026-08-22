@@ -8,9 +8,9 @@
    "color": "#00d4ff",
    "x": 56,
    "y": 42,
-   "w": 828,
-   "h": 812,
-   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_num,trim_r_num,level"
+   "w": 768,
+   "h": 962,
+   "children": "dpad_move,spd,btn_stop,gauge_spd,btn_ml,btn_mr,trim_l,trim_r,trim_l_dn,trim_l_num,trim_l_up,trim_r_dn,trim_r_num,trim_r_up,level"
   },
   {
    "id": "dpad_move",
@@ -86,64 +86,96 @@
   {
    "id": "trim_l",
    "t": "slider",
-   "x": 520,
-   "y": 480,
+   "x": 80,
+   "y": 660,
    "w": 100,
-   "h": 180,
+   "h": 210,
    "label": "Trim L",
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0,
-   "restore": 1
+   "value": 0
   },
   {
    "id": "trim_r",
    "t": "slider",
-   "x": 640,
-   "y": 480,
+   "x": 200,
+   "y": 660,
    "w": 100,
-   "h": 180,
+   "h": 210,
    "label": "Trim R",
    "min": -20,
    "max": 20,
    "step": 1,
-   "value": 0,
-   "restore": 1
+   "value": 0
+  },
+  {
+   "id": "trim_l_dn",
+   "t": "button",
+   "x": 320,
+   "y": 660,
+   "w": 100,
+   "h": 100,
+   "label": "L − 1"
   },
   {
    "id": "trim_l_num",
    "t": "editfield",
-   "x": 760,
-   "y": 480,
+   "x": 430,
+   "y": 675,
    "w": 100,
    "h": 70,
-   "label": "L =",
-   "restore": 1
+   "label": "L ="
+  },
+  {
+   "id": "trim_l_up",
+   "t": "button",
+   "x": 540,
+   "y": 660,
+   "w": 100,
+   "h": 100,
+   "label": "L + 1"
+  },
+  {
+   "id": "trim_r_dn",
+   "t": "button",
+   "x": 320,
+   "y": 770,
+   "w": 100,
+   "h": 100,
+   "label": "R − 1"
   },
   {
    "id": "trim_r_num",
    "t": "editfield",
-   "x": 760,
-   "y": 570,
+   "x": 430,
+   "y": 785,
    "w": 100,
    "h": 70,
-   "label": "R =",
-   "restore": 1
+   "label": "R ="
+  },
+  {
+   "id": "trim_r_up",
+   "t": "button",
+   "x": 540,
+   "y": 770,
+   "w": 100,
+   "h": 100,
+   "label": "R + 1"
   },
   {
    "id": "level",
    "t": "select",
    "x": 80,
-   "y": 760,
+   "y": 910,
    "w": 170,
    "h": 70,
    "label": "Level",
-   "options": "Beginner,Expert,Drive,Distance,Screen,Lights"
+   "options": "Beginner,Expert,Drive,Distance,Screen"
   }
  ],
  "canvas": {
-  "w": 940,
-  "h": 910
+  "w": 880,
+  "h": 1060
  }
 }

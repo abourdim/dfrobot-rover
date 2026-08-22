@@ -21,7 +21,7 @@ MIN_SIZE = {"button": (100, 100), "label": (80, 60), "select": (120, 60),
             "gauge": (120, 120), "slider": (80, 150), "led": (60, 60),
             "editfield": (100, 70)}   # measured: 100x70 renders without clipping
 
-LEVELS = "Beginner,Expert,Drive,Distance,Screen,Lights"
+LEVELS = "Beginner,Expert,Drive,Distance,Screen"
 
 
 def W(wid, t, x, y, w, h, **kw):
@@ -34,29 +34,47 @@ def W(wid, t, x, y, w, h, **kw):
 # Beginner would strand the robot there until someone reflashed it.
 LEVEL = lambda x, y: W("level", "select", x, y, 170, 70, label="Level", options=LEVELS)
 
-# restore=1 marks a value the APP should remember and replay on connect. This
-# board has no storage a MakeCode program can write, so wheel trim would
-# otherwise die with the battery.
+# restore=1 marks a value the APP should remember and replay on connect.
 #
-# Deliberately NOT on `level` or `mode`: replaying Mode could put the rover
-# into a self-driving mode the instant it connects, and replaying Level would
-# swap the layout out from under the restore itself.
-def trim_pair(x, y, h=180):
-    """Slider for coarse, edit field for an exact number. Both drive the same
-    firmware value, and the firmware echoes back to both so they never
-    disagree. One degree of servo pulse is the floor -- the API takes whole
-    degrees -- so the edit field is the fine control, not a finer slider."""
-    # The numbers sit BESIDE the sliders, not under them. Stacking them grew
-    # the DRIVE zone into SYSTEM below; alongside, the zone keeps its height
-    # and the pair still reads as one control each.
+# Deliberately NOT on the trim widgets. From R1-v12 the rover keeps its own
+# trim in flash, and two things remembering the same number is worse than one:
+# the app would replay the browser's idea of the calibration over the robot's,
+# so trimming from a tablet would silently undo a trim done from a laptop. The
+# robot owns it; the app just draws what the robot echoes back.
+#
+# Also NOT on `level` or `mode`: replaying Mode could put the rover into a
+# self-driving mode the instant it connects, and replaying Level would swap
+# the layout out from under the restore itself.
+def trim_pair(x, y, h=210):
+    """Three ways at the same number, because trimming a rover straight is
+    three different jobs. The slider gets you close in one drag. The -1/+1
+    buttons are the one that matters: "still pulls slightly left" is a single
+    degree, and one degree of servo pulse is the floor -- the API takes whole
+    degrees. The field is for typing back a number you wrote down.
+
+    All three drive the same firmware value and the firmware echoes back to
+    all three, so they can never disagree -- and the rover stores that value
+    in its own flash, so a trimmed robot stays trimmed through a battery
+    change and arrives already calibrated on any browser."""
+    # One row per wheel, laid out as [-1] [number] [+1] so the buttons sit
+    # either side of what they change. The numbers stay BESIDE the sliders
+    # rather than under them: stacked, the block grew the DRIVE zone down
+    # into SYSTEM.
+    def row(wid, label, dy):
+        return [
+            W("trim_%s_dn" % wid, "button", x + 240, y + dy, 100, 100,
+              label="%s − 1" % label),
+            W("trim_%s_num" % wid, "editfield", x + 350, y + dy + 15, 100, 70,
+              label="%s =" % label),
+            W("trim_%s_up" % wid, "button", x + 460, y + dy, 100, 100,
+              label="%s + 1" % label),
+        ]
     return [
         W("trim_l", "slider", x, y, 100, h, label="Trim L",
-          min=-20, max=20, step=1, value=0, restore=1),
+          min=-20, max=20, step=1, value=0),
         W("trim_r", "slider", x + 120, y, 100, h, label="Trim R",
-          min=-20, max=20, step=1, value=0, restore=1),
-        W("trim_l_num", "editfield", x + 240, y, 100, 70, label="L =", restore=1),
-        W("trim_r_num", "editfield", x + 240, y + 90, 100, 70, label="R =", restore=1),
-    ]
+          min=-20, max=20, step=1, value=0),
+    ] + row("l", "L", 0) + row("r", "R", 110)
 
 
 def group(gid, label, color, members):
@@ -79,6 +97,73 @@ def build(title, zones):
                        "h": max(w["y"] + w["h"] for w in widgets) + 56}}
 
 
+# ── PANELS TUNED BY HAND IN THE BUILD EDITOR ────────────────────────────────
+# Expert is no longer laid out here. It was arranged in the app's own Build
+# screen and exported, because some of it cannot be expressed by the rules in
+# this file: STOP sits INSIDE the D-pad's empty centre, and each wheel reads
+# as one control -- [-1] [slider] [+1] with the number underneath. The
+# geometry checks below would reject both, correctly, as overlap.
+#
+# So the export is the source of truth for Expert and this file only shrinks
+# and splices it. Re-export from Build to change it; do not hand-edit the JSON.
+HAND_TUNED = {"EXPERT": f"{HERE}/expert_from_builder.json"}
+
+# Everything applyWidgetDefaults() in the app puts back by itself. Sending it
+# is pure transfer time on a link that moves 18 characters every 35ms.
+MODEL_DEFAULTS = {"button": "neo", "slider": "track", "toggle": "square",
+                  "led": "dot", "joystick": "classic", "label": "plain",
+                  "gauge": "classic", "graph": "grid", "group": "panel"}
+REDUNDANT = {
+    "slider":    {"min": 0, "max": 100, "step": 1},
+    "gauge":     {"min": 0, "max": 100, "decimals": 1, "units": "",
+                  "warn": None, "danger": None},
+    "graph":     {"series": 1, "windowSec": 30, "autoScale": True,
+                  "min": 0, "max": 100, "showLegend": True},
+    "editfield": {"placeholder": "Type here..."},
+    "group":     {"padding": 18},
+}
+
+
+def same(a, b):
+    """Equality that does not confuse True with 1 or False with 0 -- Python
+    says they are equal, JSON does not, and dropping showLegend because it
+    "equals" 1 would ship a different layout than the one checked here."""
+    if b is None:
+        return a is None
+    if isinstance(b, bool):
+        return a is b
+    return not isinstance(a, bool) and a == b
+
+
+def shrink(w):
+    """Drop what the app reconstructs anyway. Lossless by construction: every
+    key removed here is one applyWidgetDefaults() fills back in with exactly
+    this value, and activateRemoteConfig() runs it over every widget on
+    arrival."""
+    w.pop("props", None)        # Build-only bag, never read at runtime
+    w.pop("groupId", None)      # re-derived from each group's children list
+    if "model" in w and w["model"] == MODEL_DEFAULTS.get(w["t"]):
+        w.pop("model")
+    for k, v in REDUNDANT.get(w["t"], {}).items():
+        if k in w and same(w[k], v):
+            w.pop(k)
+    # A comma string costs three bytes less per child than a JSON array, and
+    # the app accepts either.
+    if w["t"] == "group" and isinstance(w.get("children"), list):
+        w["children"] = ",".join(w["children"])
+    return w
+
+
+def load_builder(path):
+    cfg = json.load(open(path, encoding="utf-8"))
+    # schemaVersion/configRevision are export metadata. The firmware computes
+    # the revision from the blob itself, so shipping a stale one would be a
+    # way to serve a cached copy of the wrong layout.
+    return {"title": cfg["title"],
+            "widgets": [shrink(w) for w in cfg["widgets"]],
+            "canvas": cfg["canvas"]}
+
+
 # ── BEGINNER ────────────────────────────────────────────────────────────────
 # Drive it, and see what it sees. No speed slider: at this level the pad IS the
 # control, and a second one only invites "why won't it move".
@@ -98,69 +183,9 @@ beginner = build("Rover — Beginner", [
     ]),
 ])
 
-# ── EXPERT ──────────────────────────────────────────────────────────────────
-# Everything the rover can do.
-expert = build("Rover — Expert", [
-    ("grp_drive", "DRIVE", "#00d4ff", [
-        W("dpad_move", "dpad", 80, 100, 420, 420, label="Drive", model="classic"),
-        W("spd", "slider", 540, 100, 120, 260, label="Speed",
-          min=60, max=255, step=5, value=200, restore=1),
-        W("btn_stop", "button", 700, 100, 120, 120, label="STOP"),
-        W("gauge_spd", "gauge", 700, 260, 200, 190, label="Speed",
-          min=60, max=255, decimals=0, model="min", source="spd", value=200),
-        W("btn_ml", "button", 80, 560, 190, 120, label="Left wheel",
-          icon="⚙️", spin=-1, color="#0e7490"),
-        W("btn_mr", "button", 290, 560, 190, 120, label="Right wheel",
-          icon="⚙️", spin=1, color="#0e7490"),
-        *trim_pair(530, 560),
-    ]),
-    # The sweep head sits with DISTANCE, not DRIVE: it aims the sensor, so it
-    # belongs beside the reading it changes.
-    ("grp_dist", "DISTANCE", "#ffb020", [
-        W("gauge_dist", "gauge", 1000, 100, 220, 200, label="Distance",
-          min=0, max=200, units="cm", decimals=0, model="classic"),
-        W("alert", "notification", 1250, 110, 100, 180, label="Alert"),
-        W("dist_read", "select", 1000, 330, 180, 70, label="Distance read",
-          options="Auto,Read now"),
-        W("graph_dist", "graph", 1000, 430, 420, 250, label="Distance cm",
-          model="grid", windowSec=30, series=1),
-        W("srv_head", "slider", 1000, 730, 100, 190, label="Look",
-          min=0, max=180, step=1, value=90),
-        W("gauge_head", "gauge", 1120, 730, 180, 190, label="Angle",
-          min=0, max=180, units="°", decimals=0, model="min",
-          source="srv_head", value=90),
-        W("btn_head_center", "button", 1320, 760, 100, 100, label="Ahead"),
-        W("head_mode", "select", 1320, 890, 170, 70, label="Head",
-          options="Manual,Sweep"),
-    ]),
-    # Two rows, kept left of x=976: one row reached into the DISTANCE column
-    # and the validator refused it.
-    ("grp_sys", "SYSTEM", "#8892b0", [
-        W("mode", "select", 80, 850, 160, 70, label="Mode", options="Manual,Avoid"),
-        W("upd", "select", 270, 850, 160, 70, label="Telemetry", options="All,Basic,Off"),
-        LEVEL(460, 850),
-        W("lbl_ver", "label", 80, 960, 160, 70, label="Firmware", model="card"),
-        W("lbl_heartbeat", "label", 270, 960, 220, 70, label="Uptime", model="card"),
-        W("btn_buzz", "button", 520, 950, 120, 120, label="Beep"),
-    ]),
-    # The screen gets its own zone: typing a message and watching it appear on
-    # the robot is a thing in itself, not a system setting. lbl_oled shows what
-    # is REALLY on the glass, truncation included, so a message too long for
-    # the panel looks cut off here too rather than quietly disagreeing.
-    ("grp_screen", "SCREEN", "#c084fc", [
-        W("oled_text", "editfield", 1000, 1070, 300, 80, label="Say something"),
-        W("lbl_oled", "label", 1000, 1180, 300, 70, label="On the screen",
-          model="card"),
-    ]),
-    ("grp_light", "LIGHTS", "#22c55e", [
-        W("np_mode", "select", 80, 1200, 180, 70, label="Lights",
-          options="Distance,Colour,Rainbow,Off", restore=1),
-        W("np_colour", "select", 290, 1200, 170, 70, label="Colour",
-          options="Red,Orange,Yellow,Green,Blue,Purple,White", restore=1),
-        W("np_bright", "slider", 500, 1190, 100, 180, label="Bright",
-          min=0, max=255, step=5, value=60, restore=1),
-    ]),
-])
+# ── EXPERT ─────────────────────────────────────────────────────────────────
+# Everything the rover can do -- arranged by hand in Build, see HAND_TUNED.
+expert = load_builder(HAND_TUNED["EXPERT"])
 
 # ── DRIVE TEST ──────────────────────────────────────────────────────────────
 # One subsystem. Jog each wheel, watch which way it turns, trim it straight.
@@ -176,8 +201,8 @@ drive_test = build("Rover — Drive test", [
           icon="⚙️", spin=-1, color="#0e7490"),
         W("btn_mr", "button", 290, 480, 190, 120, label="Right wheel",
           icon="⚙️", spin=1, color="#0e7490"),
-        *trim_pair(520, 480),
-        LEVEL(80, 760),
+        *trim_pair(80, 660),
+        LEVEL(80, 910),
     ]),
 ])
 
@@ -214,26 +239,8 @@ screen_test = build("Rover — Screen test", [
     ]),
 ])
 
-# ── LIGHTS TEST ─────────────────────────────────────────────────────────────
-# Distance is the default mode on purpose: it is the one that teaches. The
-# strip becomes a picture of what the sensor sees, which is otherwise a number
-# on a phone.
-lights_test = build("Rover — Lights test", [
-    ("grp_test", "LIGHTS", "#22c55e", [
-        W("np_mode", "select", 80, 100, 180, 70, label="Lights",
-          options="Distance,Colour,Rainbow,Off"),
-        W("np_colour", "select", 290, 100, 170, 70, label="Colour",
-          options="Red,Orange,Yellow,Green,Blue,Purple,White"),
-        W("np_bright", "slider", 500, 100, 100, 190, label="Bright",
-          min=0, max=255, step=5, value=60),
-        W("gauge_dist", "gauge", 80, 220, 200, 190, label="Distance",
-          min=0, max=200, units="cm", decimals=0, model="classic"),
-        LEVEL(310, 250),
-    ]),
-])
-
 PANELS = [("BEGINNER", beginner), ("EXPERT", expert), ("DRIVE", drive_test),
-          ("DIST", dist_test), ("SCREEN", screen_test), ("LIGHTS", lights_test)]
+          ("DIST", dist_test), ("SCREEN", screen_test)]
 
 # ── checks ──────────────────────────────────────────────────────────────────
 src = open(SRC, encoding="utf-8").read()
@@ -259,9 +266,18 @@ for name, cfg in PANELS:
     for w in controls:
         if w["id"] not in live:
             errs.append(f"{name}: {w['id']} has no handler and no telemetry")
+        if name in HAND_TUNED:
+            continue
         mw, mh = MIN_SIZE.get(w["t"], (0, 0))
         if w["w"] < mw or w["h"] < mh:
             errs.append(f"{name}: {w['id']} is {w['w']}x{w['h']}, under the {mw}x{mh} floor")
+    # Overlap, padding and size floors are house rules for the panels laid out
+    # in this file. A hand-tuned panel has already been seen on a real screen
+    # by the person who placed it, so only the checks about FIRMWARE
+    # correctness above -- every widget driven, Level present, ids unique --
+    # apply to it.
+    if name in HAND_TUNED:
+        continue
     by = {w["id"]: w for w in cfg["widgets"]}
     for g in groups:
         gx1, gy1, gx2, gy2 = box(g)
@@ -285,7 +301,11 @@ for name, cfg in PANELS:
     n = -(-len(b64) // 18)
     print(f"  {name:10} {len(ids):7} {len(b64):6} {n:7} {n*0.035:6.1f}s")
     block.append((name, b64, "," + ",".join(ids) + ","))
-    json.dump(cfg, open(f"{HERE}/layout_{name.lower()}.json", "w"), indent=1, ensure_ascii=False)
+    # encoding= is not optional: on Windows the default is cp1252, which
+    # cannot encode the gear emoji on the jog buttons, and the dump dies
+    # halfway through leaving a truncated file behind.
+    json.dump(cfg, open(f"{HERE}/layout_{name.lower()}.json", "w", encoding="utf-8"),
+              indent=1, ensure_ascii=False)
 print()
 if errs:
     print("  FAILED"); [print("   -", e) for e in errs]; raise SystemExit(1)

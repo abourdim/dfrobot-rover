@@ -149,12 +149,12 @@
     <h2>Quick facts</h2>
     <div class="tw">
       <table class="facts" style="margin-top:10px">
-        <tr><td>Board</td><td>micro:bit <strong>V2</strong> — V1 hasn't enough memory for Bluetooth plus the strip and screen</td></tr>
+        <tr><td>Board</td><td>micro:bit <strong>V2</strong> — V1 hasn't enough memory for Bluetooth plus the screen</td></tr>
         <tr><td>Wheels</td><td>Two 360° servos on <code>S1</code> and <code>S2</code>, driven over I²C — they use no pins</td></tr>
         <tr><td>Sensor head</td><td>A third servo on <code>S3</code> — aim it by hand, or set Head to <strong>Sweep</strong> and it pans the room on its own</td></tr>
         <tr><td>Screen</td><td>128×32 OLED on the I²C port, address <code>0x3C</code></td></tr>
         <tr><td>Distance</td><td>HC-SR04<strong>P</strong> — trig <code>P0</code>, echo <code>P1</code>, VCC from <code>3V3</code></td></tr>
-        <tr><td>Lights</td><td>8 NeoPixels on <code>P15</code> — they show the distance as a bar, closer meaning more lit and redder</td></tr>
+        <tr><td>Lights</td><td>An 8-NeoPixel header is wired to <code>P15</code>, but the firmware does not drive it: the NeoPixel extension will not share this board with Bluetooth</td></tr>
         <tr><td>Power</td><td>4×AA to the DC socket, 3.5–5.5 V — never run the servos from USB</td></tr>
         <tr><td>Free pins</td><td><code>P2 P12 P13 P14 P16</code> — P8 carries the tone output, moved off P0 because P0 is the sonar trigger</td></tr>
       </table>

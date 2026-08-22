@@ -84,7 +84,7 @@
    "w": 170,
    "h": 70,
    "label": "Level",
-   "options": "Beginner,Expert,Drive,Distance,Screen,Lights"
+   "options": "Beginner,Expert,Drive,Distance,Screen"
   },
   {
    "id": "lbl_ver",
